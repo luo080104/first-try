@@ -14,15 +14,12 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_brand_series ON products(brand, series);
 
 -- SKU 表（具体配置档位，跨平台匹配的锚点）
+-- v1.1：改为通用设计，品类特有参数存 specs JSON（适配多品类）
 CREATE TABLE IF NOT EXISTS skus (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL REFERENCES products(id),
-    gpu TEXT,                         -- GPU（归一化：RTX5080）
-    cpu TEXT,                         -- CPU（归一化：酷睿Ultra9 285HX）
-    ram_gb INTEGER,                   -- 内存 GB
-    storage_gb INTEGER,               -- 存储 GB
-    screen TEXT,                      -- 屏幕（可选）
-    raw_title TEXT,                   -- 原始商品标题（用于溯源）
+    specs TEXT,                           -- 品类特有参数 JSON（电脑:{"gpu":"RTX5080","ram":32}；服饰:{"款号":"466789","颜色":"白"}）
+    raw_title TEXT,                       -- 原始商品标题（用于溯源）
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_skus_product ON skus(product_id);
