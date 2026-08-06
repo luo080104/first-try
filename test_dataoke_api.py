@@ -15,8 +15,8 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 # ===== 配置 =====
 API_URL = "https://openapi.dataoke.com/api/goods/get-ranking-list"
-APP_KEY = os.environ.get("DATAOKE_APP_KEY", "")
-APP_SECRET = os.environ.get("DATAOKE_APP_SECRET", "")
+APP_KEY = os.environ.get("DTK_APP_KEY", "")
+APP_SECRET = os.environ.get("DTK_APP_SECRET", "")
 VERSION = "v1.3.1"
 
 
@@ -88,10 +88,10 @@ def get_ranking_list(rank_type=1, page_id=1, page_size=10):
 if __name__ == "__main__":
     if not APP_KEY or not APP_SECRET:
         print("错误：环境变量未设置！")
-        print("请先设置 DATAOKE_APP_KEY 和 DATAOKE_APP_SECRET")
+        print("请先设置 DTK_APP_KEY 和 DTK_APP_SECRET")
         print("PowerShell 示例:")
-        print('  $env:DATAOKE_APP_KEY = "你的AppKey"')
-        print('  $env:DATAOKE_APP_SECRET = "你的AppSecret"')
+        print('  $env:DTK_APP_KEY = "你的AppKey"')
+        print('  $env:DTK_APP_SECRET = "你的AppSecret"')
         exit(1)
 
     print("=" * 60)
