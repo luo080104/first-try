@@ -82,9 +82,7 @@
                         return reader.read().then(function(result) {
                             if (result.done) return;
                             buffer += decoder.decode(result.value, {stream: true});
-                            var lines = buffer.split('
-
-');
+                                                        var lines = buffer.split("\n\n");
                             buffer = lines.pop();
                             lines.forEach(function(evt) {
                                 if (!evt.startsWith('data: ')) return;

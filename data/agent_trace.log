@@ -1,0 +1,6 @@
+
+============================================================
+[2026-08-07 16:01:17] 输入: 帮我看看惠普的暗影精灵
+[思维链] 我们 need parse user query. User says "帮我看看惠普的暗影精灵" meaning help me look at HP Shadow Demon? likely gaming laptop "暗影精灵" (HP OMEN). Need keyword: brand+category, but no category? "暗影精灵" is a series of laptops, but user didn't say "笔记本" explicitly. We can infer category is "数码家电" because it's laptop. keyword should be "惠普 暗影精灵" (maybe add 笔记本? But per rule keyword is brand + category, "暗影精灵" is product line, not category. But we can treat category as "数码家电" and keyword as "惠普 暗影精灵". Need output JSO
+[结果] {"keyword": "惠普 暗影精灵", "category": "数码家电"}
+[缓存] hit=128 miss=38

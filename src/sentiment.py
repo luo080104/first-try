@@ -52,6 +52,8 @@ def _classify_batch(batch):
         'Content-Type': 'application/json', 'Authorization': f'Bearer {API_KEY}'})
     with urllib.request.urlopen(req, timeout=30) as r:
         data = json.loads(r.read().decode('utf-8'))
+    usage = data.get('usage', {})
+    print(f'[sentiment] cache hit={usage.get("prompt_cache_hit_tokens",0)} miss={usage.get("prompt_cache_miss_tokens",0)}')
     content = data['choices'][0]['message']['content'].strip()
     if content.startswith('```'):
         content = content.split(chr(10), 1)[1].rsplit('```', 1)[0]
