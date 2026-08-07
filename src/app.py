@@ -11,7 +11,7 @@ import uvicorn
 
 from api_client import search_goods, search_pdd
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices
 
 app = FastAPI(title='购物助手')
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), 'templates'))
@@ -21,6 +21,19 @@ CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 @app.get('/', response_class=HTMLResponse)
 def index(request: Request):
     return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES})
+
+@app.get('/submit', response_class=HTMLResponse)
+def submit_page(request: Request):
+    return templates.TemplateResponse(request, 'submit.html', {})
+
+@app.post('/submit', response_class=HTMLResponse)
+def submit_post(request: Request,
+                keyword: str = Form(...), title: str = Form(...),
+                platform: str = Form('other'), shop_name: str = Form(''),
+                price: float = Form(...), url: str = Form(''), note: str = Form('')):
+    init_db()
+    save_manual_price(keyword.strip(), title.strip(), platform, shop_name.strip(), price, url.strip(), note.strip())
+    return templates.TemplateResponse(request, 'submit.html', {'success': True, 'keyword': keyword})
 
 @app.post('/search', response_class=HTMLResponse)
 def search(request: Request, keyword: str = Form(...), category: str = Form('')):
@@ -56,6 +69,15 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
         for it in all_items[:20]:
             groups.append({'key': it['title'][:30], 'count': 1, 'platforms': [it], 'best': it})
 
+    # 人工录入结果合并（众包补盲区）
+    manual_items = find_manual_prices(keyword)
+    for m in manual_items:
+        groups.append({'key': f'人工录入: {m["title"][:20]}', 'count': 1,
+                       'platforms': [{'platform': m['platform'], 'title': m['title'],
+                                      'actualPrice': m['price'], 'originalPrice': None,
+                                      'shopName': m['shop_name'] + '（人工录入）', 'url': m['url']}],
+                       'best': None})
+
     # 存库
     conn = get_conn()
     for it in all_items:
@@ -65,7 +87,7 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
     return templates.TemplateResponse(request, 'result.html', {
         'keyword': keyword, 'category': category,
         'groups': groups[:10], 'total': len(all_items),
-        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
+        'tb_count': len(tb_items), 'pdd_count': len(pdd_items), 'manual_count': len(manual_items),
     })
 
 if __name__ == '__main__':

@@ -115,3 +115,18 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     value TEXT NOT NULL,
     updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== 人工录入价格（众包补盲区，OpenPrice 模式）==========
+
+CREATE TABLE IF NOT EXISTS manual_prices (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT NOT NULL,                  -- 商品关键词（比价时匹配用）
+    title TEXT NOT NULL,                    -- 商品名称
+    platform TEXT NOT NULL,                 -- 平台：tb/pdd/jd/other
+    shop_name TEXT,                         -- 店铺/渠道名
+    price REAL NOT NULL,                    -- 价格
+    url TEXT,                               -- 商品链接
+    note TEXT,                              -- 备注（录入人/时间说明）
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_manual_keyword ON manual_prices(keyword);

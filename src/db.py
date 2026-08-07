@@ -92,3 +92,26 @@ def recent_prices(conn, limit=10):
         ORDER BY ph.queried_at DESC LIMIT ?
     ''', (limit,))
     return cur.fetchall()
+
+def save_manual_price(keyword, title, platform, shop_name, price, url, note=''):
+    """保存人工录入价格"""
+    conn = get_conn()
+    cur = conn.execute('''
+        INSERT INTO manual_prices (keyword, title, platform, shop_name, price, url, note)
+        VALUES (?,?,?,?,?,?,?)
+    ''', (keyword, title, platform, shop_name, price, url, note))
+    conn.commit()
+    conn.close()
+    return cur.lastrowid
+
+def find_manual_prices(keyword, limit=10):
+    """按关键词匹配人工录入价（模糊匹配）"""
+    conn = get_conn()
+    cur = conn.execute('''
+        SELECT * FROM manual_prices
+        WHERE keyword LIKE ? OR title LIKE ?
+        ORDER BY price ASC LIMIT ?
+    ''', (f'%{keyword}%', f'%{keyword}%', limit))
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
