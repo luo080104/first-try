@@ -76,7 +76,22 @@ def search_pdd(keywords: str, page: int = 1, size: int = 20) -> list:
         lst = data
     else:
         lst = []
-    return parse_pdd_list(lst)
+    items = parse_pdd_list(lst)
+    return sort_by_relevance(items, keywords)
+
+def sort_by_relevance(items: list, keyword: str) -> list:
+    """按标题相关性排序：含完整关键词的排前，含部分词的次之（解决 PDD 匹配松散问题）"""
+    def score(it):
+        title = it.get('title', '')
+        s = 0
+        if keyword in title:
+            s += 100
+        # 关键词拆词（中英文都拆）：品牌词命中加权
+        for w in [keyword[i:i+2] for i in range(len(keyword)-1)]:
+            if w in title:
+                s += 3
+        return s
+    return sorted(items, key=score, reverse=True)
 
 def parse_pdd_list(raw_list: list) -> list:
     """解析拼多多返回字段 → 统一结构"""
