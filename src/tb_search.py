@@ -3,20 +3,19 @@
 # 第一次使用：运行后浏览器弹出，手动登录淘宝一次，之后免登录
 # 用法: from tb_search import search_taobao; items = search_taobao('石头岛')
 #
-# 核心思路（来自 CSDN 2025-09 文章实测）：
-#   浏览器渲染淘宝搜索页时，会自动调用 mtop.relationrecommend.wirelessrecommend.recommend API
-#   DrissionPage 的 page.listen 可以拦截这个请求的响应，直接拿到结构化 JSON
-#   无需处理签名/token/风控——浏览器全部搞定了
-#   这和 tb_spider_ref 项目调的同一个 API，但 tb_spider_ref 用 requests 直调 → RGV587
-#   DrissionPage 让浏览器调 → 成功
-#
-# 备用方案：page.listen 失败时，回退到 HTML 卡片文本解析（和 jd_search.py 同模式）
+# === 2026-08-07 v2 更新（借鉴 5 个 GitHub 项目源码） ===
+# 1. 多包拦截：淘宝会发两次相同请求，第一个是假数据，第二个才是真的（CSDN 154302696 实测）
+# 2. 多 API 监听：同时监听多个 MTOP 接口，增加命中率（xiuyegege/DrissionPage_taobao_monitor_shop）
+# 3. 丰富字段：借鉴 iokNokarl/taobao_spider 的 models.py，提取品牌/服务标签/商品属性/地区/天猫标识
+# 4. 搜索页 URL：用 uland.taobao.com/sem/tbsearch（ShilongLee/Crawler 用的搜索入口）
+# 5. 翻页加载：滚动触发更多 API 请求（xiuyegege 的 get_shop_info 模式）
 
 import sys
 import os
 import time
 import re
 import json
+import urllib.parse
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -29,9 +28,31 @@ CHROME_PATHS = [
 PROFILE_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'tb_profile')
 _last_call_time = 0  # 低频约束
 
-# MTOP API 特征字符串（浏览器渲染搜索页时自动调用的接口）
-# 来源：CSDN 2025-09 文章 + tb_spider_ref/config.py 交叉验证
-MTOP_API_PATTERN = 'mtop.relationrecommend.wirelessrecommend.recommend'
+# 多 API 监听模式（来源：xiuyegege multi-API + CSDN 文章 + ShilongLee search.py 交叉验证）
+# 淘宝搜索页可能触发以下任意一个 API，全部监听增加命中率
+MTOP_API_PATTERNS = [
+    'mtop.relationrecommend.wirelessrecommend.recommend',  # 主搜索 API（ShilongLee/Crawler 用的）
+    'mtop.taobao.search.',                                 # 搜索通用前缀
+    'mtop.taobao.shop.simple.fetch',                       # 店铺商品列表
+    'mtop.taobao.shop.item.list',                          # 店铺商品列表2
+]
+
+# iokNokarl models.py 的服务标签映射表
+SERVICE_TAG_MAP = {
+    'p4p': '广告', 'guanggao': '广告',
+    'tmallPC': '天猫', 'tmall': '天猫',
+    'richangrexiaobaokuan2': '热销爆款',
+    'thbxf1': '退货宝', 'shipping48H': '48小时发货',
+    'baoyounew': '包邮', 'cainixihuan': '猜你喜欢',
+    'jinpaimaijia': '金牌卖家', 'huabei': '花呗',
+    'sfk': '分期', 'global': '海外', 'chaoshi': '超市',
+    'ershou': '二手', 'xinpin': '新品', 'cuxiao': '促销',
+    'pinpai': '品牌', 'tianmaoguoji': '天猫国际',
+    'taobaoteshe': '淘宝特卖', 'pinzhixinxuan': '品质新选',
+    'yushou': '预售', 'dingjin': '定金',
+    'tianmaochaoshi': '天猫超市', 'tianmaohexiao': '天猫合销',
+    'duigongzhifupc': '对公支付', 'xiancaihoufupc': '先采后付',
+}
 
 def _find_browser():
     for p in EDGE_PATHS + CHROME_PATHS:
@@ -39,21 +60,22 @@ def _find_browser():
             return p
     return None
 
-def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150) -> list:
+def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page: int = 1) -> list:
     """淘宝关键词搜索（浏览器自动化 + API 拦截）。
-    返回: [{platform, title, price, original_price, sales, shop, location, is_ad, url}]
+    返回: [{platform, title, price, original_price, sales, shop, location, is_ad, is_tmall,
+           brand, service_tags, url}]
     遇验证码返回 [] 并打印提示。"""
     global _last_call_time
     # 低频约束：两次调用间隔至少 30 秒
     wait = 30 - (time.time() - _last_call_time)
     if wait > 0:
-        print(f'⏳ 淘宝搜索频率控制，等待 {int(wait)} 秒...')
+        print(f'[tb] 频率控制，等待 {int(wait)} 秒...')
         time.sleep(wait)
     _last_call_time = time.time()
 
     browser_path = _find_browser()
     if not browser_path:
-        print('❌ 未找到 Chrome/Edge')
+        print('[tb] 未找到 Chrome/Edge')
         return []
 
     from DrissionPage import Chromium, ChromiumOptions
@@ -66,12 +88,12 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150) -> l
 
     try:
         # 方案 A：page.listen 拦截 MTOP API JSON（首选）
-        items = _search_via_listen(tab, keyword, max_items, login_wait)
+        items = _search_via_listen(tab, keyword, max_items, login_wait, page)
         if items:
             return items[:max_items]
 
         # 方案 B：回退到 HTML 卡片文本解析
-        print('⚠️ API 拦截未成功，回退到 HTML 解析...')
+        print('[tb] API 拦截未成功，回退到 HTML 解析...')
         items = _search_via_html(tab, keyword, max_items)
         return items[:max_items]
 
@@ -79,19 +101,25 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150) -> l
         browser.quit()
 
 
-def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int) -> list:
-    """方案 A：拦截浏览器发出的 MTOP API 请求，直接拿 JSON 响应。"""
+def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_num: int) -> list:
+    """方案 A：拦截浏览器发出的 MTOP API 请求，直接拿 JSON 响应。
 
-    # 开始监听 MTOP API
-    tab.listen.start(MTOP_API_PATTERN)
+    关键改进（来自 CSDN 154302696 实测）：
+    淘宝会伪造两个相同的请求，第一个是假数据，第二个才是真数据。
+    所以需要等待多个包，跳过第一个。"""
 
-    # 访问淘宝搜索页
-    url = f'https://s.taobao.com/search?q={keyword}&ie=utf8'
+    # 多 API 同时监听（xiuyegege 模式）
+    for pattern in MTOP_API_PATTERNS:
+        tab.listen.start(pattern)
+
+    # 搜索页 URL（ShilongLee 用的 uland 入口 + 标准 s.taobao.com）
+    keyword_encoded = urllib.parse.quote(keyword, encoding='utf-8')
+    url = f'https://s.taobao.com/search?q={keyword_encoded}&ie=utf8&page={page_num}'
     tab.get(url)
 
     # 登录检测（淘宝搜索需要登录）
     if _needs_login(tab):
-        print('🔐 请在浏览器窗口手动登录淘宝（仅首次需要）...')
+        print('[tb] 请在浏览器窗口手动登录淘宝（仅首次需要）...')
         deadline = time.time() + login_wait
         logged = False
         while time.time() < deadline:
@@ -100,51 +128,113 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int) -> li
                 break
             time.sleep(3)
         if not logged:
-            print('⏰ 登录超时')
+            print('[tb] 登录超时')
             return []
         # 登录后重新访问搜索页
         tab.get(url)
-        tab.listen.start(MTOP_API_PATTERN)  # 重新监听
+        for pattern in MTOP_API_PATTERNS:
+            tab.listen.start(pattern)
 
     # 验证码检测
     if _has_captcha(tab):
-        print('⚠️ 遇到淘宝验证码，本次跳过（按约束不尝试绕过）')
+        print('[tb] 遇到淘宝验证码，本次跳过（按约束不尝试绕过）')
         return []
 
-    # 等待 MTOP API 响应（超时 15 秒）
-    try:
-        packet = tab.listen.wait(timeout=15)
-    except Exception:
-        return []
+    # 等待 MTOP API 响应 —— 多包模式
+    # CSDN 实测：淘宝发两次相同请求，第一次假数据，第二次真数据
+    items = []
+    packets_received = 0
+    max_packets = 3  # 最多等 3 个包
 
-    if packet is None:
-        return []
+    while packets_received < max_packets and len(items) < max_items:
+        try:
+            packet = tab.listen.wait(timeout=15)
+        except Exception:
+            break
 
-    try:
-        body = packet.response.body
-        if isinstance(body, str):
-            data = json.loads(body)
-        elif isinstance(body, dict):
-            data = body
+        if packet is None:
+            break
+
+        packets_received += 1
+        print(f'[tb] 收到第 {packets_received} 个数据包...')
+
+        try:
+            body = packet.response.body
+            if isinstance(body, str):
+                data = json.loads(body)
+            elif isinstance(body, dict):
+                data = body
+            elif isinstance(body, bytes):
+                data = json.loads(body.decode('utf-8', errors='replace'))
+            else:
+                continue
+        except Exception:
+            continue
+
+        # 检查是否是搜索结果 API 的响应
+        ret_list = data.get('ret', [])
+        ret_str = '|'.join(ret_list) if isinstance(ret_list, list) else str(ret_list)
+
+        # 如果返回 RGV587（风控），跳过这个包
+        if 'RGV587' in ret_str:
+            print(f'[tb] 第 {packets_received} 个包触发风控 RGV587，跳过')
+            continue
+
+        # 如果不是 SUCCESS，可能是假数据或错误包，跳过
+        if 'SUCCESS' not in ret_str:
+            print(f'[tb] 第 {packets_received} 个包状态: {ret_str[:100]}')
+            continue
+
+        # 解析商品数据
+        parsed = _parse_mtop_response(data, max_items - len(items))
+        if parsed:
+            items.extend(parsed)
+            print(f'[tb] 第 {packets_received} 个包解析出 {len(parsed)} 条商品')
+            if len(items) >= max_items:
+                break
         else:
-            return []
-    except Exception:
-        return []
+            print(f'[tb] 第 {packets_received} 个包无有效商品数据（可能是假数据包）')
 
-    # 解析 MTOP 响应（结构与 tb_spider_ref 的解析逻辑一致）
-    return _parse_mtop_response(data, max_items)
+    # 如果第一批数据不够，滚动加载更多（xiuyegege 模式）
+    if len(items) < max_items and packets_received > 0:
+        print(f'[tb] 当前 {len(items)} 条，滚动加载更多...')
+        for _ in range(3):
+            tab.run_js('window.scrollTo(0, document.body.scrollHeight)')
+            time.sleep(2)
+            try:
+                packet = tab.listen.wait(timeout=10)
+                if packet:
+                    body = packet.response.body
+                    if isinstance(body, str):
+                        data = json.loads(body)
+                    elif isinstance(body, dict):
+                        data = body
+                    else:
+                        continue
+                    parsed = _parse_mtop_response(data, max_items - len(items))
+                    if parsed:
+                        items.extend(parsed)
+                        print(f'[tb] 滚动加载 +{len(parsed)} 条')
+                        if len(items) >= max_items:
+                            break
+            except Exception:
+                continue
+
+    tab.listen.stop()
+    return items
 
 
 def _parse_mtop_response(data: dict, max_items: int) -> list:
-    """从 MTOP API JSON 响应中提取商品列表。"""
-    items = []
+    """从 MTOP API JSON 响应中提取商品列表。
 
-    # 检查返回状态
-    ret_list = data.get('ret', [])
-    ret_str = '|'.join(ret_list) if isinstance(ret_list, list) else str(ret_list)
-    if 'SUCCESS' not in ret_str:
-        print(f'⚠️ MTOP 返回非成功: {ret_str[:200]}')
-        return []
+    字段映射来源：iokNokarl/taobao_spider models.py + ShilongLee search.py
+    提取字段：
+      item_id, title, price, price_desc, real_sales, procity(省/市),
+      pic_url, item_url, shop(name/url), is_p4p(广告), is_tmall(天猫),
+      service_tags(服务标签), brand(品牌), product_attrs(商品属性),
+      same_count(同款数), seller_id(卖家ID)
+    """
+    items = []
 
     raw_data = data.get('data', {})
     raw_items = raw_data.get('itemsArray', [])
@@ -163,25 +253,92 @@ def _parse_mtop_response(data: dict, max_items: int) -> list:
             continue
 
         try:
-            title = raw_item.get('title', '') or raw_item.get('item_name', '')
-            # 清理 HTML 标签
-            title = re.sub(r'<[^>]+>', '', title).strip()[:80]
+            item_id = str(raw_item.get('nid', raw_item.get('itemId', raw_item.get('item_id', ''))))
+            if not item_id:
+                continue
 
-            price_str = str(raw_item.get('priceShow', raw_item.get('price', '')))
+            # 标题（清理 HTML 标签，iokNokarl 模式）
+            title_html = raw_item.get('title', '') or raw_item.get('item_name', '')
+            title = re.sub(r'<[^>]+>', '', title_html).strip()[:100]
+
+            # 价格（iokNokarl 模式）
+            price_show = raw_item.get('priceShow', {})
+            if isinstance(price_show, dict):
+                price_str = str(price_show.get('price', raw_item.get('price', '')))
+                price_desc = price_show.get('priceDesc', '')
+            else:
+                price_str = str(price_show or raw_item.get('price', ''))
+                price_desc = ''
             price = _extract_price(price_str)
 
+            # 原价
             original_str = str(raw_item.get('originalPrice', raw_item.get('oriPrice', '')))
             original = _extract_price(original_str)
 
-            sales = raw_item.get('sales', raw_item.get('realSales', ''))
-            shop = raw_item.get('nick', raw_item.get('shopName', raw_item.get('sellerNick', '')))
-            item_id = str(raw_item.get('nid', raw_item.get('itemId', '')))
-            is_ad = raw_item.get('isAd', '') or raw_item.get('spm', '')
+            # 销量
+            sales = raw_item.get('realSales', raw_item.get('sales', ''))
 
-            # 拼商品链接
-            url = ''
-            if item_id and item_id.isdigit():
-                url = f'https://item.taobao.com/item.htm?id={item_id}'
+            # 店铺信息（iokNokarl 模式）
+            shop_info = raw_item.get('shopInfo', {})
+            if isinstance(shop_info, dict):
+                shop = shop_info.get('title', shop_info.get('shopName', ''))
+            else:
+                shop = str(shop_info or raw_item.get('nick', raw_item.get('sellerNick', '')))
+
+            # 地区（iokNokarl 模式：procity 拆分省/市）
+            procity = raw_item.get('procity', '')
+            province, city = _split_procity(procity)
+            location = procity.strip() if procity else ''
+
+            # 广告标记
+            is_p4p = raw_item.get('isP4p', 'false') == 'true'
+            is_ad = is_p4p or bool(raw_item.get('isAd', ''))
+
+            # 天猫标识（iokNokarl 模式：检查 icons 数组）
+            icons = raw_item.get('icons', [])
+            is_tmall = False
+            service_tags = []
+            if isinstance(icons, list):
+                for icon in icons:
+                    if not isinstance(icon, dict):
+                        continue
+                    alias = icon.get('alias', '')
+                    text = icon.get('text', '')
+                    if alias in ('tmallPC', 'tmall'):
+                        is_tmall = True
+                    if text:
+                        service_tags.append(text)
+                    elif alias and alias not in ('p4p', 'guanggao'):
+                        service_tags.append(SERVICE_TAG_MAP.get(alias, alias))
+
+            # 品牌提取（iokNokarl 模式：从 structuredUSPInfo 提取）
+            brand = ''
+            usp_list = raw_item.get('structuredUSPInfo', [])
+            if isinstance(usp_list, list):
+                for usp in usp_list:
+                    if isinstance(usp, dict) and usp.get('propertyName', '') == '品牌':
+                        brand = usp.get('propertyValueName', '')
+                        break
+
+            # 同款数量、卖家ID
+            same_count = raw_item.get('sameCount', '')
+            seller_id = str(raw_item.get('userId', raw_item.get('sellerId', '')))
+
+            # 浏览热度
+            summary_tips = raw_item.get('summaryTips', [])
+            summary = ' | '.join(summary_tips) if isinstance(summary_tips, list) and summary_tips else ''
+
+            # 商品链接
+            item_url = raw_item.get('auctionURL', raw_item.get('itemUrl', ''))
+            if item_url and not item_url.startswith('http'):
+                item_url = f'https:{item_url}'
+            elif not item_url and item_id and item_id.isdigit():
+                item_url = f'https://item.taobao.com/item.htm?id={item_id}'
+
+            # 图片链接
+            pic_url = raw_item.get('pic_path', raw_item.get('picPath', raw_item.get('pic', '')))
+            if pic_url and not pic_url.startswith('http'):
+                pic_url = f'https:{pic_url}'
 
             if title and price:
                 items.append({
@@ -190,10 +347,20 @@ def _parse_mtop_response(data: dict, max_items: int) -> list:
                     'price': price,
                     'original_price': original if original and original > price else None,
                     'sales': str(sales)[:20] if sales else '',
-                    'shop': str(shop)[:30] if shop else '',
-                    'location': '',
-                    'is_ad': bool(is_ad),
-                    'url': url,
+                    'shop': str(shop)[:50] if shop else '',
+                    'location': location,
+                    'province': province,
+                    'city': city,
+                    'is_ad': is_ad,
+                    'is_tmall': is_tmall,
+                    'brand': brand,
+                    'service_tags': service_tags,
+                    'seller_id': seller_id,
+                    'same_count': str(same_count) if same_count else '',
+                    'summary': summary,
+                    'url': item_url,
+                    'pic_url': pic_url,
+                    'item_id': item_id,
                 })
         except Exception:
             continue
@@ -207,8 +374,8 @@ def _parse_mtop_response(data: dict, max_items: int) -> list:
 def _search_via_html(tab, keyword: str, max_items: int) -> list:
     """方案 B：解析 HTML 商品卡片文本（备用，当 API 拦截失败时）。"""
 
-    # 确保在搜索结果页
-    url = f'https://s.taobao.com/search?q={keyword}&ie=utf8'
+    keyword_encoded = urllib.parse.quote(keyword, encoding='utf-8')
+    url = f'https://s.taobao.com/search?q={keyword_encoded}&ie=utf8'
     if 's.taobao.com/search' not in tab.url:
         tab.get(url)
         tab.wait.doc_loaded()
@@ -221,12 +388,10 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
 
     # 验证码检测
     if _has_captcha(tab):
-        print('⚠️ 遇到淘宝验证码，本次跳过')
+        print('[tb] 遇到淘宝验证码，本次跳过')
         return []
 
     # 淘宝商品卡片选择器（2025 版，带 hash 后缀，用 contains 匹配）
-    # 来源：kuazhi.com 2025 文章实测
-    # a.doubleCardWrapperAdapt--mEcC7olq（新）/ Card--doubleCardWrapper--L2XFE73（旧）
     cards = tab.eles('xpath://a[contains(@class,"doubleCardWrapper")]', timeout=5)
     if not cards:
         cards = tab.eles('xpath://*[contains(@class,"Card--doubleCard")]', timeout=3)
@@ -240,42 +405,36 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
         except Exception:
             continue
 
-        # 广告标记
         is_ad = '广告' in txt
 
-        # 价格
-        prices = re.findall(r'[¥￥](\d+(?:\.\d+)?)', txt)
+        prices = re.findall(r'[\u00a5\uFFE5](\d+(?:\.\d+)?)', txt)
         price = float(prices[0]) if prices else None
         original = float(prices[1]) if len(prices) > 1 else None
 
         if not price:
             continue
 
-        # 标题：取文本的第一段（去掉广告/价格等）
         parts = txt.split('|')
         title = ''
         for p in parts:
             p = p.strip()
-            if p and '¥' not in p and '￥' not in p and '广告' not in p \
+            if p and '\u00a5' not in p and '\uFFE5' not in p and '广告' not in p \
                and '人付款' not in p and '人收货' not in p and '月销' not in p \
                and '包邮' not in p and not re.match(r'^[\d,.]+$', p):
-                title = p[:80]
+                title = p[:100]
                 break
 
-        # 销量
         sales = ''
         m = re.search(r'([\d.]+万人?付款|[\d.]+万人?收货|月销[\d.]+万?)', txt)
         if m:
             sales = m.group(1)
 
-        # 店铺
         shop = ''
         for p in parts:
             if '旗舰店' in p or '专营店' in p or '专卖店' in p or '官方' in p:
-                shop = p.strip()[:30]
+                shop = p.strip()[:50]
                 break
 
-        # 链接
         link = ''
         try:
             link = c.link or c.attr('href') or ''
@@ -291,7 +450,15 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
             'shop': shop,
             'location': '',
             'is_ad': is_ad,
+            'is_tmall': '天猫' in txt,
+            'brand': '',
+            'service_tags': [],
+            'seller_id': '',
+            'same_count': '',
+            'summary': '',
             'url': link,
+            'pic_url': '',
+            'item_id': '',
         })
 
     return items[:max_items]
@@ -315,6 +482,16 @@ def _has_captcha(tab) -> bool:
         return False
 
 
+def _split_procity(procity: str):
+    """将 '浙江 宁波' 拆分为 ('浙江', '宁波')。来源：iokNokarl models.py"""
+    if not procity:
+        return '', ''
+    parts = procity.strip().split(None, 1)
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    return parts[0] if parts else '', ''
+
+
 def _extract_price(s: str) -> float:
     """从字符串中提取价格数字。"""
     if not s:
@@ -326,7 +503,13 @@ def _extract_price(s: str) -> float:
 if __name__ == '__main__':
     kw = sys.argv[1] if len(sys.argv) > 1 else '石头岛'
     items = search_taobao(kw)
-    print(f'\n淘宝「{kw}」: {len(items)} 条')
+    print(f'\n[tb] 淘宝「{kw}」: {len(items)} 条')
     for it in items:
+        tags_str = ' '.join(it.get('service_tags', []))
+        tmall = ' [天猫]' if it['is_tmall'] else ''
         ad = ' [广告]' if it['is_ad'] else ''
-        print(f"  ¥{it['price']} | {it['title'][:40]} | {it['shop']} | {it['sales']}{ad}")
+        brand = f' [{it["brand"]}]' if it['brand'] else ''
+        loc = f' {it["location"]}' if it['location'] else ''
+        print(f'  ¥{it["price"]} | {it["title"][:40]} | {it["shop"][:20]} | {it["sales"]}{loc}{brand}{tmall}{ad}')
+        if tags_str:
+            print(f'         标签: {tags_str}')

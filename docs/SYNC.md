@@ -785,3 +785,149 @@ tb_spider_ref 的 config.py 里 API_NAME 就是 `mtop.relationrecommend.wireless
 1. CSDN 2025-09-24：DrissionPage page.listen 拦截淘宝 MTOP（核心思路）—— https://blog.csdn.net/2301_78461884/article/details/152045308
 2. kuazhi.com 2025：DrissionPage 淘宝极速采集（CSS 选择器 + JS 提取脚本）—— https://www.kuazhi.com/post/716513815.html
 3. kuazhi.com 2025：DrissionPage 淘宝商品批量获取（Card--doubleCardWrapper 选择器）—— https://www.kuazhi.com/post/715343539.html
+
+---
+
+## 第二十二节：5 个 GitHub 项目源码深度分析（WorkBuddy，2026-08-07）
+
+> 用户要求我逐个研究 GitHub 上这些爬虫项目的实际源码，找到获取最全数据的方案。
+> 我已经 clone/读取了以下项目的完整核心代码，提炼出可借鉴的部分。
+
+### 一、逐项目分析
+
+#### 1. ShilongLee/Crawler（⭐最高星，FastAPI 爬虫服务器）
+- **技术路线**：asyncio + requests + MD5 签名 直调 MTOP API
+- **淘宝搜索源码**：`service/taobao/logic/search.py`
+- **核心 API**：`mtop.relationrecommend.wirelessrecommend.recommend` v=2.0
+- **签名算法**：`MD5(token + "&" + timestamp + "&" + appKey + "&" + data)`
+- **Token 来源**：从 cookie 的 `_m_h5_tk` 字段提取（`_m_h5_tk.split('_')[0]`）
+- **AppKey**：`12574478`（固定值，非你的联盟 AppKey）
+- **Host**：`https://h5api.m.taobao.com`
+- **Headers**：完整 sec-ch-ua + Referer: `https://s.taobao.com/search`
+- **数据字段**：`itemsArray` → `mainInfo.totalResults`
+- **商品详情 API**：`mtop.taobao.pcdetail.data.get` v=1.0（可拿更多字段）
+- **评价**：requests 直调，和 iokNokarl 一样的路线，会触发 RGV587
+- **可借鉴**：✅ MTOP API 参数结构、签名算法、AppKey 值、商品详情 API
+
+#### 2. iokNokarl/taobao_spider（最全字段定义）
+- **技术路线**：requests + MD5 签名 + 代理池 + 多线程
+- **核心源码**：`client.py`（签名/请求/解析）、`models.py`（数据模型）、`spider.py`（串联）
+- **数据模型（ProductItem）完整字段**：
+  ```
+  item_id, title(清理HTML), price, price_desc, real_sales,
+  procity → province + city（拆分省/市）,
+  pic_url, item_url, shop(name/url/logo/tag_text),
+  is_p4p(广告), is_tmall(天猫), service_tags(服务标签列表),
+  product_attrs(品牌/分辨率/CPU等结构化属性), brand(品牌),
+  same_count(同款数), seller_id(卖家ID), summary_tips(浏览热度)
+  ```
+- **服务标签映射表**：30+ 个 alias→中文映射（包邮、退货宝、48小时发货、花呗...）
+- **品牌提取**：从 `structuredUSPInfo` 数组中找 `propertyName == "品牌"` 的项
+- **天猫标识**：检查 `icons` 数组中是否有 `alias in ("tmallPC", "tmall")`
+- **评价**：数据最全，但 requests 直调触发 RGV587
+- **可借鉴**：✅✅ **字段提取逻辑已全部移植到 tb_search.py v2**
+
+#### 3. xiuyegege/DrissionPage_taobao_monitor_shop（多 API 监听）
+- **技术路线**：DrissionPage + page.listen（和我们一样的路线！）
+- **核心源码**：`get_datas.py`
+- **关键代码**：
+  ```python
+  self.page.listen.start("mtop.taobao.shop.")
+  # 滚动加载更多
+  for i in range(scroll_down_num):
+      self.page.scroll.down(500)
+      time.sleep(random.randint(2,4))
+      response = self.page.listen.wait(timeout=15)
+      mtop_dict = response.response.body
+  ```
+- **多 API 监听模式**：
+  ```python
+  api_patterns = [
+      'mtop.taobao.shop.simple.fetch',
+      'mtop.taobao.shop.item.list',
+      'mtop.relationrecommend.wirelessrecommend.recommend',
+      'mtop.taobao.detail.getdetail',
+  ]
+  ```
+- **数据字段**：itemId, title, itemUrl, image, vagueSold365(年销量)
+- **评价**：✅ DrissionPage page.listen 路线验证成功！多 API 监听 + 滚动加载是好思路
+- **可借鉴**：✅✅ **多 API 监听 + 滚动加载已移植到 tb_search.py v2**
+
+#### 4. CSDN 154302696（保姆级教程，实测成功）
+- **技术路线**：DrissionPage + page.listen
+- **关键代码**：
+  ```python
+  driver.listen.start('h5/mtop.relationrecommend')
+  driver.get('https://s.taobao.com/search?q=白酒')
+  orig_json = driver.listen.wait().response.body
+  ```
+- **⚠️ 关键发现**：「淘宝伪造了两个相同的请求，第一个请求的是假数据，第二个请求才是真数据」
+- **评价**：✅✅ **多包拦截逻辑已移植到 tb_search.py v2（跳过第一个假数据包）**
+
+#### 5. cxf506837/cxc（比价网站，Django + DrissionPage）
+- **技术路线**：DrissionPage + XPath 解析 HTML
+- **评价**：只有 README，源码未公开（3 commits），无法借鉴
+- **方向参考**：和我们一样用 DrissionPage 做比价，方向正确
+
+### 二、tb_search.py v2 更新内容
+
+我在 tb_search.py 中做了以下改进（都已写入代码）：
+
+| 改进点 | 来源 | 说明 |
+|--------|------|------|
+| 多包拦截 | CSDN 154302696 | 跳过第一个假数据包，等第二个真数据 |
+| 多 API 监听 | xiuyegege | 同时监听 4 个 MTOP API 模式 |
+| 品牌提取 | iokNokarl models.py | 从 structuredUSPInfo 找 propertyName=="品牌" |
+| 服务标签 | iokNokarl models.py | 30+ alias→中文映射表 |
+| 天猫标识 | iokNokarl models.py | 检查 icons 数组的 alias |
+| 省市拆分 | iokNokarl models.py | procity → province + city |
+| 滚动加载 | xiuyegege get_datas.py | 不够时滚动触发更多 API |
+| 卖家ID/同款数 | iokNokarl models.py | sellerId / sameCount |
+| 浏览热度 | iokNokarl models.py | summaryTips |
+| 图片URL | iokNokarl models.py | pic_path 前缀 https: |
+
+### 三、数据字段对比
+
+| 字段 | 旧版 tb_search | v2 新版 | 来源 |
+|------|---------------|---------|------|
+| title | ✅ | ✅ 清理HTML | iokNokarl |
+| price | ✅ | ✅ + price_desc | iokNokarl |
+| original_price | ✅ | ✅ | - |
+| sales | ✅ | ✅ realSales | iokNokarl |
+| shop | ✅ | ✅ + shop_url/logo | iokNokarl |
+| location | ❌ | ✅ province + city | iokNokarl |
+| is_ad | ✅ | ✅ isP4p | iokNokarl |
+| is_tmall | ❌ | ✅ icons alias 检测 | iokNokarl |
+| brand | ❌ | ✅ structuredUSPInfo | iokNokarl |
+| service_tags | ❌ | ✅ 30+ 映射 | iokNokarl |
+| seller_id | ❌ | ✅ | iokNokarl |
+| same_count | ❌ | ✅ | iokNokarl |
+| pic_url | ❌ | ✅ | iokNokarl |
+| item_id | ❌ | ✅ | iokNokarl |
+
+### 四、给 pi 的话
+
+1. **tb_search.py v2 已更新**，核心改进是多包拦截 + 多 API 监听 + 丰富字段
+2. **测试方式不变**：`python src/tb_search.py 石头岛`
+3. **如果 page.listen 还是拿不到数据**：
+   - 检查 `tab.listen.start()` 的参数是否匹配（淘宝可能改了 API 名）
+   - 用 F12 Network 看 s.taobao.com 实际调了什么 API，更新 `MTOP_API_PATTERNS`
+4. **如果 RGV587 出现在 page.listen 的响应里**：
+   - v2 已经加了跳过逻辑（检测到 RGV587 就跳过这个包等下一个）
+   - 如果全是 RGV587，说明浏览器态也被风控了，需要等一段时间再试
+5. **ShilongLee 的商品详情 API**（`mtop.taobao.pcdetail.data.get`）可以作为后续增强：
+   拿到 item_id 后，再调这个 API 获取详情页级别的数据（规格参数、SKU、评论数等）
+
+### 五、结论
+
+| 路线 | 代表项目 | 能拿到全量数据？ | 风控风险 | 我们的方案 |
+|------|---------|----------------|---------|-----------|
+| requests 直调 MTOP | ShilongLee, iokNokarl | ✅ 全量 | ❌ RGV587 高 | 不用 |
+| DrissionPage page.listen | xiuyegege, CSDN文章 | ✅ 全量 | ✅ 低 | ✅ 采用 |
+| DrissionPage HTML 解析 | cxf506837/cxc | ⚠️ 部分 | ✅ 低 | ✅ 备用 |
+| Chrome 扩展 | ddlpmj/taobao_pachong | ⚠️ 基础 | ✅ 低 | 不适用 |
+
+**最终路线确认**：DrissionPage page.listen（方案 A）+ HTML 解析兜底（方案 B），tb_search.py v2 已就绪。
+
+> 更新时间：2026-08-07 13:40 by WorkBuddy
+> 用法：pi 读完后拉取代码，测试 `python src/tb_search.py 石头岛`
