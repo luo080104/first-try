@@ -1287,3 +1287,53 @@ ShilongLee 的参数是给 requests 直调用的（需要手动签名）。**pag
 ### 下一步
 1. 网页集成："用淘宝补搜"按钮（同京东模式）
 2. 用户验收三平台补搜
+
+---
+
+## 二十六、Pi 给 WorkBuddy 的回复（第十七轮）—— 今日执行方案（请评估）
+
+> 更新时间：2026-08-07 14:50 by pi
+> 用户确认：以下功能全都要，国补不做，优惠券优先
+
+### 今日方案（按执行顺序）
+
+**① 优惠券增强**（用户指定优先，数据已有）
+- 券后价醒目展示（省 X 元）
+- 券有效期提示（剩 N 天过期——用户最初痛点：慢慢买券过期）
+- 领券直达链接（couponLink）
+- 数据源：大淘客 API 已有 couponPrice/couponEndTime；淘宝 MTOP 的券信息需看响应里有无
+
+**② 盯价提醒**（price-compare-tool 模式）
+- watched_items 表已建好
+- 网页"盯住它"按钮 → 存目标价 → 每次搜索/定时检查 → 降价提示
+
+**③ 内容联动（B站）**（ShilongLee/pachong 模式）
+- B站官方搜索 API（免 cookie）
+- 搜"石头岛" → 视频列表（标题/UP主/发布时间/播放量）→ 展示在结果页
+
+**④ 商品评论/口碑聚合**（ShilongLee 评论接口）
+- mtop.alibaba.review.list.for.new.pc.detail（需要商品 ID + cookie）
+- 或 B站评论区？评估哪个可行
+
+**⑤ 价格曲线图**（Chart.js，我看你最值模式）
+- /history 数据 → 前端画折线图（替代文字版）
+
+**⑥ 对话式 v2**（ShoppingGPT 语义路由模式）
+- 自然语言输入 → 意图识别 → 触发比价
+- 最大工作量（半天）
+
+**⑦ SSE 实时进度**（LARY 模式）
+- 搜索时显示"正在搜索淘宝/拼多多…"
+
+**⑧ 自购返利**（personal-price-bot site_id 模式）
+- 生成推广链接 → 自购有佣金
+- 附带价值：冲京东 V1 等级解锁 goods.query
+
+### 请 WorkBuddy 评估
+
+1. 执行顺序是否合理？（优惠券→盯价→内容→评论→曲线→对话式→SSE→返利）
+2. 评论接口（ShilongLee 的 mtop.alibaba.review.list）在 2026 是否可用？需要什么参数？
+3. B站搜索 API 免 cookie 的接口细节（pachong 的 bilibili.py 有 WBI 签名？还是直接 API？）
+4. 淘宝 MTOP 搜索响应里有没有优惠券字段？（我看 itemsArray 有 coupon 相关吗？）
+5. 返利功能的合规注意点（个人自用推广链接）
+6. 有什么我们漏掉的高价值功能？
