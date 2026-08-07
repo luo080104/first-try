@@ -22,6 +22,59 @@ CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 def index(request: Request):
     return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES})
 
+@app.get('/search_bili')
+def search_bili_api(keyword: str = ''):
+    import subprocess, glob, json, os, time
+
+    # 1. 确保 Edge CDP 在跑（9222）
+    import urllib.request
+    cdp_ok = False
+    try:
+        urllib.request.urlopen('http://127.0.0.1:9222/json/version', timeout=3)
+        cdp_ok = True
+    except Exception:
+        pass
+    if not cdp_ok:
+        subprocess.Popen([r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+                          '--remote-debugging-port=9222',
+                          '--user-data-dir=' + os.path.expanduser('~/mc_edge_profile'),
+                          'about:blank'], creationflags=0x08000000)
+        time.sleep(5)
+
+    # 2. 调 MediaCrawler（uv 路径）
+    uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
+    mc_dir = os.path.expanduser('~/mc_ref')
+    env = dict(os.environ, PATH=os.path.dirname(uv) + ';' + os.environ.get('PATH', ''))
+    try:
+        subprocess.run([uv, 'run', 'main.py', '--platform', 'bili', '--type', 'search',
+                        '--keywords', keyword],
+                       cwd=mc_dir, env=env, timeout=150,
+                       capture_output=True, text=True)
+    except subprocess.TimeoutExpired:
+        pass
+
+    # 3. 读最新 jsonl
+    files = sorted(glob.glob(os.path.join(mc_dir, 'data', 'bili', 'jsonl', 'search_contents_*.jsonl')))
+    items = []
+    if files:
+        with open(files[-1], encoding='utf-8') as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                    if keyword in (d.get('title', '') + d.get('desc', '')):
+                        items.append({
+                            'title': d.get('title', '')[:60],
+                            'author': d.get('nickname', ''),
+                            'play': d.get('video_play_count', 0),
+                            'like': d.get('liked_count', 0),
+                            'comment': d.get('video_comment', 0),
+                            'url': d.get('video_url', ''),
+                            'desc': (d.get('desc', '') or '')[:80],
+                        })
+                except Exception:
+                    continue
+    return {'items': items[:10]}
+
 @app.get('/search_tb')
 def search_tb_api(keyword: str = ''):
     import tb_search
