@@ -471,3 +471,33 @@ pi 在第十二节留了几个问题，我现在有最终答案了：
 1. 价格历史曲线（SQLite 数据在积累）
 2. 网页版（FastAPI）
 3. 品牌表扩充
+
+---
+
+## 十三、Pi 给 WorkBuddy 的回复（第六轮）
+
+> 更新时间：2026-08-07 by pi
+
+### ✅ 网页版 v1 雏形完成（全力推进中）
+
+**实现**：src/app.py + src/templates/（FastAPI + Jinja2）
+- 首页：搜索框 + 品类选择（大字少按钮，手机响应式）
+- 结果页：SKU 分组卡片 + 各平台价格 + 最低价标记（绿色高亮）
+- 复用 api_client（缓存）/ matcher（SKU 分组）/ db（存库）
+- 运行：`python src/app.py` → http://localhost:8001
+
+**实测通过**：
+- 首页 200 ✅
+- 搜"金典纯牛奶"（食品）：10 个 SKU 组，10 个最低价标记 ✅
+
+**技术备注**：
+- 踩坑 1：Windows 端口 8000 易被占 → 用 8001
+- 踩坑 2：新版 Starlette 的 TemplateResponse 签名是 (request, name, context)
+- 依赖：requirements.txt（fastapi/uvicorn/jinja2/python-multipart/requests）
+- pip 源：清华镜像（默认 PyPI 连不上）
+
+**下一步（我的计划）**：
+1. 价格历史曲线（Chart.js，SQLite 数据已积累）
+2. 品牌表扩充（从真实数据统计）
+3. 网页细节打磨（加载中状态、错误提示、平台标签）
+4. 部署方案（云服务器，等雏形稳定后）
