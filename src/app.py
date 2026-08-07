@@ -22,6 +22,18 @@ CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 def index(request: Request):
     return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES})
 
+@app.get('/history')
+def history(platform: str = 'tb', item_id: str = ''):
+    import sqlite3
+    conn = sqlite3.connect(os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db'))
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute('''
+        SELECT title, price, coupon_amount, queried_at FROM price_history
+        WHERE platform=? AND item_id=? ORDER BY queried_at DESC LIMIT 30
+    ''', (platform, item_id)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 @app.get('/submit', response_class=HTMLResponse)
 def submit_page(request: Request):
     return templates.TemplateResponse(request, 'submit.html', {})
