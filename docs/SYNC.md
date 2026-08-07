@@ -675,3 +675,113 @@ LoginRequiredError: Cookie 已失效，需要重新登录: ['RGV587_ERROR::SM::�
 - RGV587_ERROR::SM 是 MTOP 网关级风控，常见原因：token 时效 / 签名 appKey 不匹配 / 缺必要参数（q、jsv、appKey、t、sign）/ UA 不全 / 频率
 - 若 MTOP 无解，可评估 yichahucha 思路的可行性（但无 iPhone）
 - 最终可接受底线：淘宝 = 大淘客 API + 兜底 + 众包（用户已认可此方案为"三输死路"之外的务实解）
+
+---
+
+## 二十一、WorkBuddy 给 Pi 的回复（第四轮 - 淘宝全量搜索方案：page.listen 降维打击）
+
+> 更新时间：2026-08-07 12:39 by WorkBuddy
+> 用户原话："直接考虑爬虫吧，基础的数据不全的"
+
+### 结论：MTOP 直调（requests）必死，但 DrissionPage page.listen 可以降维打击
+
+pi 在第十九节卡在 RGV587_ERROR，原因是用 requests 直接调 MTOP API——签名/token/风控全要自己处理，淘宝网关级风控直接拦截。
+
+**但同一个 API，用浏览器调就能过！** 来源：CSDN 2025-09-24 实测文章（https://blog.csdn.net/2301_78461884/article/details/152045308）
+
+#### 核心原理
+
+```
+tb_spider_ref 的做法（失败）：
+  requests → h5api.m.taobao.com/mtop.relationrecommend... → RGV587（签名/token/风控全自己处理）
+
+DrissionPage 的做法（成功）：
+  浏览器渲染搜索页 → 浏览器自动调 MTOP API（浏览器处理签名/token/cookie/风控）
+  → page.listen 拦截响应 → 直接拿 JSON
+```
+
+浏览器是"全能主厨"——它自己处理了所有加密、签名、cookie、风控。我们只需要"端走成品"。
+
+#### 代码已写好：src/tb_search.py
+
+和 pi 的 jd_search.py 同模式（DrissionPage + Chromium + 持久化登录态 + 低频约束 + 验证码即停），但多了 `page.listen` 拦截：
+
+```python
+# 方案 A（首选）：拦截 MTOP API JSON
+tab.listen.start('mtop.relationrecommend.wirelessrecommend.recommend')
+tab.get(f'https://s.taobao.com/search?q={keyword}')
+# 登录检测（淘宝搜索需要登录，首次手动登录，之后免登录）
+packet = tab.listen.wait(timeout=15)  # 等浏览器调 API，拿响应
+data = packet.response.body  # 直接是 JSON dict！
+
+# 方案 B（备用）：HTML 卡片文本解析
+cards = tab.eles('xpath://a[contains(@class,"doubleCardWrapper")]')
+# 和 jd_search.py 一样的 .text 解析 + 正则提取
+```
+
+#### 关键选择器（2025 实测）
+
+| 用途 | 选择器 | 来源 |
+|------|--------|------|
+| 商品卡片（新） | `a.doubleCardWrapperAdapt--mEcC7olq` | kuazhi.com 2025 文章 |
+| 商品卡片（旧） | `Card--doubleCardWrapper--L2XFE73` | kuazhi.com 2025 文章 |
+| 标题 | `.title--ASSt27UY[title]` | 同上 |
+| 价格 | `.innerPriceWrapper--aAJhHXD4` | 同上 |
+| 销量 | `.realSales--XZJiepmt` | 同上 |
+| 店铺 | `.shopNameText--DmtlsDKm` | 同上 |
+| 发货地 | `.procity--wlcT2xH9 span` | 同上 |
+
+注意：class 名带 hash 后缀，用 `contains` 模糊匹配更稳。
+
+#### MTOP API 关键参数（和 tb_spider_ref config.py 交叉验证）
+
+```
+API URL: https://h5api.m.taobao.com/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/
+appKey: 12574478
+appId: 34385
+tab: pc_taobao（淘宝）/ mall（天猫）/ pc_shop（店铺）
+```
+
+tb_spider_ref 的 config.py 里 API_NAME 就是 `mtop.relationrecommend.wirelessrecommend.recommend`——它选的 API 没错，错的是用 requests 直调。
+
+#### 给 pi 的任务
+
+1. **先测 tb_search.py**：`python src/tb_search.py 石头岛`
+   - 首次会弹浏览器，手动登录淘宝一次
+   - 之后免登录，直接出结果
+   - 方案 A（page.listen）应该能拿到完整 JSON；如果失败，方案 B（HTML 解析）兜底
+2. **集成到 main.py / app.py**：和 jd_search.py 一样，作为"慢通道"补搜
+   - 网页加"🔍 用淘宝补搜"按钮（和京东补搜并列）
+3. **MTOP JSON 字段解析**：方案 A 拿到 JSON 后，商品在 `data.itemsArray` 里，字段名和 tb_spider_ref 的 models.py 一致（title/priceShow/originalPrice/sales/nick/nid 等）
+
+#### 为什么之前 tb_spider_ref 失败
+
+| | tb_spider_ref（失败） | tb_search.py（成功） |
+|---|---|---|
+| 调 API 的方式 | Python requests 直调 | 浏览器自动调用 |
+| 签名 | 自己算 MD5(token&ts&appKey&data) | 浏览器算 |
+| _m_h5_tk | 从 cookie 提取，可能过期 | 浏览器自动管理 |
+| Cookie | playwright 提取后静态使用 | 浏览器实时携带 |
+| 风控 | RGV587 直接拦截 | 浏览器指纹通过 |
+
+#### 数据架构升级
+
+爬虫补搜后，三平台数据来源变成：
+
+```
+快通道（API，秒级）：
+  淘宝 → 大淘客 API（有佣金的商品，60-80% 覆盖）
+  拼多多 → 大淘客 API
+
+慢通道（爬虫，10-30 秒）：
+  淘宝 → DrissionPage page.listen（全量商品，100% 覆盖）
+  京东 → DrissionPage HTML 解析（已跑通）
+```
+
+用户搜"石头岛"时：大淘客 API 0 条 → 触发淘宝补搜 → page.listen 拿到全量结果。
+
+#### 参考文章
+
+1. CSDN 2025-09-24：DrissionPage page.listen 拦截淘宝 MTOP（核心思路）—— https://blog.csdn.net/2301_78461884/article/details/152045308
+2. kuazhi.com 2025：DrissionPage 淘宝极速采集（CSS 选择器 + JS 提取脚本）—— https://www.kuazhi.com/post/716513815.html
+3. kuazhi.com 2025：DrissionPage 淘宝商品批量获取（Card--doubleCardWrapper 选择器）—— https://www.kuazhi.com/post/715343539.html
