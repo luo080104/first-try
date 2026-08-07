@@ -52,7 +52,7 @@ def get(api_url: str, biz_params: dict) -> dict:
         return json.loads(r.read().decode('utf-8'))
 
 def search_goods(keywords: str, category: str = None, page: int = 1, size: int = 20) -> list:
-    """商品搜索，返回解析后的商品列表"""
+    """淘宝系商品搜索（大淘客），返回解析后的商品列表"""
     params = {'keyWords': keywords, 'pageId': str(page), 'pageSize': str(size)}
     if category and category in CATEGORY_CIDS:
         params['cids'] = CATEGORY_CIDS[category]
@@ -60,10 +60,44 @@ def search_goods(keywords: str, category: str = None, page: int = 1, size: int =
     if result.get('code') != 0:
         print(f'⚠️ API 错误: {result.get("msg")}')
         return []
-    return parse_goods_list(result.get('data', {}).get('list', []))
+    return parse_goods_list(result.get('data', {}).get('list', []), platform='tb')
 
-def parse_goods_list(raw_list: list) -> list:
-    """解析大淘客原始字段 → 统一结构"""
+def search_pdd(keywords: str, page: int = 1, size: int = 20) -> list:
+    """拼多多商品搜索（大淘客 dels/pdd/goods/search）"""
+    params = {'keyword': keywords, 'page': str(page), 'pageSize': str(size)}
+    result = get('dels/pdd/goods/search', params)
+    if result.get('code') != 0:
+        print(f'⚠️ PDD API 错误: {result.get("msg")}')
+        return []
+    data = result.get('data', {})
+    if isinstance(data, dict):
+        lst = data.get('list', data.get('goodsList', []))
+    elif isinstance(data, list):
+        lst = data
+    else:
+        lst = []
+    return parse_pdd_list(lst)
+
+def parse_pdd_list(raw_list: list) -> list:
+    """解析拼多多返回字段 → 统一结构"""
+    items = []
+    for g in raw_list:
+        items.append({
+            'goodsId': g.get('goodsSign') or g.get('goods_id'),
+            'title': g.get('goodsName') or g.get('goods_name', ''),
+            'actualPrice': g.get('minGroupPrice') or g.get('min_on_sale_group_price', 0) / 100,
+            'originalPrice': g.get('marketPrice'),
+            'couponPrice': (g.get('couponDiscount') or g.get('coupon_discount', 0)) / 100,
+            'monthSales': g.get('salesTip') or g.get('sales_tip', 0),
+            'shopName': g.get('mallName') or g.get('mall_name', ''),
+            'brand': g.get('brandName', ''),
+            'platform': 'pdd',
+            'url': None,
+        })
+    return items
+
+def parse_goods_list(raw_list: list, platform: str = 'tb') -> list:
+    """解析大淘客淘宝系字段 → 统一结构"""
     items = []
     for g in raw_list:
         items.append({
@@ -75,7 +109,7 @@ def parse_goods_list(raw_list: list) -> list:
             'monthSales': g.get('monthSales', 0),
             'shopName': g.get('shopName', ''),
             'brand': g.get('brandName') or g.get('brand', ''),  # brandName 才是品牌名，brand=1/0 是是否品牌商品
-            'platform': 'tb',  # 大淘客默认淘宝系；阶段 2 扩展多平台
+            'platform': platform,
             'url': g.get('itemLink'),
         })
     return items
