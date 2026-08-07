@@ -27,6 +27,9 @@
                    border-radius: 24px; min-height: 44px; display: inline-flex; align-items: center; }
         .quick .q1 { background: #e8f7ee; color: #27ae60; }
         .quick .q2 { background: #eaf2fb; color: #0984e3; }
+            .sub-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .sub-btns .btn { flex: 1; min-width: 140px; }
+        .loading-tip { display: none; text-align: center; font-size: 15px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -62,6 +65,99 @@
                 document.getElementById('cat').value = el.dataset.cat;
             });
         });
+
+        function tbSearch() {
+            var btn = document.getElementById('tb-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            document.getElementById('tb-loading').style.display = 'block';
+            fetch('/search_tb?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()))
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('tb-loading').style.display = 'none';
+                    var box = document.getElementById('jd-results');
+                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>'; }
+                    else {
+                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' + data.items.length + ' 条）</span></div>';
+                        data.items.forEach(function(it) {
+                            html += '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
+                                '<div class="info"><div class="title">' + (it.is_p4p ? '【广告】' : '') + (it.is_tmall ? '【天猫】' : '') + it.title + '</div>' +
+                                '<div class="shop">' + (it.shop_name || '') + ' ・ ' + (it.province || '') + ' ・ ' + (it.real_sales || '') + '</div></div>' +
+                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
+                        });
+                        box.innerHTML = html + '</div>';
+                    }
+                    btn.disabled = false;
+                })
+                .catch(() => { document.getElementById('tb-loading').style.display = 'none'; btn.disabled = false; });
+        }
+        function jdSearch() {
+            var btn = document.getElementById('jd-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            document.getElementById('jd-loading').style.display = 'block';
+            fetch('/search_jd?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()), {timeout: 60000})
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('jd-loading').style.display = 'none';
+                    var box = document.getElementById('jd-results');
+                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">京东没搜到或遇到验证码</div>'; }
+                    else {
+                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 京东结果（' + data.items.length + ' 条）</span></div>';
+                        data.items.forEach(function(it) {
+                            html += '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
+                                '<div class="info"><div class="title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div>' +
+                                '<div class="shop">' + (it.shop || '') + ' ・ ' + (it.sales || '') + '</div></div>' +
+                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
+                        });
+                        box.innerHTML = html + '</div>';
+                    }
+                    btn.disabled = false;
+                })
+                .catch(() => { document.getElementById('jd-loading').style.display = 'none'; btn.disabled = false; });
+        }
+        function biliSearch() {
+            var btn = document.getElementById('bili-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            document.getElementById('bili-loading').style.display = 'block';
+            fetch('/search_bili?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()), {timeout: 180000})
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('bili-loading').style.display = 'none';
+                    var box = document.getElementById('jd-results');
+                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">没搜到相关内容</div>'; }
+                    else {
+                        var html = '<div class="group"><div class="group-head"><span class="sku">📺 内容联动（' + data.items.length + ' 条）</span></div>';
+                        data.items.forEach(function(it) {
+                            var isBili = it.type === 'bili';
+                            var isXhs = it.type === 'xhs';
+                            var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
+                            var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
+                            var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
+                                              : (isXhs ? ('作者: ' + it.author + ' ・ 赞 ' + it.like)
+                                                       : ('作者: ' + it.author + ' ・ 吧: ' + it.desc));
+                            if (it.score) {
+                                var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
+                                meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
+                                if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
+                                    meta += '<br>👎 负面 ' + it.sent.neg + ' 条' + (it.sent.ad ? ' ⚠️软广嫌疑 ' + it.sent.ad + ' 条' : '');
+                                    if (it.sent.neg > 3) meta += ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
+                                }
+                                if (it.flags && it.flags.length) meta += '<br><span style="color:#95a5a6">' + it.flags.join(' / ') + '</span>';
+                            }
+                            html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
+                                '<div class="info"><div class="title">' + it.title + '</div>' +
+                                '<div class="shop">' + meta + '</div></div>' +
+                                (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">' + (isBili ? '观看 ↗' : '帖子 ↗') + '</a>' : '') + '</div>';
+                        });
+                        box.innerHTML = html + '</div>';
+                    }
+                    btn.disabled = false;
+                })
+                .catch(() => { document.getElementById('bili-loading').style.display = 'none'; btn.disabled = false; });
+        }
+
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();
             if (!kw) { alert('请输入商品名称'); return; }
@@ -103,7 +199,17 @@
         function renderResult(d, box) {
             var html = '<div class="stat">淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' +
                 (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ' + d.total + ' 条候选</div>';
-            if (!d.groups.length) { html += '<div class="empty">没有搜到结果</div>'; }
+            if (!d.groups.length) {
+                html += '<div class="empty">没有搜到结果（该商品可能未设置推广佣金）</div>';
+                html += '<div class="sub-btns" style="margin-top:20px">' +
+                    '<button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">🛒 用淘宝补搜</button>' +
+                    '<button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">🔍 用京东补搜</button>' +
+                    '<button onclick="biliSearch()" id="bili-btn" class="btn btn-bili">📺 内容联动</button></div>';
+                html += '<div id="tb-loading" class="loading-tip" style="color:#ff5000">正在淘宝搜索…</div>';
+                html += '<div id="jd-loading" class="loading-tip" style="color:#e4393c">正在京东搜索…</div>';
+                html += '<div id="bili-loading" class="loading-tip" style="color:#00a1d6">正在搜索相关内容…</div>';
+                html += '<div id="jd-results"></div>';
+            }
             d.groups.forEach(function(g) {
                 html += '<div class="group"><div class="group-head"><span class="sku">📦 ' + g.key + '</span><span class="count">' + g.count + ' 个候选</span></div>';
                 g.platforms.forEach(function(it) {
