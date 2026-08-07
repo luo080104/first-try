@@ -115,3 +115,37 @@ def find_manual_prices(keyword, limit=10):
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+# ========== 盯价功能 ==========
+
+def add_watch(title, platform, item_id, current_price, target_price):
+    """添加盯价"""
+    conn = get_conn()
+    cur = conn.execute('''
+        INSERT INTO watched_items (title, platform, item_id, current_price, target_price, is_active)
+        VALUES (?,?,?,?,?,1)
+    ''', (title, platform, item_id, current_price, target_price))
+    conn.commit()
+    conn.close()
+    return cur.lastrowid
+
+def list_watches():
+    """盯价列表（含最近价格历史）"""
+    conn = get_conn()
+    cur = conn.execute('''
+        SELECT id, title, platform, item_id, current_price, target_price, is_active, created_at
+        FROM watched_items ORDER BY created_at DESC LIMIT 20
+    ''')
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def check_watches():
+    """检查盯价是否达标（当前价 <= 目标价）"""
+    watches = list_watches()
+    hits = []
+    for w in watches:
+        if w.get('current_price') and w.get('target_price'):
+            if w['current_price'] <= w['target_price']:
+                hits.append(w)
+    return hits

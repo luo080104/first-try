@@ -14,7 +14,7 @@ import json as _json
 
 from api_client import search_goods, search_pdd, value_score
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
 
 app = FastAPI(title='购物助手')
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), 'templates'))
@@ -119,6 +119,21 @@ def submit_post(request: Request,
     init_db()
     save_manual_price(keyword.strip(), title.strip(), platform, shop_name.strip(), price, url.strip(), note.strip())
     return templates.TemplateResponse(request, 'submit.html', {'success': True, 'keyword': keyword})
+
+@app.post('/watch')
+def watch_add(title: str = Form(...), platform: str = Form(''), item_id: str = Form(''),
+              current_price: float = Form(...), target_price: float = Form(...)):
+    init_db()
+    add_watch(title[:80], platform, item_id, current_price, target_price)
+    return {'ok': True}
+
+@app.get('/watches', response_class=HTMLResponse)
+def watches_page(request: Request):
+    init_db()
+    rows = list_watches()
+    hits = check_watches()
+    return templates.TemplateResponse(request, 'watches.html',
+                                      {'watches': rows, 'hits': hits})
 
 @app.get('/search_sse')
 async def search_sse(keyword: str = '', category: str = ''):

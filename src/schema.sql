@@ -48,7 +48,11 @@ CREATE INDEX IF NOT EXISTS idx_price_item ON price_history(platform, item_id);
 -- 盯价表（用户关注的商品 + 目标价，降价推送）
 CREATE TABLE IF NOT EXISTS watched_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sku_id INTEGER NOT NULL REFERENCES skus(id),
+    sku_id INTEGER REFERENCES skus(id),     -- 可为空（未匹配 SKU）
+    title TEXT,                             -- 商品标题
+    platform TEXT,                          -- 平台
+    item_id TEXT,                           -- 平台商品 ID
+    current_price REAL,                     -- 盯价时的价格
     target_price REAL,                      -- 目标价（低于此价推送）
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now','localtime'))

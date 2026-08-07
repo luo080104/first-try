@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>盯价清单 - 购物比价助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+               background: #f5f6fa; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px 16px 60px; }
+        .top { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .back { font-size: 24px; text-decoration: none; color: #636e72;
+                border: 2px solid #dfe6e9; border-radius: 10px; padding: 4px 14px; }
+        .top h1 { font-size: 20px; color: #2d3436; flex: 1; }
+        .hit { background: #e8f7ee; border: 1.5px solid #27ae60; border-radius: 12px;
+               padding: 14px; margin-bottom: 14px; font-size: 14px; color: #1e8449; line-height: 1.7; }
+        .card { background: #fff; border-radius: 14px; padding: 16px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 12px; }
+        .card .t { font-size: 15px; color: #2d3436; margin-bottom: 6px; }
+        .card .m { font-size: 13px; color: #636e72; line-height: 1.8; }
+        .card .m b { color: #d63031; }
+        .empty { text-align: center; color: #b2bec3; padding: 40px 0; }
+        .tip { background: #eaf2fb; border: 1px solid #b3d4f5; border-radius: 10px;
+               padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #2c6fbb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top">
+            <a href="/" class="back">←</a>
+            <h1>🎯 盯价清单</h1>
+        </div>
+
+        {% if hits %}
+            {% for h in hits %}
+            <div class="hit">✅ 降价提醒：<b>{{ h.title }}</b><br>
+                当前 ¥{{ h.current_price }} ≤ 目标价 ¥{{ h.target_price }} —— 可以下手了！</div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="tip">💡 在比价结果里点「🎯 盯住」就能添加盯价。<br>
+            每次搜索会自动检查是否降价达标（自动定时检查需部署后开启）。</div>
+
+        {% if watches %}
+            {% for w in watches %}
+            <div class="card">
+                <div class="t">{{ w.title }}</div>
+                <div class="m">
+                    平台：{{ w.platform or '-' }}<br>
+                    盯价时：¥{{ w.current_price }} → 目标价：<b>¥{{ w.target_price }}</b><br>
+                    添加于：{{ w.created_at[:16] }}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty">还没有盯价商品<br>去比价结果里点「🎯 盯住」吧</div>
+        {% endif %}
+    </div>
+</body>
+</html>
