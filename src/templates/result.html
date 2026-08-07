@@ -128,11 +128,16 @@
                 .then(r => r.json())
                 .then(data => {
                     if (!data.length) { box.innerHTML = '暂无历史记录（价格会随每次查询自动积累）'; return; }
-                    var rows = data.slice(0, 10).map(d =>
+                    var summary = data[data.length - 1].summary;
+                    var diff = summary.current - summary.lowest;
+                    var advice = diff <= 0 ? '✅ 当前价 = 历史最低，可以买' :
+                                 '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
+                    var rows = data.slice(0, 8).map(d =>
                         '<div>' + d.queried_at.slice(0, 16) + ' → ¥' + d.price +
                         (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '') + '</div>'
                     ).join('');
-                    box.innerHTML = rows;
+                    box.innerHTML = '<div style="color:#d63031;font-weight:600;margin-bottom:4px">' +
+                        '历史最低 ¥' + summary.lowest.toFixed(2) + '（共记录 ' + summary.count + ' 次）' + advice + '</div>' + rows;
                 })
                 .catch(() => box.innerHTML = '加载失败');
         }

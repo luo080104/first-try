@@ -32,7 +32,12 @@ def history(platform: str = 'tb', item_id: str = ''):
         WHERE platform=? AND item_id=? ORDER BY queried_at DESC LIMIT 30
     ''', (platform, item_id)).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    result = [dict(r) for r in rows]
+    if result:
+        prices = [r['price'] for r in result]
+        result.append({'summary': {'lowest': min(prices), 'current': result[0]['price'],
+                                   'count': len(result)}})
+    return result
 
 @app.get('/submit', response_class=HTMLResponse)
 def submit_page(request: Request):
