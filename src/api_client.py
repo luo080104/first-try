@@ -159,7 +159,7 @@ def parse_pdd_list(raw_list: list) -> list:
             'title': g.get('goodsName') or g.get('goods_name', ''),
             'actualPrice': g.get('minGroupPrice') or g.get('min_on_sale_group_price', 0) / 100,
             'originalPrice': g.get('marketPrice'),
-            'couponPrice': (g.get('couponDiscount') or g.get('coupon_discount', 0)) / 100,
+            'coupon_amount': (g.get('couponDiscount') or g.get('coupon_discount', 0)) / 100,
             'monthSales': g.get('salesTip') or g.get('sales_tip', 0),
             'shopName': g.get('mallName') or g.get('mall_name', ''),
             'brand': g.get('brandName', ''),
@@ -177,12 +177,15 @@ def parse_goods_list(raw_list: list, platform: str = 'tb') -> list:
             'title': g.get('dtitle') or g.get('title', ''),
             'actualPrice': g.get('actualPrice', 0),
             'originalPrice': g.get('originalPrice'),
-            'couponPrice': g.get('couponPrice', 0),
+            'coupon_amount': g.get('couponPrice', 0),
             'monthSales': g.get('monthSales', 0),
             'shopName': g.get('shopName', ''),
             'brand': g.get('brandName') or g.get('brand', ''),  # brandName 才是品牌名，brand=1/0 是是否品牌商品
             'platform': platform,
             'url': g.get('itemLink'),
+            'coupon_end': g.get('couponEndTime'),
+            'coupon_link': g.get('couponLink'),
+            'coupon_cond': g.get('couponConditions'),
         })
     return items
 

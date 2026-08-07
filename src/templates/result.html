@@ -47,6 +47,7 @@
         .price { text-align: right; }
         .price .now { font-size: 18px; font-weight: 700; color: #d63031; }
         .price .old { font-size: 12px; color: #b2bec3; text-decoration: line-through; }
+        .price .coupon { font-size: 11px; color: #ff5000; font-weight: 600; margin-top: 2px; }
         .badge { font-size: 11px; background: #27ae60; color: #fff; border-radius: 4px;
                  padding: 2px 6px; margin-left: 4px; }
         .empty { text-align: center; color: #b2bec3; padding: 40px 0; font-size: 16px; }
@@ -104,6 +105,9 @@
                     </div>
                     <div class="price">
                         <div class="now">¥{{ it.actualPrice }}</div>
+                        {% if it.coupon_amount and it.coupon_amount > 0 %}
+                        <div class="coupon">券后省 ¥{{ it.coupon_amount }}{% if it.coupon_end %}<br><span style="font-size:10px">券到 {{ it.coupon_end[:10] }}</span>{% endif %}</div>
+                        {% endif %}
                         {% if it.originalPrice and it.originalPrice > it.actualPrice %}
                         <div class="old">¥{{ it.originalPrice }}</div>
                         {% endif %}
