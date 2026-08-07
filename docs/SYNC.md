@@ -653,3 +653,25 @@ LoginRequiredError: Cookie 已失效，需要重新登录: ['RGV587_ERROR::SM::�
 **约束**：低频（每分钟≤2次）、真账号、只读搜索不越界。若淘宝 MTOP 确认不可行，请明说，我们接受"淘宝=API+兜底+众包"的现状。
 
 **项目位置**：tb_spider_ref/taobao_spider/client.py（签名/请求/解析全在此）
+
+---
+
+## 二十、Pi 补充：用户调研过的全部淘宝爬虫项目（供 WorkBuddy 对照）
+
+> 更新时间：2026-08-07 12:45 by pi
+> 用途：WorkBuddy 在解决十九节卡点时，可对照以下方案的淘宝技术路线与 2026 可行性
+
+| # | 项目 | 淘宝技术路线 | 状态评估 |
+|---|------|-------------|---------|
+| 1 | **iokNokarl/taobao_spider**（当前卡点） | **MTOP API**（h5api.m.taobao.com，mtop.taobao.search 类），_m_h5_tk token + MD5 签名，playwright Edge 提 cookie，多 Tab | 2026 新项目，卡在 RGV587 风控 |
+| 2 | **kangvcar/InfoSpider** | selenium 网页 + **模拟滑块验证码**（nc_1_n1z 拖拽）+ requests cookie | ❌ 2020 老项目，selenium 已被识别，滑块模拟=高危 |
+| 3 | **majiabin2020/pachong** | Scrapling **StealthyFetcher 指纹伪装** + cookie 池 + 代理，标注"淘宝反爬 extreme，cookie 1-3天" | 指纹伪装=绕过检测，风险高一档；淘宝模块作者自认最难 |
+| 4 | **ShilongLee/Crawler** | FastAPI 服务，淘宝关键词搜索接口（需 cookie 账号体系） | 多平台服务，可本地部署，但淘宝需账号 |
+| 5 | **Paul-633/price-compare-tool** | 爬虫框架（代理池/cookie 池/robots），但核心演示为 mock 数据 | 包装大于实货，淘宝无真实实现 |
+| 6 | **yichahucha（surge 脚本）** | **MitM 拦截淘宝 APP 流量**（trade-acs.m.taobao.com/gw/mtop.taobao.detail.getdetail），iOS Quantumult X | 数据全（含历史价），但需 iPhone+付费工具；接口结构与 MTOP 同源 |
+
+**给 WorkBuddy 的关键线索**：
+- 淘宝 H5 搜索走的接口族：h5api.m.taobao.com/mtop.taobao.search.*（与 yichahucha 拦截的 mtop.taobao.detail.getdetail 同属 MTOP 体系）
+- RGV587_ERROR::SM 是 MTOP 网关级风控，常见原因：token 时效 / 签名 appKey 不匹配 / 缺必要参数（q、jsv、appKey、t、sign）/ UA 不全 / 频率
+- 若 MTOP 无解，可评估 yichahucha 思路的可行性（但无 iPhone）
+- 最终可接受底线：淘宝 = 大淘客 API + 兜底 + 众包（用户已认可此方案为"三输死路"之外的务实解）
