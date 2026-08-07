@@ -15,6 +15,79 @@ import json as _json
 
 from api_client import search_goods, search_pdd, value_score
 from llm_parse import parse_intent
+
+def read_content_items(keyword: str) -> dict:
+    """读内容联动数据（jsonl 缓存，秒回）——B站/贴吧/小红书均衡 10 条 + 评分 + 套路检测"""
+    import glob
+    mc_dir = os.path.expanduser('~/mc_ref')
+    def read_jsonl(plat):
+        out = []
+        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', 'search_contents_*.jsonl')))
+        if files:
+            with open(files[-1], encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        d = json.loads(line)
+                        t = d.get('title', '') or d.get('content', '') or d.get('desc', '') or ''
+                        tl = t.lower()
+                        if keyword in t or (keyword in ('石头岛', 'stone island') and ('石头岛' in t or 'stone island' in tl or 'stoneisland' in tl)):
+                            out.append((d, plat))
+                    except Exception:
+                        continue
+        return out
+    cached = read_jsonl('bili') + read_jsonl('tieba') + read_jsonl('xhs')
+    by_type = {'bili': [], 'tieba': [], 'xhs': []}
+    for d, plat in cached:
+        if plat in by_type and len(by_type[plat]) < 10:
+            by_type[plat].append((d, plat))
+    items = []
+    for d, plat in (by_type['bili'] + by_type['tieba'] + by_type['xhs']):
+        if plat == 'bili':
+            items.append({'type': 'bili', 'title': (d.get('title','') or '')[:60],
+                          'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
+                          'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
+                          'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80],
+                          'content_id': str(d.get('video_id','')), 'pub_ts': d.get('create_time','')})
+        elif plat == 'tieba':
+            items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
+                          'author': d.get('author',''), 'play': 0, 'like': 0,
+                          'comment': d.get('comment_count',0), 'url': d.get('url',''),
+                          'desc': d.get('tieba_name',''),
+                          'content_id': str(d.get('note_id','')), 'pub_ts': d.get('publish_time','')})
+        else:
+            items.append({'type': 'xhs', 'title': (d.get('title','') or '')[:60],
+                          'author': d.get('nickname',''), 'play': 0,
+                          'like': d.get('liked_count',0), 'comment': d.get('comment_count',0),
+                          'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60],
+                          'content_id': str(d.get('note_id','')), 'pub_ts': d.get('time','')})
+    for it in items:
+        sc = score_content(it, keyword)
+        it['score'] = sc['score']
+        it['flags'] = sc['flags']
+        it['sent'] = sc['sentiment']
+    trap = detect_trap(keyword)
+    result = {'items': items[:30]}
+    if trap.get('has_trap') or trap.get('has_fake_original'):
+        result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
+    return result
+
+def search_taobao_full(keyword: str) -> list:
+    """淘宝全量搜索（慢通道，浏览器），失败返回空"""
+    try:
+        import tb_search
+        return tb_search.search_taobao(keyword, max_items=8)
+    except Exception as e:
+        print(f'[tb_full] 失败: {str(e)[:80]}')
+        return []
+
+def search_jd_full(keyword: str) -> list:
+    """京东全量搜索（慢通道，浏览器），失败返回空"""
+    try:
+        import jd_search
+        return jd_search.search_jd(keyword, max_items=8)
+    except Exception as e:
+        print(f'[jd_full] 失败: {str(e)[:80]}')
+        return []
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
@@ -232,14 +305,27 @@ async def search_sse(keyword: str = '', category: str = ''):
             if search_kw != keyword or search_cat != category:
                 yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
             keyword, category = search_kw, search_cat
-            # 并行工具调用（教材：无依赖子任务并行执行）
+            # 快通道：API 并行（教材：无依赖子任务并行执行）
             yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多...'})
             tb_items, pdd_items = await asyncio.gather(
                 asyncio.to_thread(search_goods, keyword, category or None),
                 asyncio.to_thread(search_pdd, keyword),
             )
-            yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条，正在 SKU 分组...'})
             all_items = tb_items + pdd_items
+
+            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东（用户要求：默认所有，不分平台）
+            slow_items = []
+            if len(all_items) < 5:
+                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东）...'})
+                tb_full, jd_full = await asyncio.gather(
+                    asyncio.to_thread(search_taobao_full, keyword),
+                    asyncio.to_thread(search_jd_full, keyword),
+                )
+                slow_items = tb_full + jd_full
+                all_items = tb_items + pdd_items + slow_items
+                yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
+            else:
+                yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条，正在 SKU 分组...'})
 
             init_db()
             groups = []
@@ -277,10 +363,12 @@ async def search_sse(keyword: str = '', category: str = ''):
                 save_search_result(conn, it, category or '未分类')
             conn.close()
 
+            content = await asyncio.to_thread(read_content_items, keyword)
             yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                        'groups': groups, 'total': len(all_items),
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
-                       'manual_count': len(manual_items)})
+                       'manual_count': len(manual_items), 'content': content,
+                       'slow_count': len(slow_items)})
         except Exception as e:
             yield sse({'type': 'error', 'msg': str(e)[:200]})
 
