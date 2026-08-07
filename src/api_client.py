@@ -193,3 +193,16 @@ if __name__ == '__main__':
     print(f'「{kw}」返回 {len(items)} 条：')
     for i, it in enumerate(items[:5], 1):
         print(f'  {i}. {it["title"][:35]} | ¥{it["actualPrice"]} | 券¥{it["couponPrice"]} | 月销{it["monthSales"]}')
+
+
+def value_score(item: dict) -> float:
+    """性价比评分（借鉴 price-compare-tool 公式，用真实数据）
+    销量权重 0.4 + 价格权重 0.6，销量越高价越低分越高"""
+    try:
+        sales = float(item.get('monthSales', 0) or 0)
+        price = float(item.get('actualPrice', 0) or 0)
+    except (TypeError, ValueError):
+        sales, price = 0, 0
+    sales_score = min(sales / 10000, 1.0)
+    price_score = 1.0 / (1.0 + price / 1000)
+    return round((sales_score * 0.4 + price_score * 0.6) * 100, 1)

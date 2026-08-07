@@ -96,7 +96,7 @@
                     <span class="plat">{{ '淘宝' if it.platform == 'tb' else '拼多多' }}</span>
                     <div class="info">
                         <div class="title">{{ it.title }}</div>
-                        <div class="shop">{{ it.shopName }}{% if it == g.best %}<span class="badge">最低价</span>{% endif %}
+                        <div class="shop">{{ it.shopName }} ・ {{ it.value_score }}分{% if it == g.best %}<span class="badge">最低价</span>{% endif %}
                             {% if it.url %}<a class="link" href="{{ it.url }}" target="_blank" rel="noopener">去购买 ↗</a>{% endif %}
                             <a class="link" href="javascript:void(0)" onclick="loadHistory('{{ it.platform }}','{{ it.goodsId }}',this)">📈 历史价</a>
                         </div>

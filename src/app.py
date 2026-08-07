@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
 
-from api_client import search_goods, search_pdd
+from api_client import search_goods, search_pdd, value_score
 from matcher import parse_items, group_by_sku, ADAPTERS
 from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices
 
@@ -74,6 +74,7 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
                 continue
             by_platform = {}
             for it in items:
+                it['value_score'] = value_score(it)
                 p = it.get('platform', '?')
                 if p not in by_platform or it['actualPrice'] < by_platform[p]['actualPrice']:
                     by_platform[p] = it
