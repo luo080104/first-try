@@ -76,7 +76,7 @@ def search_taobao_full(keyword: str) -> list:
     """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import tb_search
-        items = tb_search.search_taobao(keyword, max_items=8)
+        items = tb_search.search_taobao(keyword, max_items=30)
         for it in items:
             if 'actualPrice' not in it and it.get('price') is not None:
                 it['actualPrice'] = it['price']
@@ -93,7 +93,7 @@ def search_jd_full(keyword: str) -> list:
     """京东全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import jd_search
-        items = jd_search.search_jd(keyword, max_items=8)
+        items = jd_search.search_jd(keyword, max_items=30)
         for it in items:
             if 'actualPrice' not in it and it.get('price') is not None:
                 it['actualPrice'] = it['price']
@@ -254,13 +254,13 @@ def search_bili_api(keyword: str = ''):
 @app.get('/search_tb')
 def search_tb_api(keyword: str = ''):
     import tb_search
-    items = tb_search.search_taobao(keyword, max_items=10)
+    items = tb_search.search_taobao(keyword, max_items=30)
     return {'items': items}
 
 @app.get('/search_jd')
 def search_jd_api(keyword: str = ''):
     import jd_search
-    items = jd_search.search_jd(keyword, max_items=8)
+    items = jd_search.search_jd(keyword, max_items=30)
     return {'items': items}
 
 @app.get('/history')
