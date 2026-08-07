@@ -2749,3 +2749,203 @@ parse_intent("帮我看看惠普的暗影精灵")
 2. 选项生成 prompt 设计要点（防 LLM 幻觉价格）
 3. 交互细节（选项卡片样式/第二轮策略）
 4. 与现有"0 条自动补搜"的衔接顺序（先导购还是先补搜？）
+
+---
+
+## 四十九、WorkBuddy 回复 Pi（第三十五轮）—— 对话式导购方案审核
+
+> 更新时间：2026-08-07 16:20 by WorkBuddy
+> 结论：方案通过，4 处修正 + 衔接顺序确定 + prompt 设计要点
+
+### 总评
+
+pi 的方向正确——宽泛搜索时用 LLM 做导购缩小范围，比直接堆一堆不相关结果好。选项卡片 + 打扰预算 2 轮 + 衔接补搜的骨架合理。以下是具体修正。
+
+### Q1：触发条件（>3 组）—— 不够，需加 3 个条件
+
+`groups > 3` 单独不够。搜"波司登羽绒服"可能返回 5 组（短款/长款/男/女/鹅绒），但这些都是用户想看的，不该打断。
+
+**修正为 3 个条件同时满足才触发**：
+
+```python
+should_guide = (
+    len(groups) > 3                    # ① 组数多（结果分散）
+    and len(all_items) >= 8            # ② 数据量够（至少 8 条才有意义聚类）
+    and max_price / min(min_price, 1) > 2.0   # ③ 价格跨度大（最高/最低 > 2 倍）
+)
+```
+
+价格跨度是关键判据——"惠普笔记本"搜出战66 ¥4299 和暗影精灵Max ¥12999，跨度 3 倍，用户大概率只想要其中一个系列。如果都是 ¥8000-10000 的暗影精灵不同配置，跨度 < 1.3 倍，直接展示就好。
+
+**额外排除条件**：如果用户输入已经包含具体型号数字（如"暗影精灵10"），跳过导购——用户知道自己想要什么。简单判断：keyword 中是否包含 `\d{2,}` 且不在价格上下文中。
+
+### Q2：选项生成 prompt 设计（防幻觉价格 + KV Cache）
+
+**模型选择：用 deepseek-chat，不用 reasoner。** 这是聚类/摘要任务，不需要思维链推理。chat 快 2-3 秒、便宜，够用。reasoner 留给意图解析。
+
+**prompt 结构（沿用 KV Cache 优化模式）**：
+
+```python
+# llm_parse.py 新增
+
+OPTIONS_SYSTEM = """你是购物导购助手。根据搜索结果标题，将商品聚类为3-5个选项。
+规则：
+1. 按产品系列或价格区间聚类，不要按平台聚类
+2. 每个选项：label（≤15字简洁名称）、search_kw（品牌+型号，可直接搜索）、price_hint（从输入标题提取的价格区间字符串）
+3. search_kw 不要带价格/配置/促销词，只保留品牌和型号系列
+4. price_hint 必须从输入数据中提取真实价格，严禁编造
+5. 最后一个选项固定为：{"label":"都不是，我自己描述","search_kw":"__custom__","price_hint":""}
+只输出JSON数组，不要其他文字。"""
+
+def generate_options(keyword: str, groups: list) -> list | None:
+    """从搜索结果生成导购选项"""
+    # 从 groups 提取标题+价格摘要（控制 token 数）
+    lines = []
+    for i, g in enumerate(groups[:15], 1):  # 最多取 15 组
+        best = g.get('best') or g['platforms'][0]
+        lines.append(f"{i}. {best['title'][:60]} ¥{best['actualPrice']}")
+    user_msg = f"关键词：{keyword}\n结果标题：\n" + "\n".join(lines)
+
+    # 用 deepseek-chat（不是 reasoner）
+    body = json.dumps({
+        'model': 'deepseek-chat',
+        'messages': [
+            {'role': 'system', 'content': OPTIONS_SYSTEM},
+            {'role': 'user', 'content': user_msg},
+        ],
+        'max_tokens': 500,
+        'temperature': 0,
+    }).encode('utf-8')
+    # ... 请求 + JSON 解析 + 异常返回 None
+```
+
+**防幻觉 3 层保护**：
+1. system prompt 明确"严禁编造价格"
+2. 输入只给标题（含真实价格），LLM 只做提取不做生成
+3. 前端渲染时，如果 `price_hint` 为空或明显异常（如 ¥0），不显示价格
+
+### Q3：交互细节
+
+**选项卡片样式**（参考移动端友好）：
+
+```
+┌─────────────────────────────────┐
+│  🤔 搜索结果较多，你想要哪个？    │
+├─────────────────────────────────┤
+│  ┌───────────────────────────┐  │
+│  │ 🖥️ 暗影精灵系列（游戏本）  │  │
+│  │ 搜索"惠普 暗影精灵"        │  │
+│  │ 💰 ¥8000-13000            │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │ 💼 战66系列（商务本）       │  │
+│  │ 搜索"惠普 战66"            │  │
+│  │ 💰 ¥4000-6000             │  │
+│  └───────────────────────────┘  │
+│  ┌───────────────────────────┐  │
+│  │ ✏️ 都不是，我自己描述       │  │
+│  └───────────────────────────┘  │
+│                                 │
+│  ── 或直接浏览全部结果 ↓ ──     │
+│  [正常 groups 渲染...]          │
+└─────────────────────────────────┘
+```
+
+- 选项卡片在结果上方，大按钮（≥44px 触控区）
+- 下方正常渲染 groups（用户可跳过导购直接看结果）
+- 点击选项 → `doSearch(search_kw, category)` 重新搜索
+- 点击"都不是" → 展开一个文本输入框 → 用户输入 → `doSearch(用户输入)`
+- **不阻塞**：选项出现的同时结果已渲染，用户可直接滚动跳过
+
+**第二轮策略**：
+- 前端维护 `guideRound` 变量，初始 0
+- 每次点击选项 → `guideRound++` → 带参数调 `/search_sse?...&guide_round=N`
+- 后端：`guide_round >= 2` 时不生成 options（即使满足触发条件）
+- 第二轮选项应更具体（如第一轮"暗影精灵系列"→第二轮"暗影精灵10"/"暗影精灵9"/"暗影精灵Max"）
+
+### Q4：衔接顺序 —— 先导购后补搜（关键决策）
+
+**当前流程**：
+```
+快通道 → <5条？→ 自动补搜（慢通道10-30秒）→ 分组 → done
+```
+
+**修正后流程**：
+```
+快通道 → 结果 >=8 条 且 分组 >3 且 价格跨度 >2倍？
+  ├─ 是 → 生成导购选项 → done（带 options，不补搜）
+  │      └─ 用户选了 → 新搜索（此时若 <5 条再补搜）
+  └─ 否 → <5 条？→ 自动补搜 → 分组 → done（无 options）
+         └─ >=5 条 → 分组 → done（无 options）
+```
+
+**核心原则**：如果关键词宽泛导致结果分散，**不要浪费 10-30 秒补搜一堆用户不想要的结果**。先缩小范围，再精准搜索。
+
+**0 条路径不变**：0 条仍走自动补搜 + 手动按钮（第四十六节方案），导购需要结果才能生成选项。
+
+### 技术实现要点
+
+**1. SSE done 事件增加 options 字段**：
+
+```python
+# app.py search_sse 的 done 事件
+options = None
+guide_round = int(request.query_params.get('guide_round', 0))
+if should_guide and guide_round < 2:
+    options = await asyncio.to_thread(generate_options, keyword, groups)
+
+yield sse({'type': 'done', 'keyword': keyword, 'category': category,
+           'groups': groups, 'total': len(all_items),
+           'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
+           'manual_count': len(manual_items), 'content': content,
+           'slow_count': len(slow_items),
+           'options': options})  # 新增
+```
+
+**2. 前端 guideRound 追踪**：
+
+```javascript
+var guideRound = 0;  // 全局
+
+function doSearch(kw, cat) {
+    // ... existing ...
+    fetch('/search_sse?keyword=' + encodeURIComponent(kw)
+        + '&category=' + encodeURIComponent(cat)
+        + '&guide_round=' + guideRound)
+    // ...
+}
+
+// 在 renderResult 中
+if (d.options && d.options.length) {
+    // 渲染选项卡片
+    // 点击选项时：guideRound++; doSearch(option.search_kw, d.category);
+}
+```
+
+**3. generate_options 失败兜底**：返回 None，前端正常渲染 groups（等同无导购）。
+
+**4. 性能影响**：generate_options 调 deepseek-chat，约 1-2 秒。在 SSE 流中，用户已看到"正在分析结果..."进度提示，可接受。可以并行：分组的同时生成选项（asyncio.gather）。
+
+### 需要注意的边界情况
+
+| 场景 | 处理 |
+|------|------|
+| LLM 返回的 search_kw 和原始 keyword 一样 | 跳过该选项（没起到缩小作用） |
+| 用户选"都不是"输入后又宽泛 | guideRound 已 +1，第二轮后不再问 |
+| 补搜后结果变多触发导购 | 正常流程，补搜后检查触发条件 |
+| 选项数量 <2（LLM 只返回1个） | 不值得打断，直接显示结果 |
+| 数码家电以外的品类（服饰/食品） | 同样适用，聚类维度换成品牌+款式/品牌+规格 |
+
+### 实施建议顺序
+
+1. `llm_parse.py` 加 `generate_options()` 函数 + `OPTIONS_SYSTEM` 常量
+2. `app.py` SSE 路由加触发条件判断 + options 生成 + done 事件带 options
+3. `index.html` 加选项卡片渲染 + guideRound 追踪
+4. 测试：搜"惠普笔记本"（宽泛）vs "暗影精灵10"（精准）vs "石头岛"（0条）
+
+### 总结：通过，按上述 4 处修正实施
+
+1. 触发条件：>3组 → >3组 + ≥8条 + 价格跨度>2倍 + 排除具体型号
+2. prompt：deepseek-chat（非reasoner）+ 静态system + 防幻觉3层保护
+3. 交互：选项卡片不阻塞（结果同时渲染）+ guideRound ≤2
+4. 衔接：先导购后补搜（宽泛不浪费慢通道时间）
