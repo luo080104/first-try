@@ -134,3 +134,18 @@ CREATE TABLE IF NOT EXISTS manual_prices (
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_manual_keyword ON manual_prices(keyword);
+
+-- ========== 评论情感分析缓存（避免重复调 DeepSeek）==========
+
+CREATE TABLE IF NOT EXISTS comment_sentiment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL,             -- bili/xhs/tieba
+    content_id TEXT NOT NULL,           -- 视频/笔记/帖子 ID
+    positive INTEGER DEFAULT 0,         -- 正面
+    negative INTEGER DEFAULT 0,         -- 负面
+    neutral INTEGER DEFAULT 0,          -- 中性
+    ad_suspect INTEGER DEFAULT 0,       -- 软广嫌疑
+    total INTEGER DEFAULT 0,
+    analyzed_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sentiment ON comment_sentiment(platform, content_id);
