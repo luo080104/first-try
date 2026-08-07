@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import asyncio
 from fastapi.responses import StreamingResponse
@@ -20,7 +21,16 @@ from matcher import parse_items, group_by_sku, ADAPTERS
 from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
 
 app = FastAPI(title='购物助手')
-templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), 'templates'))
+templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
+app.mount('/static', StaticFiles(directory=os.path.join(templates_dir, 'static')), name='static')
+
+@app.middleware('http')
+async def no_cache(request, call_next):
+    resp = await call_next(request)
+    if request.url.path.endswith(('.html', '/')) or not request.url.path:
+        resp.headers['Cache-Control'] = 'no-store'
+    return resp
+templates = Jinja2Templates(directory=templates_dir)
 
 CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 
