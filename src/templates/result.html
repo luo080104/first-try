@@ -126,7 +126,7 @@
             <button onclick="jdSearch()" id="jd-btn" style="padding:12px 24px;font-size:16px;background:#e4393c;color:#fff;border:none;border-radius:10px;cursor:pointer">🔍 用京东补搜（约10-30秒）</button>
             <div id="jd-loading" style="display:none;color:#e4393c;margin-top:10px;font-size:14px">正在京东搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
             <div id="tb-loading" style="display:none;color:#ff5000;margin-top:10px;font-size:14px">正在淘宝搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
-            <div id="bili-loading" style="display:none;color:#00a1d6;margin-top:10px;font-size:14px">正在搜索「{{ keyword }}」相关内容（B站/贴吧）…（约1分钟）</div>
+            <div id="bili-loading" style="display:none;color:#00a1d6;margin-top:10px;font-size:14px">正在搜索「{{ keyword }}」相关内容（B站/小红书/贴吧）…（约1分钟）</div>
         </div>
         <div id="jd-results"></div>
         <a href="/" class="back-home">← 再查一个</a>
@@ -181,10 +181,12 @@
                         var html = '<div class="group"><div class="group-head"><span class="sku">📺 B站相关评测（' + data.items.length + ' 个视频）</span></div>';
                         data.items.forEach(function(it) {
                             var isBili = it.type === 'bili';
-                            var platStyle = isBili ? 'background:#00a1d6' : 'background:#4a90d9';
-                            var platName = isBili ? 'B站' : '贴吧';
+                            var isXhs = it.type === 'xhs';
+                            var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
+                            var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
                             var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                              : ('作者: ' + it.author + ' ・ 吧: ' + it.desc);
+                                              : (isXhs ? ('作者: ' + it.author + ' ・ 赞 ' + it.like)
+                                                       : ('作者: ' + it.author + ' ・ 吧: ' + it.desc));
                             html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
                                 '<div class="info"><div class="title">' + it.title + '</div>' +
                                 '<div class="shop">' + meta + '</div></div>' +

@@ -54,14 +54,21 @@ def search_bili_api(keyword: str = ''):
                 for line in f:
                     try:
                         d = json.loads(line)
-                        t = d.get('title', '') or d.get('content', '') or ''
-                        if keyword in t:
+                        t = d.get('title', '') or d.get('content', '') or d.get('desc', '') or ''
+                        tl = t.lower()
+                        if keyword in t or (keyword in ('石头岛', 'stone island') and ('石头岛' in t or 'stone island' in tl or 'stoneisland' in tl)):
                             out.append((d, plat))
                     except Exception:
                         continue
         return out
-    cached = read_jsonl('bili') + read_jsonl('tieba')
+    cached = read_jsonl('bili') + read_jsonl('tieba') + read_jsonl('xhs')
     if len(cached) >= 5:
+        # 按类型均衡：每类最多 10 条，避免单一平台占满
+        by_type = {'bili': [], 'tieba': [], 'xhs': []}
+        for d, plat in cached:
+            if plat in by_type and len(by_type[plat]) < 10:
+                by_type[plat].append((d, plat))
+        cached = by_type['bili'] + by_type['tieba'] + by_type['xhs']
         items = []
         for d, plat in cached:
             if plat == 'bili':
@@ -69,12 +76,17 @@ def search_bili_api(keyword: str = ''):
                               'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
                               'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
                               'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80]})
-            else:
+            elif plat == 'tieba':
                 items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
                               'author': d.get('author',''), 'play': 0, 'like': 0,
                               'comment': d.get('comment_count',0), 'url': d.get('url',''),
                               'desc': d.get('tieba_name','')})
-        return {'items': items[:15]}
+            else:
+                items.append({'type': 'xhs', 'title': (d.get('title','') or '')[:60],
+                              'author': d.get('nickname',''), 'play': 0,
+                              'like': d.get('liked_count',0), 'comment': d.get('comment_count',0),
+                              'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60]})
+        return {'items': items[:30]}
 
     # 3. 缓存不足才调 MediaCrawler（uv 路径）
     uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
