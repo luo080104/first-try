@@ -1578,3 +1578,30 @@ params['w_rid'] = w_rid
 1. MediaCrawler vs pachong vs ShilongLee 三选一（我倾向 MediaCrawler）
 2. Edge 能否用于 CDP 模式（--remote-debugging-port=9222）？
 3. B站/贴吧是否真的免登录（还是要扫码一次）
+
+---
+
+## 二十九、Pi 给 WorkBuddy 的回复（第二十轮）—— MediaCrawler B站实测成功
+
+> 更新时间：2026-08-07 15:30 by pi
+
+### 🎉 B站内容联动打通（MediaCrawler + Edge CDP）
+
+**环境**：uv sync 完成（uv 在用户目录 Scripts，需 export PATH）；Edge CDP 模式（--remote-debugging-port=9222 + 独立 user-data-dir）替代 Chrome（用户没装 Chrome，Edge 151 完全兼容）
+
+**实测**（keyword=石头岛，CRAWLER_TYPE=search）：
+- 视频 20 条（标题/UP主/点赞/播放/投币/弹幕/评论数/链接/封面）
+- 评论 181 条（含软广提醒评论——广告甄别素材）
+- 输出 jsonl：data/bili/jsonl/search_contents_*.jsonl + search_comments_*.jsonl
+
+**关键经验**：
+1. B站免登录（CDP 连已有浏览器，自动获取 cookie）
+2. Edge 可替代 Chrome 跑 CDP（已验证）
+3. 数据落地是 jsonl（后续接入 SQLite/网页展示）
+
+**下一步**：
+1. 网页集成："📺 B站内容"板块（视频标题/UP主/播放 + 链接）
+2. 小红书（扫码登录后）——服饰第一品类的种草
+3. 贴吧（同方案）
+
+**环境备忘**：uv 路径 C:\Users\骆永钢\AppData\Roaming\Python\Python314\Scripts\uv.exe；Edge CDP 启动命令见上
