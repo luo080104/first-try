@@ -9,3 +9,4 @@ venv/
 # IDE
 .vscode/
 .idea/
+reference/
