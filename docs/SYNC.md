@@ -2608,3 +2608,75 @@ stream 模式下需要逐行读取 `data: {...}` 并拼接 content。对于 100 
 ### 本次附带修复
 - index.html JS 语法错误（split 转义破坏，导致按钮全无反应）已修复
 - sentiment.py 补缓存命中日志（WorkBuddy P1 缺口）
+
+---
+
+## 四十六、WorkBuddy Bug 诊断：SSE 结果页 0 条时无补搜入口
+
+**触发场景**：用户搜"帮我看看惠普的暗影精灵"，SSE 结果页显示「淘宝 0 条 + 拼多多 0 条 = 0 条候选 / 没有搜到结果」，且没有任何补搜按钮。
+
+### 诊断过程
+
+**1. 意图解析正常** ✅
+```python
+parse_intent("帮我看看惠普的暗影精灵")
+→ {'keyword': '惠普 暗影精灵', 'category': '数码家电'}
+```
+
+**2. 大淘客 API 确实返回 0** ✅（不是 bug，是预期行为）
+```
+淘宝 "惠普 暗影精灵" → code=0, total=0, list=[]
+拼多多 "惠普 暗影精灵" → code=0, total=0, list=[]
+
+交叉验证（同一时刻）：
+淘宝 "iPhone" → total=23, list=10 ✅ API 正常
+拼多多 "石头岛" → total=1000, list=8 ✅ API 正常
+```
+结论：大淘客只返回有佣金的推广商品，"惠普 暗影精灵"没有推广佣金商品。这是 API 的固有限制，不是技术故障。
+
+**3. 真正的 bug：SSE 结果页缺补搜按钮** ❌
+
+- `result.html`（POST /search 路由）：**有**补搜按钮（淘宝/京东/B站，L79-86）
+- `index.html`（SSE /search_sse 路由）：**没有**补搜按钮——`renderResult()` 函数（L103-124）在 `groups.length === 0` 时只渲染 `<div class="empty">没有搜到结果</div>`，不渲染任何 fallback 按钮
+
+**用户走的是 SSE 路由**（index.html L76 `fetch('/search_sse?...')`），所以看到 0 条结果后没有任何补救入口。
+
+### 修复方案（给 pi）
+
+**核心**：index.html 的 `renderResult()` 函数在 `groups.length === 0` 时，渲染补搜按钮（复用 result.html 的 tbSearch/jdSearch/biliSearch 逻辑）。
+
+**具体修改**：
+
+1. **index.html `renderResult()` 加补搜按钮**（L106 附近）
+
+当 `d.groups.length === 0` 时，除了显示"没有搜到结果"，还要渲染：
+```html
+<div style="text-align:center;margin-top:16px">
+  <div style="color:#636e72;margin-bottom:12px">该商品可能未设置推广佣金，试试全量搜索：</div>
+  <button onclick="tbSearch()" class="btn btn-tb">🛒 用淘宝补搜</button>
+  <button onclick="jdSearch()" class="btn btn-jd">🔍 用京东补搜</button>
+  <button onclick="biliSearch()" style="...">📺 B站/贴吧</button>
+</div>
+```
+
+2. **把 tbSearch/jdSearch/biliSearch 三个函数复制到 index.html**
+
+从 result.html L125-230 复制这三个函数（含 loading/results DOM 操作），粘贴到 index.html 的 `<script>` 块内。注意：
+- `tbSearch` 调 `/tb_search?keyword=xxx`，结果渲染到指定 div
+- `jdSearch` 调 `/jd_search?keyword=xxx`
+- `biliSearch` 调 `/bili_search?keyword=xxx`
+- 需要在 index.html 中加对应的 results 容器 div（`#tb-results`、`#jd-results`、`#bili-results`）
+
+3. **（可选增强）API 返回 0 时自动提示补搜**
+
+在 SSE `search_sse` 路由的 `done` 事件中，如果 `total === 0`，增加一个字段 `suggest_fallback: true`。前端收到后自动滚动到补搜按钮区域。
+
+**不改的部分**：
+- 大淘客 API 本身没问题，不加自动 fallback 调爬虫（10-30 秒等待用户体验差）
+- POST /search 路由的 result.html 已有补搜按钮，不用改
+
+### 测试方法
+1. 刷新首页，搜"帮我看看惠普的暗影精灵"
+2. SSE 显示 0 条结果后，应看到 3 个补搜按钮
+3. 点"用淘宝补搜"→ 10-30 秒后应显示淘宝全量结果
+4. 点"用京东补搜"→ 应显示京东自营结果
