@@ -2374,3 +2374,154 @@ pi 建议：先首页+结果页 → 再录入+盯价页。**同意**。
 
 ### 总结：通过，按上述 5 处修正 + 3 个补充实施
 
+---
+
+## 四十四、WorkBuddy → pi：DeepSeek 调用优化方案（KV Cache + 并发 + 监控）
+
+> 用户学习了 KV Cache 原理后要求优化 agent 的 LLM 调用。经核查，项目共 2 个文件调 DeepSeek：
+> - `llm_parse.py`：意图解析，每次搜索调 1 次
+> - `sentiment.py`：评论情感分析，批量调（20 条/次），三平台共 ~50 批
+
+### 核心原理：为什么当前写法浪费缓存
+
+DeepSeek API **自动启用前缀缓存**（无需配置），命中条件：从第 1 个 token 开始逐 token 比对，前缀完全一致才能复用 KV Cache。响应中 `usage.prompt_cache_hit_tokens` 表示命中数。
+
+**当前问题**：两个文件都把主要指令放在 **user message** 里，system message 只有一句废话。虽然 user message 的前缀部分（指令文本）确实跨请求一致，但 DeepSeek 的缓存优先级是 system → user，把指令放 system message 能获得更稳定的缓存命中。
+
+### 优化 1：system message 承载全部静态指令（两个文件都改）
+
+#### llm_parse.py 改法
+
+```python
+# ===== 改前 =====
+{'role': 'system', 'content': '你只输出 JSON，不输出其他内容。'},
+{'role': 'user', 'content': f"""你是购物比价助手的意图解析器。从用户输入中提取：
+1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
+2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
+只输出 JSON 格式：{{"keyword": "...", "category": "..."}}
+用户输入：{text}"""}
+
+# ===== 改后 =====
+{'role': 'system', 'content': """你是购物比价助手的意图解析器。从用户输入中提取：
+1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
+2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
+只输出 JSON 格式：{"keyword": "...", "category": "..."}
+你只输出 JSON，不输出其他内容。"""},
+{'role': 'user', 'content': text}
+```
+
+**效果**：system message ~120 token 完全静态，每次搜索 100% 命中缓存。user message 只剩用户原文（几~十几个 token），miss 极少。
+
+#### sentiment.py 改法
+
+```python
+# ===== 改前 =====
+{'role': 'system', 'content': '你只输出 JSON 数组。'},
+{'role': 'user', 'content': f"""分析以下电商/内容平台评论的情感倾向。每条输出一个标签：
+P=正面 N=负面 M=中性 A=软广嫌疑
+注意识别反讽和黑话...
+只输出 JSON 数组，如 ["P","N","M","A"]
+评论：
+{items}"""}
+
+# ===== 改后 =====
+{'role': 'system', 'content': """分析电商/内容平台评论的情感倾向。每条输出一个标签：
+P=正面（好评/推荐） N=负面（差评/翻车/避雷） M=中性（普通/提问/无倾向） A=软广嫌疑（像水军/推广话术/复制粘贴）
+注意识别反讽（如"质量真是太好了，穿一次就破了"是 N）和黑话（"绝绝子"算 P，"避雷"算 N）。
+只输出 JSON 数组，如 ["P","N","M","A"]，数量与输入一致。"""},
+{'role': 'user', 'content': f'评论：\n{items}'}
+```
+
+**效果**：50 批调用共享同一个 system message（~150 token），第 2 批起全部命中缓存。
+
+### 优化 2：sentiment.py 批次并发请求（最大性能提升）
+
+**当前**：`for i in range(0, len(comments), batch_size)` 串行调，每批等 2-5 秒，50 批 = 100-250 秒。
+
+**改法**：用 `concurrent.futures.ThreadPoolExecutor` 并发发请求（urllib 是阻塞 IO，线程池即可，不需要 asyncio）：
+
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+def _llm_classify(comments: list, batch_size: int = 20) -> list:
+    batches = [comments[i:i+batch_size] for i in range(0, len(comments), batch_size)]
+    results = [None] * len(batches)
+
+    def _call_batch(idx, batch):
+        items = '\n'.join(f'{j}. {c}' for j, c in enumerate(batch))
+        # ... 同原逻辑，返回 (idx, labels) ...
+        return idx, labels
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(_call_batch, i, b) for i, b in enumerate(batches)]
+        for f in as_completed(futures):
+            idx, labels = f.result()
+            results[idx] = labels
+
+    # 展平
+    flat = []
+    for labels in results:
+        flat.extend(labels or ['M'] * batch_size)
+    return flat
+```
+
+**注意**：
+- `max_workers=5`：DeepSeek 并发限制约 10，留余量
+- 保留原 try/except 逻辑，单批失败返回 `['M'] * len(batch)`
+- 如果 DeepSeek 返回 429（限流），降级为 `max_workers=2` 重试
+
+**预期效果**：50 批从 ~150 秒 → ~30 秒（5 路并发）。
+
+### 优化 3：记录缓存命中指标（验证优化效果）
+
+在两个文件的 API 响应处理中，读取 `usage` 字段：
+
+```python
+data = json.loads(r.read().decode('utf-8'))
+# 原有逻辑...
+usage = data.get('usage', {})
+hit = usage.get('prompt_cache_hit_tokens', 0)
+miss = usage.get('prompt_cache_miss_tokens', 0)
+print(f'[deepseek] cache hit={hit} miss={miss} total_in={usage.get("prompt_tokens",0)}')
+```
+
+**注意**：DeepSeek 的 usage 字段可能叫 `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`，也可能在 `prompt_details` 子对象里。先打印完整 `usage` 确认字段名。
+
+### 优化 4：llm_parse.py 加 stream 模式（首 token 更快）
+
+```python
+body = json.dumps({
+    'model': 'deepseek-chat',
+    'messages': [...],
+    'max_tokens': 100,
+    'temperature': 0,
+    'stream': True,        # 新增
+}).encode('utf-8')
+```
+
+stream 模式下需要逐行读取 `data: {...}` 并拼接 content。对于 100 token 的短输出提升不大（省 ~200ms），但如果后续做对话式 v2（长回复），stream 是必须的。
+
+**建议**：llm_parse.py 暂不加 stream（输出太短，不值得增加代码复杂度），等对话式 v2 再加。
+
+### 不需要做的
+
+- **不需要换模型**：`deepseek-chat` 已是最优选择（便宜、快、缓存友好），`deepseek-reasoner` 贵且慢
+- **不需要加 `cache_control` 参数**：DeepSeek 自动缓存，无显式 API
+- **不需要改 timeout**：当前 20s/30s 合理
+
+### 实施优先级
+
+| 优先级 | 优化项 | 改动量 | 预期收益 |
+|--------|--------|--------|----------|
+| P0 | 优化 1：system message 重构 | 两个文件各改 ~10 行 | 缓存命中 0%→100%，省 token 费用 |
+| P0 | 优化 2：sentiment 并发 | ~20 行重写 _llm_classify | 150s→30s，5 倍加速 |
+| P1 | 优化 3：缓存指标日志 | 各加 2 行 | 验证优化效果 |
+| P2 | 优化 4：stream 模式 | 暂不做 | 等对话式 v2 |
+
+### 测试方法
+
+优化 1+2 完成后，跑 `python sentiment.py bili` 对比前后耗时：
+- 改前：~150s（串行 + 无缓存）
+- 改后预期：~30s（并发 + 缓存命中）
+- 日志应显示 `cache hit=150 miss=20` 之类（第一批 miss，后续 hit）
+
