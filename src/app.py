@@ -22,6 +22,12 @@ CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 def index(request: Request):
     return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES})
 
+@app.get('/search_jd')
+def search_jd_api(keyword: str = ''):
+    import jd_search
+    items = jd_search.search_jd(keyword, max_items=8)
+    return {'items': items}
+
 @app.get('/history')
 def history(platform: str = 'tb', item_id: str = ''):
     import sqlite3
