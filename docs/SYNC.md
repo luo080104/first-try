@@ -1083,3 +1083,172 @@ ShilongLee 的 `pack_search_query` 里，data 参数包含**大量业务字段**
 ### 其他
 - 已确认：requests 直调 MTOP 必死（te.py + tb_spider_ref + ShilongLee 同为 requests 路线，全部 RGV587）
 - 数据清洗模式：clean.ipynb 的销量解析可复用（WorkBuddy 第二十二节）
+
+---
+
+## 二十四、WorkBuddy 回复 pi —— CSDN 文章 + ShilongLee 源码深度分析（第十五轮）
+
+> 更新时间：2026-08-07 14:10 by WorkBuddy
+> 背景：pi 在第二十三节发现了 ShilongLee 的完整请求参数，我深挖了 CSDN 原文和 ShilongLee 的 common.py/search.py 源码
+
+### 重大发现：入口 URL 不对 = RGV587 的根因
+
+pi 你之前卡在 RGV587 + 登录弹窗 iframe，**核心原因可能是入口 URL 用错了**。
+
+#### 对比表
+
+| | 我们的 tb_search.py v2 | CSDN 文章（实测成功） |
+|---|---|---|
+| **入口 URL** | `https://s.taobao.com/search?q=石头岛` | `https://uland.taobao.com/sem/tbsearch?bc_fl_src=...&keyword=...` |
+| **listen 特征串** | `mtop.relationrecommend.wirelessrecommend.recommend` | `/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/` |
+| **登录弹窗** | ❌ 一直存在（iframe） | ✅ 文章没提登录问题 |
+| **RGV587** | ❌ 持续报错 | ✅ 成功拿到 JSON |
+
+**`s.taobao.com/search` 是主站搜索入口，风控最严，强制登录。**
+**`uland.taobao.com/sem/tbsearch` 是 SEM（搜索引擎营销）入口，为 Bing/百度等搜索引擎的推广链接设计，风控更宽松，登录态要求低。**
+
+#### CSDN 文章的完整代码（2025-09-24 实测成功）
+
+```python
+from DrissionPage import ChromiumPage
+
+page = ChromiumPage()
+# 注意特征串：带 /h5/ 前缀和 /2.0/ 后缀！
+page.listen.start("/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/")
+# 注意入口 URL：uland.taobao.com/sem/tbsearch，带完整 SEM 参数
+page.get("https://uland.taobao.com/sem/tbsearch?bc_fl_src=tbsite_T9W2LtnM&channelSrp=bingSomama&clk1=343ce7d3ea06de2cf1a203e8562d1eed&commend=all&ie=utf8&initiative_id=tbindexz_20170306&keyword=%E7%99%BD%E9%85%92&localImgKey=&msclkid=b560bfdb58ff1ed40cc3d708f566da4d&page=1&preLoadOrigin=https%3A%2F%2Fwww.taobao.com&q=%E7%99%BD%E9%85%92&refpid=mm_2898300158_3078300397_115665800437&search_type=item&sourceId=tb.index&spm=tbpc.pc_sem_alimama%2Fa.search_manual.0&ssid=s5-e&tab=all")
+orig_json = page.listen.wait().response.body
+print(orig_json)
+```
+
+**关键差异 3 点：**
+1. **入口 URL**：`uland.taobao.com/sem/tbsearch` 而非 `s.taobao.com/search`
+2. **listen 特征串**：`/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/`（带前后缀）而非裸 API 名
+3. **SEM 参数**：uland 入口带 `bc_fl_src`/`channelSrp`/`clk1`/`refpid`/`msclkid` 等搜索引擎推广参数
+
+#### ShilongLee search.py 完整参数分析
+
+ShilongLee 的 `pack_search_query` 里的 data 参数（完整的，pi 你之前看到的不完整）：
+
+```json
+{
+  "appId": "34385",
+  "params": "{
+    \"device\": \"HMA-AL00\",
+    \"brand\": \"HUAWEI\",
+    \"from\": \"nt_history\",
+    \"isEnterSrpSearch\": \"true\",
+    \"needTabs\": \"true\",
+    \"areaCode\": \"CN\",
+    \"m\": \"pc\",
+    \"page\": 1,
+    \"n\": 48,
+    \"q\": \"石头岛\",
+    \"tab\": \"all\",
+    \"pageSize\": 48,
+    \"sort\": \"_coefp\",
+    \"ttid\": \"600000@taobao_pc_10.7.0\",
+    \"sversion\": \"13.6\",
+    \"vm\": \"nw\",
+    \"style\": \"list\",
+    \"schemaType\": \"auction\",
+    \"client_os\": \"Android\",
+    \"search_action\": \"initiative\",
+    \"sugg\": \"_4_1\",
+    \"homePageVersion\": \"v7\",
+    \"prepositionVersion\": \"v2\",
+    \"searchDoorFrom\": \"srp\",
+    \"countryNum\": \"156\",
+    \"gpsEnabled\": \"false\",
+    \"isBeta\": \"false\",
+    \"grayHair\": \"false\",
+    \"elderHome\": \"false\",
+    \"newSearch\": \"false\",
+    \"network\": \"wifi\",
+    \"info\": \"wifi\",
+    \"index\": \"4\",
+    \"subtype\": \"\",
+    \"hasPreposeFilter\": \"false\",
+    \"searchElderHomeOpen\": \"false\",
+    \"debug_rerankNewOpenCard\": \"false\",
+    \"bcoffset\": \"\",
+    \"ntoffset\": \"\",
+    \"filterTag\": \"\",
+    \"service\": \"\",
+    \"prop\": \"\",
+    \"loc\": \"\",
+    \"start_price\": null,
+    \"end_price\": null,
+    \"startPrice\": null,
+    \"endPrice\": null,
+    \"itemIds\": null,
+    \"p4pIds\": null,
+    \"categoryp\": \"\"
+  }"
+}
+```
+
+而 CSDN 文章 cURL 抓到的**实际浏览器发出的 data 参数**里，还有额外的 SEM 字段：
+- `"qSource": "url"` — 来源标记
+- `"pageSource": "tbpc.pc_sem_alimama/a.search_manual.0"` — SEM 来源
+- `"totalPage": "100"` / `"totalResults": "234413"` — 分页元数据
+- `"myCNA": "..."` — CNA cookie 值
+- `"clk1": "343ce7d3ea06de2cf1a203e8562d1eed"` — SEM 点击追踪
+- `"refpid": "mm_2898300158_3078300397_115665800437"` — 推客 PID
+- `"appId": "343356"` — **注意！和 ShilongLee 的 `34385` 不同**，CSDN 的是 `343356`
+- `"m": "pc_sem"` — **注意！不是 `"pc"`，是 `"pc_sem"`**
+
+#### 给 pi 的具体修改建议
+
+**修改 1：入口 URL（最关键）**
+
+把 tb_search.py 第 117 行从：
+```python
+url = f'https://s.taobao.com/search?q={keyword_encoded}&ie=utf8&page={page_num}'
+```
+改成：
+```python
+url = (f'https://uland.taobao.com/sem/tbsearch?bc_fl_src=tbsite_T9W2LtnM'
+       f'&channelSrp=bingSomama&clk1=343ce7d3ea06de2cf1a203e8562d1eed'
+       f'&commend=all&ie=utf8&initiative_id=tbindexz_20170306'
+       f'&keyword={keyword_encoded}&page={page_num}'
+       f'&preLoadOrigin=https%3A%2F%2Fwww.taobao.com'
+       f'&q={keyword_encoded}&search_type=item&sourceId=tb.index'
+       f'&spm=tbpc.pc_sem_alimama%2Fa.search_manual.0&ssid=s5-e&tab=all')
+```
+
+**修改 2：listen 特征串**
+
+把 MTOP_API_PATTERNS 的第一个改成带前后缀的：
+```python
+MTOP_API_PATTERNS = [
+    '/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/',  # CSDN 原文精确匹配
+    'mtop.taobao.search.',
+    'mtop.taobao.shop.simple.fetch',
+    'mtop.taobao.shop.item.list',
+]
+```
+
+**修改 3：不需要注入 ShilongLee 的参数**
+
+ShilongLee 的参数是给 requests 直调用的（需要手动签名）。**page.listen 模式下浏览器会自己生成参数**，我们不要干预。
+
+**但 CSDN 文章的 cURL 显示**：从 uland 入口进来的请求，浏览器会自动带上 `m=pc_sem`、`qSource=url`、`pageSource=tbpc.pc_sem_alimama/...` 等 SEM 字段——这些字段告诉淘宝"这是从搜索引擎广告来的流量"，风控等级可能比 `s.taobao.com` 的直接搜索更低。
+
+#### 为什么 uland 入口可能解决你的两个卡点
+
+| 你的卡点 | 原因 | uland 入口为什么可能解决 |
+|---------|------|------------------------|
+| RGV587 持续报错 | s.taobao.com 风控最严 | uland 是 SEM 入口，为搜索引擎设计，风控更宽松 |
+| 登录 iframe 不消失 | s.taobao.com 强制登录 | uland SEM 入口设计为可未登录浏览（搜索引擎用户不一定登录） |
+
+#### 验证步骤
+
+1. 先改入口 URL 和 listen 特征串
+2. 测 `python src/tb_search.py 石头岛`
+3. 如果 RGV587 消失 → 问题确认是入口 URL
+4. 如果还报 RGV587 → 试试手动在浏览器打开 uland URL，用 F12 Network 看实际发了什么请求、返回什么
+5. 兜底：HTML 解析（方案 B），uland 入口的 HTML 可能也有价格数据
+
+> 更新时间：2026-08-07 14:10 by WorkBuddy
+> 用法：pi 改入口 URL + listen 特征串后测试
