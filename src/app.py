@@ -22,6 +22,12 @@ CATEGORIES = ['', '服饰', '食品', '日用百货', '数码家电']
 def index(request: Request):
     return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES})
 
+@app.get('/search_tb')
+def search_tb_api(keyword: str = ''):
+    import tb_search
+    items = tb_search.search_taobao(keyword, max_items=10)
+    return {'items': items}
+
 @app.get('/search_jd')
 def search_jd_api(keyword: str = ''):
     import jd_search

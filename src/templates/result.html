@@ -117,8 +117,10 @@
         {% endif %}
 
         <div style="text-align:center;margin-top:16px">
-            <button onclick="jdSearch()" id="jd-btn" style="padding:12px 30px;font-size:16px;background:#e4393c;color:#fff;border:none;border-radius:10px;cursor:pointer">🔍 用京东补搜（约10-30秒）</button>
+            <button onclick="tbSearch()" id="tb-btn" style="padding:12px 24px;font-size:16px;background:#ff5000;color:#fff;border:none;border-radius:10px;cursor:pointer">🛒 用淘宝补搜（约10-30秒）</button>
+            <button onclick="jdSearch()" id="jd-btn" style="padding:12px 24px;font-size:16px;background:#e4393c;color:#fff;border:none;border-radius:10px;cursor:pointer">🔍 用京东补搜（约10-30秒）</button>
             <div id="jd-loading" style="display:none;color:#e4393c;margin-top:10px;font-size:14px">正在京东搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
+            <div id="tb-loading" style="display:none;color:#ff5000;margin-top:10px;font-size:14px">正在淘宝搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
         </div>
         <div id="jd-results"></div>
         <a href="/" class="back-home">← 再查一个</a>
@@ -145,6 +147,35 @@
                         '历史最低 ¥' + summary.lowest.toFixed(2) + '（共记录 ' + summary.count + ' 次）' + advice + '</div>' + rows;
                 })
                 .catch(() => box.innerHTML = '加载失败');
+        }
+        function tbSearch() {
+            var btn = document.getElementById('tb-btn');
+            btn.disabled = true;
+            document.getElementById('tb-loading').style.display = 'block';
+            fetch('/search_tb?keyword=' + encodeURIComponent('{{ keyword }}'), {timeout: 60000})
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('tb-loading').style.display = 'none';
+                    var box = document.getElementById('jd-results');
+                    if (!data.items || !data.items.length) {
+                        box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>';
+                    } else {
+                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' + data.items.length + ' 条）</span></div>';
+                        data.items.forEach(function(it) {
+                            html += '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
+                                '<div class="info"><div class="title">' + (it.is_p4p ? '【广告】' : '') + (it.is_tmall ? '【天猫】' : '') + it.title + '</div>' +
+                                '<div class="shop">' + (it.shop_name || '') + ' ・ ' + (it.province || '') + ' ・ ' + (it.real_sales || '') + '</div></div>' +
+                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
+                        });
+                        box.innerHTML = html + '</div>';
+                    }
+                    btn.disabled = false;
+                })
+                .catch(() => {
+                    document.getElementById('tb-loading').style.display = 'none';
+                    document.getElementById('jd-results').innerHTML = '<div style="text-align:center;color:#d63031;padding:16px">淘宝搜索失败（可能超时）</div>';
+                    btn.disabled = false;
+                });
         }
         function jdSearch() {
             var btn = document.getElementById('jd-btn');
