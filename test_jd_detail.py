@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """京东联盟 API 测试 - 带 token 重试 goods.query"""
+import os
 import requests
 import json
 import hashlib
@@ -8,8 +9,8 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-APP_KEY = "ed65706b4132ee846a05f2ed8a3e3350"
-APP_SECRET = "361449e7aa6946b5a0733d2cd24259c6"
+APP_KEY = os.environ.get("JD_APP_KEY", "")
+APP_SECRET = os.environ.get("JD_APP_SECRET", "")
 ACCESS_TOKEN = "0fb68ec29cc66ae746372da23cc269929790b29e53526d014d7e8190225fb0a94e3b7c29300158f4"
 API_URL = "https://api.jd.com/routerjson"
 

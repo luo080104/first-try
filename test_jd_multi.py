@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """京东联盟 API 多接口测试"""
+import os
 import requests
 import json
 import hashlib
@@ -8,8 +9,8 @@ import sys
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-APP_KEY = "ed65706b4132ee846a05f2ed8a3e3350"
-APP_SECRET = "361449e7aa6946b5a0733d2cd24259c6"
+APP_KEY = os.environ.get("JD_APP_KEY", "")
+APP_SECRET = os.environ.get("JD_APP_SECRET", "")
 API_URL = "https://api.jd.com/routerjson"
 
 
