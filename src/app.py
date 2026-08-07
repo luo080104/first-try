@@ -1,3 +1,4 @@
+import re
 # app.py - 购物助手网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
 import sys
@@ -14,7 +15,7 @@ from fastapi.responses import StreamingResponse
 import json as _json
 
 from api_client import search_goods, search_pdd, value_score
-from llm_parse import parse_intent
+from llm_parse import parse_intent, generate_options
 
 def read_content_items(keyword: str) -> dict:
     """读内容联动数据（jsonl 缓存，秒回）——B站/贴吧/小红书均衡 10 条 + 评分 + 套路检测"""
@@ -72,19 +73,35 @@ def read_content_items(keyword: str) -> dict:
     return result
 
 def search_taobao_full(keyword: str) -> list:
-    """淘宝全量搜索（慢通道，浏览器），失败返回空"""
+    """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import tb_search
-        return tb_search.search_taobao(keyword, max_items=8)
+        items = tb_search.search_taobao(keyword, max_items=8)
+        for it in items:
+            if 'actualPrice' not in it and it.get('price') is not None:
+                it['actualPrice'] = it['price']
+            it['monthSales'] = it.get('sales') or it.get('real_sales') or 0
+            it['shopName'] = it.get('shop_name') or it.get('shop') or ''
+            it['title'] = it.get('title', '')
+            it['platform'] = 'tb'
+        return items
     except Exception as e:
         print(f'[tb_full] 失败: {str(e)[:80]}')
         return []
 
 def search_jd_full(keyword: str) -> list:
-    """京东全量搜索（慢通道，浏览器），失败返回空"""
+    """京东全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import jd_search
-        return jd_search.search_jd(keyword, max_items=8)
+        items = jd_search.search_jd(keyword, max_items=8)
+        for it in items:
+            if 'actualPrice' not in it and it.get('price') is not None:
+                it['actualPrice'] = it['price']
+            it['monthSales'] = it.get('sales') or 0
+            it['shopName'] = it.get('shop') or ''
+            it['title'] = it.get('title', '')
+            it['platform'] = 'jd'
+        return items
     except Exception as e:
         print(f'[jd_full] 失败: {str(e)[:80]}')
         return []
@@ -292,7 +309,7 @@ def watches_page(request: Request):
                                       {'watches': rows, 'hits': hits})
 
 @app.get('/search_sse')
-async def search_sse(keyword: str = '', category: str = ''):
+async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0):
     async def gen():
         nonlocal keyword, category
         def sse(data):
@@ -363,12 +380,24 @@ async def search_sse(keyword: str = '', category: str = ''):
                 save_search_result(conn, it, category or '未分类')
             conn.close()
 
+            # 对话式导购：触发条件（WorkBuddy 审核）——先导购后补搜
+            options = []
+            prices = [g['best']['actualPrice'] for g in groups if g.get('best') and g['best'].get('actualPrice')]
+            has_model_num = bool(re.search(r'\d{2,}', keyword))
+            if (guide_round < 1 and len(groups) > 3 and len(all_items) >= 8
+                    and prices and max(prices) / max(min(prices), 1) > 2.0
+                    and not has_model_num):
+                yield sse({'type': 'progress', 'msg': '📋 结果较多，正在生成导购选项...'})
+                options = await asyncio.to_thread(generate_options, keyword, groups)
+                if options:
+                    yield sse({'type': 'guide', 'options': options})
+
             content = await asyncio.to_thread(read_content_items, keyword)
             yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                        'groups': groups, 'total': len(all_items),
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
                        'manual_count': len(manual_items), 'content': content,
-                       'slow_count': len(slow_items)})
+                       'slow_count': len(slow_items), 'options': options})
         except Exception as e:
             yield sse({'type': 'error', 'msg': str(e)[:200]})
 

@@ -72,3 +72,55 @@ if __name__ == '__main__':
     print(parse_intent(text))
     log = open(TRACE_LOG, encoding='utf-8').read()
     print(log[log.rfind('='):][:300])
+
+
+# ========== 对话式导购（WorkBuddy 审核版）==========
+
+OPTIONS_SYSTEM = """你是购物导购助手。根据搜索结果标题，将商品聚类为3-5个选项。
+规则：
+1. 按产品系列或价格区间聚类，不要按平台聚类
+2. 每个选项：label（≤15字简洁名称）、search_kw（品牌+型号，可直接搜索）、price_hint（从输入标题提取的价格区间字符串）
+3. search_kw 不要带价格/配置/促销词，只保留品牌和型号系列
+4. price_hint 必须从输入数据中提取真实价格，严禁编造
+5. 最后一个选项固定为：{"label":"都不是，我自己描述","search_kw":"__custom__","price_hint":""}
+只输出JSON数组，不要其他文字。"""
+
+def generate_options(keyword: str, groups: list) -> list:
+    """从搜索结果生成导购选项（deepseek-chat，聚类/摘要任务不需要 reasoner）"""
+    lines = []
+    for i, g in enumerate(groups[:15], 1):
+        best = g.get('best') or g['platforms'][0]
+        title = str(best.get('title', ''))[:60]
+        price = best.get('actualPrice', 0)
+        lines.append(f"{i}. {title} ¥{price}")
+
+    user_msg = "关键词：" + keyword + chr(10) + "结果标题：" + chr(10) + chr(10).join(lines)
+    body = json.dumps({
+        'model': 'deepseek-chat',
+        'messages': [
+            {'role': 'system', 'content': OPTIONS_SYSTEM},
+            {'role': 'user', 'content': user_msg},
+        ],
+        'max_tokens': 500,
+        'temperature': 0,
+    }).encode('utf-8')
+    req = urllib.request.Request(API_URL, data=body, headers={
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {API_KEY}',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode('utf-8'))
+        content = data['choices'][0]['message']['content'].strip()
+        if content.startswith('```'):
+            content = content.split(chr(10), 1)[1].rsplit('```', 1)[0]
+        options = json.loads(content)
+        # 防幻觉：过滤异常价格
+        for opt in options:
+            ph = opt.get('price_hint', '')
+            if not ph or '¥0' in ph or len(str(ph)) > 30:
+                opt['price_hint'] = ''
+        return options if isinstance(options, list) else []
+    except Exception as e:
+        print(f'[guide] 选项生成失败: {str(e)[:80]}')
+        return []

@@ -158,6 +158,48 @@
                 .catch(() => { document.getElementById('bili-loading').style.display = 'none'; btn.disabled = false; });
         }
 
+
+        var guideRound = 0;
+        function renderGuide(options, kw, prog, box) {
+            guideRound += 1;
+            var html = '<div class="group" style="border:2px solid #ff6b35"><div class="group-head">' +
+                '<span class="sku">🤔 结果较多，你想要哪个？</span></div>';
+            options.forEach(function(opt) {
+                var isCustom = opt.search_kw === '__custom__';
+                html += '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
+                    'onclick="guideSelect(this)" data-kw="' + (isCustom ? '__custom__' : opt.search_kw) + '" data-label="' + opt.label + '">' +
+                    '<div class="info"><div class="title">' + (isCustom ? '✏️ ' : '') + opt.label + '</div>' +
+                    (opt.price_hint ? '<div class="shop">💰 ' + opt.price_hint + '</div>' : '') +
+                    (isCustom ? '<div class="shop">告诉我你想要什么样的，我来帮你找</div>' : '') +
+                    '</div><div style="color:#ff6b35;font-size:20px">›</div></div>';
+            });
+            html += '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
+            var div = document.createElement('div');
+            div.id = 'guide-box';
+            div.innerHTML = html;
+            box.parentNode.insertBefore(div, box);
+            document.getElementById('guide-round') ? null : (function(){
+                var inp = document.createElement('input');
+                inp.type = 'hidden'; inp.id = 'guide-round'; inp.value = '0';
+                document.body.appendChild(inp);
+            })();
+            document.getElementById('guide-round').value = guideRound;
+        }
+        function guideSelect(el) { var kw2 = el.getAttribute('data-kw'); var label = el.getAttribute('data-label');
+            if (kw2 === '__custom__') {
+                var desc = prompt('请描述你想要的商品（例如：14寸轻薄本，续航好）');
+                if (!desc) return;
+                document.getElementById('kw').value = desc;
+            } else {
+                document.getElementById('kw').value = kw2;
+            }
+            document.getElementById('guide-round').value = guideRound;
+            document.getElementById('sse-result').innerHTML = '';
+            var gb = document.getElementById('guide-box');
+            if (gb) gb.remove();
+            doSearch();
+        }
+
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();
             if (!kw) { alert('请输入商品名称'); return; }
@@ -169,7 +211,8 @@
             prog.style.display = 'block';
             prog.innerHTML = '<span class="spinner"></span>开始搜索...';
             box.innerHTML = '';
-            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat))
+            var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
+            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round)
                 .then(resp => {
                     var reader = resp.body.getReader();
                     var decoder = new TextDecoder();
@@ -183,7 +226,8 @@
                             lines.forEach(function(evt) {
                                 if (!evt.startsWith('data: ')) return;
                                 var data = JSON.parse(evt.slice(6));
-                                if (data.type === 'progress') { prog.innerText = data.msg; }
+                                if (data.type === 'guide') { renderGuide(data.options, kw, prog, box); }
+                                else if (data.type === 'progress') { prog.innerText = data.msg; }
                                 else if (data.type === 'error') { prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
                                     prog.style.display = 'none';
