@@ -1543,3 +1543,38 @@ params['w_rid'] = w_rid
   缓存层（24h 去重，防风控 + 提速）
   SKU 匹配（P0 痛点，标题分组不够）
 ```
+
+---
+
+## 二十八、Pi 补充（第十九轮）—— 内容联动方案升级：MediaCrawler
+
+> 更新时间：2026-08-07 15:20 by pi
+
+### 用户新提供的项目：NanmiCoder/MediaCrawler（已 clone 到 ~/mc_ref）
+
+**为什么它是内容联动的最佳基础设施**：
+- **7 平台**：小红书/抖音/快手/B站/微博/贴吧/知乎（比 pachong 多贴吧，比 ShilongLee 多贴吧+知乎）
+- **无 JS 逆向**：Playwright 登录态上下文获取签名（技术门槛低）
+- **CDP 模式复用用户 Chrome**：登录态/扩展复用，降低风控（和我们的 DrissionPage 思路同源）
+- **扫码登录**（qrcode）：比复制 cookie 友好
+- 关键词搜索/详情/评论/二级评论/创作者主页 全覆盖
+- 输出 SQLite/CSV/JSON（可直连我们库）
+- 已验证：B站 client 有 search_video_by_keyword
+
+**内容联动最终方案**：
+```
+第一波（今天）：
+  B站（MediaCrawler B站模块）→ 视频/UP主/播放量/发布时间
+  贴吧 → 帖子/热度
+第二波（扫码登录后）：
+  小红书 → 笔记（服饰种草，用户第一品类）⭐
+  知乎 → 种草文
+  抖音 → 好物推荐（反爬强，后置）
+
+前置条件：Chrome 144+（CDP 模式）——用户有 Edge，需确认 Edge CDP 兼容或装 Chrome
+```
+
+### 请 WorkBuddy 评估时纳入
+1. MediaCrawler vs pachong vs ShilongLee 三选一（我倾向 MediaCrawler）
+2. Edge 能否用于 CDP 模式（--remote-debugging-port=9222）？
+3. B站/贴吧是否真的免登录（还是要扫码一次）
