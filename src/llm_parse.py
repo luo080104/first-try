@@ -1,6 +1,5 @@
-# llm_parse.py - 对话式意图解析（DeepSeek Reasoner + 思维链日志）
-# 输入："帮我看看石头岛的外套多少钱" → {"keyword": "石头岛 外套", "category": "服饰"}
-# 调试：reasoning_content（思维链）记录到 data/agent_trace.log
+# llm_parse.py - 对话式意图解析（Reasoner + 思维链日志 + 前缀缓存优化）
+# P0-1：静态指令移 system message（命中 DeepSeek 前缀缓存）
 import json
 import os
 import urllib.request
@@ -10,8 +9,13 @@ API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'sk-edf4d1c70edf43708a8904bee493529
 API_URL = 'https://api.deepseek.com/chat/completions'
 TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.log')
 
-def _log_trace(text: str, reasoning: str, result: dict):
-    """思维链日志（调试用）"""
+# 静态指令（system message，前缀缓存友好）
+SYSTEM_PROMPT = """你是购物比价助手的意图解析器。提取规则：
+1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
+2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
+只输出 JSON 格式：{"keyword": "...", "category": "..."}"""
+
+def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cache_miss: int = 0):
     try:
         os.makedirs(os.path.dirname(TRACE_LOG), exist_ok=True)
         with open(TRACE_LOG, 'a', encoding='utf-8') as f:
@@ -19,22 +23,17 @@ def _log_trace(text: str, reasoning: str, result: dict):
             if reasoning:
                 f.write(f"[思维链] {reasoning[:500]}\n")
             f.write(f"[结果] {json.dumps(result, ensure_ascii=False)}\n")
+            if cache_hit or cache_miss:
+                f.write(f"[缓存] hit={cache_hit} miss={cache_miss}\n")
     except Exception:
         pass
 
 def parse_intent(text: str, use_reasoner: bool = True) -> dict:
-    """解析用户自然语言 → 搜索意图（use_reasoner=True 时记录思维链）"""
-    prompt = f"""你是购物比价助手的意图解析器。从用户输入中提取：
-1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
-2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
-只输出 JSON 格式：{{"keyword": "...", "category": "..."}}
-用户输入：{text}"""
-
     body = json.dumps({
         'model': 'deepseek-reasoner' if use_reasoner else 'deepseek-chat',
         'messages': [
-            {'role': 'system', 'content': '你只输出 JSON，不输出其他内容。'},
-            {'role': 'user', 'content': prompt},
+            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'user', 'content': text},   # 只放可变内容
         ],
         'max_tokens': 200,
         'temperature': 0,
@@ -49,7 +48,7 @@ def parse_intent(text: str, use_reasoner: bool = True) -> dict:
             data = json.loads(r.read().decode('utf-8'))
         msg = data['choices'][0]['message']
         content = (msg.get('content') or '').strip()
-        reasoning = (msg.get('reasoning_content') or '').strip()  # 思维链
+        reasoning = (msg.get('reasoning_content') or '').strip()
         if content.startswith('```'):
             content = content.split('\n', 1)[1].rsplit('```', 1)[0]
         result = json.loads(content)
@@ -57,7 +56,11 @@ def parse_intent(text: str, use_reasoner: bool = True) -> dict:
             'keyword': result.get('keyword', text.strip())[:50],
             'category': result.get('category', ''),
         }
-        _log_trace(text, reasoning, result)
+        # P1：缓存命中指标
+        usage = data.get('usage', {})
+        hit = usage.get('prompt_cache_hit_tokens', 0)
+        miss = usage.get('prompt_cache_miss_tokens', 0)
+        _log_trace(text, reasoning, result, hit, miss)
         return result
     except Exception as e:
         print(f'[llm] 解析失败: {str(e)[:80]}，回退为原文')
@@ -66,9 +69,6 @@ def parse_intent(text: str, use_reasoner: bool = True) -> dict:
 if __name__ == '__main__':
     import sys
     text = sys.argv[1] if len(sys.argv) > 1 else '帮我看看石头岛的外套多少钱'
-    r = parse_intent(text)
-    print(r)
-    # 打印思维链
+    print(parse_intent(text))
     log = open(TRACE_LOG, encoding='utf-8').read()
-    tail = log[log.rfind('='):]
-    print(tail[:400])
+    print(log[log.rfind('='):][:300])

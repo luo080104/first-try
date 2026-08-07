@@ -232,11 +232,13 @@ async def search_sse(keyword: str = '', category: str = ''):
             if search_kw != keyword or search_cat != category:
                 yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
             keyword, category = search_kw, search_cat
-            yield sse({'type': 'progress', 'msg': f'正在淘宝搜索「{keyword}」...'})
-            tb_items = await asyncio.to_thread(search_goods, keyword, category or None)
-            yield sse({'type': 'progress', 'msg': f'✅ 淘宝完成（{len(tb_items)} 条），正在拼多多...'})
-            pdd_items = await asyncio.to_thread(search_pdd, keyword)
-            yield sse({'type': 'progress', 'msg': f'✅ 拼多多完成（{len(pdd_items)} 条），正在 SKU 分组...'})
+            # 并行工具调用（教材：无依赖子任务并行执行）
+            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多...'})
+            tb_items, pdd_items = await asyncio.gather(
+                asyncio.to_thread(search_goods, keyword, category or None),
+                asyncio.to_thread(search_pdd, keyword),
+            )
+            yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条，正在 SKU 分组...'})
             all_items = tb_items + pdd_items
 
             init_db()
