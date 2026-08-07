@@ -44,9 +44,40 @@ def search_bili_api(keyword: str = ''):
                           'about:blank'], creationflags=0x08000000)
         time.sleep(5)
 
-    # 2. 调 MediaCrawler（uv 路径）
-    uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
+    # 2. 先读已有 jsonl（有匹配数据就不重爬）
     mc_dir = os.path.expanduser('~/mc_ref')
+    def read_jsonl(plat):
+        out = []
+        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', 'search_contents_*.jsonl')))
+        if files:
+            with open(files[-1], encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        d = json.loads(line)
+                        t = d.get('title', '') or d.get('content', '') or ''
+                        if keyword in t:
+                            out.append((d, plat))
+                    except Exception:
+                        continue
+        return out
+    cached = read_jsonl('bili') + read_jsonl('tieba')
+    if len(cached) >= 5:
+        items = []
+        for d, plat in cached:
+            if plat == 'bili':
+                items.append({'type': 'bili', 'title': (d.get('title','') or '')[:60],
+                              'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
+                              'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
+                              'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80]})
+            else:
+                items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
+                              'author': d.get('author',''), 'play': 0, 'like': 0,
+                              'comment': d.get('comment_count',0), 'url': d.get('url',''),
+                              'desc': d.get('tieba_name','')})
+        return {'items': items[:15]}
+
+    # 3. 缓存不足才调 MediaCrawler（uv 路径）
+    uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
     env = dict(os.environ, PATH=os.path.dirname(uv) + ';' + os.environ.get('PATH', ''))
     try:
         subprocess.run([uv, 'run', 'main.py', '--platform', 'bili', '--type', 'search',
@@ -56,27 +87,40 @@ def search_bili_api(keyword: str = ''):
     except subprocess.TimeoutExpired:
         pass
 
-    # 3. 读最新 jsonl
-    files = sorted(glob.glob(os.path.join(mc_dir, 'data', 'bili', 'jsonl', 'search_contents_*.jsonl')))
+    # 3. 读最新 jsonl（B站 + 贴吧）
     items = []
-    if files:
+    for plat, path in [('bili', 'search_contents'), ('tieba', 'search_contents')]:
+        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', path + '_*.jsonl')))
+        if not files:
+            continue
         with open(files[-1], encoding='utf-8') as f:
             for line in f:
                 try:
                     d = json.loads(line)
-                    if keyword in (d.get('title', '') + d.get('desc', '')):
-                        items.append({
-                            'title': d.get('title', '')[:60],
-                            'author': d.get('nickname', ''),
-                            'play': d.get('video_play_count', 0),
-                            'like': d.get('liked_count', 0),
-                            'comment': d.get('video_comment', 0),
-                            'url': d.get('video_url', ''),
-                            'desc': (d.get('desc', '') or '')[:80],
-                        })
+                    title = d.get('title', '') or d.get('content', '') or ''
+                    if keyword in title:
+                        if plat == 'bili':
+                            items.append({
+                                'type': 'bili', 'title': title[:60],
+                                'author': d.get('nickname', ''),
+                                'play': d.get('video_play_count', 0),
+                                'like': d.get('liked_count', 0),
+                                'comment': d.get('video_comment', 0),
+                                'url': d.get('video_url', ''),
+                                'desc': (d.get('desc', '') or '')[:80],
+                            })
+                        else:
+                            items.append({
+                                'type': 'tieba', 'title': title[:60],
+                                'author': d.get('author', ''),
+                                'play': 0, 'like': 0,
+                                'comment': d.get('comment_count', 0),
+                                'url': d.get('url', ''),
+                                'desc': d.get('tieba_name', ''),
+                            })
                 except Exception:
                     continue
-    return {'items': items[:10]}
+    return {'items': items[:15]}
 
 @app.get('/search_tb')
 def search_tb_api(keyword: str = ''):

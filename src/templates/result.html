@@ -122,11 +122,11 @@
 
         <div style="text-align:center;margin-top:16px">
             <button onclick="tbSearch()" id="tb-btn" style="padding:12px 24px;font-size:16px;background:#ff5000;color:#fff;border:none;border-radius:10px;cursor:pointer">🛒 用淘宝补搜（约10-30秒）</button>
-            <button onclick="biliSearch()" id="bili-btn" style="padding:12px 24px;font-size:16px;background:#00a1d6;color:#fff;border:none;border-radius:10px;cursor:pointer">📺 B站评测（约1分钟）</button>
+            <button onclick="biliSearch()" id="bili-btn" style="padding:12px 24px;font-size:16px;background:#00a1d6;color:#fff;border:none;border-radius:10px;cursor:pointer">📺 B站/贴吧（约1分钟）</button>
             <button onclick="jdSearch()" id="jd-btn" style="padding:12px 24px;font-size:16px;background:#e4393c;color:#fff;border:none;border-radius:10px;cursor:pointer">🔍 用京东补搜（约10-30秒）</button>
             <div id="jd-loading" style="display:none;color:#e4393c;margin-top:10px;font-size:14px">正在京东搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
             <div id="tb-loading" style="display:none;color:#ff5000;margin-top:10px;font-size:14px">正在淘宝搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
-            <div id="bili-loading" style="display:none;color:#00a1d6;margin-top:10px;font-size:14px">正在B站搜索「{{ keyword }}」评测视频…（约1分钟）</div>
+            <div id="bili-loading" style="display:none;color:#00a1d6;margin-top:10px;font-size:14px">正在搜索「{{ keyword }}」相关内容（B站/贴吧）…（约1分钟）</div>
         </div>
         <div id="jd-results"></div>
         <a href="/" class="back-home">← 再查一个</a>
@@ -180,11 +180,15 @@
                     } else {
                         var html = '<div class="group"><div class="group-head"><span class="sku">📺 B站相关评测（' + data.items.length + ' 个视频）</span></div>';
                         data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#00a1d6;color:#fff">B站</span>' +
+                            var isBili = it.type === 'bili';
+                            var platStyle = isBili ? 'background:#00a1d6' : 'background:#4a90d9';
+                            var platName = isBili ? 'B站' : '贴吧';
+                            var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
+                                              : ('作者: ' + it.author + ' ・ 吧: ' + it.desc);
+                            html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
                                 '<div class="info"><div class="title">' + it.title + '</div>' +
-                                '<div class="shop">UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like + ' ・ 评论 ' + it.comment + '</div>' +
-                                (it.desc ? '<div class="shop">' + it.desc + '</div>' : '') + '</div>' +
-                                (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">观看 ↗</a>' : '') + '</div>';
+                                '<div class="shop">' + meta + '</div></div>' +
+                                (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">' + (isBili ? '观看 ↗' : '帖子 ↗') + '</a>' : '') + '</div>';
                         });
                         box.innerHTML = html + '</div>';
                     }
