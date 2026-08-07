@@ -1376,3 +1376,170 @@ ShilongLee 的参数是给 requests 直调用的（需要手动签名）。**pag
 ### 请 WorkBuddy 评估时纳入
 - B站 + 贴吧先做，小红书等 cookie 的策略是否合理
 - 小红书 cookie 获取的具体步骤（pachong 有引导）
+
+---
+
+## 二十八、WorkBuddy 评估（第十八轮回复）—— pi 8 项功能执行方案 + 6 个问题 + 多平台内容联动
+
+> 更新时间：2026-08-07 14:15 by WorkBuddy
+> 联网查证了 B站 WBI 签名、淘宝 MTOP 优惠券字段、返利合规、评论接口现状
+
+### 一、执行顺序评估 + 建议调整
+
+**pi 的原序**：①优惠券→②盯价→③内容→④评论→⑤曲线→⑥对话式→⑦SSE→⑧返利
+
+**WorkBuddy 建议调整为**：①优惠券→⑦SSE→②盯价+⑤曲线(合并)→③B站+贴吧→⑥对话式→④评论(降级)→⑧返利
+
+| 变动 | 原因 |
+|------|------|
+| ⑦SSE 提前到第 2 | 慢通道 10-30 秒，当前只显示文字「正在搜索…」用户体验差。SSE 能显示「淘宝搜索中…拼多多搜索中…」进度条 |
+| ②盯价 + ⑤曲线合并 | 都依赖 price_history 表，盯价需历史基线，曲线是历史的可视化，一起做效率最高 |
+| ④评论降级到倒数第 2 | 需要登录 cookie + 风控更严 + 价值不如内容联动（B站 UP 主评测比评论区更有参考性） |
+| ⑧返利最后 | 合规风险最高，且不能解锁 goods.query（详见下方 Q5） |
+
+### 二、逐个问题回答
+
+#### Q1: 执行顺序是否合理？
+
+大部分合理，但有 2 个调整点（见上方表格）。核心原则：**先做用户体验瓶颈（SSE）再做大功能（对话式），先做免 cookie 的（B站/贴吧）再要 cookie 的（小红书/评论）**。
+
+#### Q2: 评论接口 mtop.alibaba.review.list 在 2026 是否可用？
+
+**结论：风险高，建议降级或跳过。**
+
+- 接口全名：`mtop.alibaba.review.list.for.new.pc.detail`
+- 需要参数：商品 itemId（有）+ **登录态 cookie**（tb_search.py 当前无 cookie）
+- 风控等级：比搜索更高（评论是核心营销数据，淘宝重点保护）
+- 2026 可用性：未实测，但 MTOP 评论接口经常变签名要求，稳定性差
+- **替代方案**：用 B站 UP 主评测视频替代评论区——搜"石头岛 测评"比看商品评论更有参考价值。用户项目构想本来就写了「博主推荐内容联动（B站/知乎）」
+
+#### Q3: B站搜索 API 免 cookie 接口细节
+
+**结论：不能完全免 cookie，但不需要登录。需要 WBI 签名 + buvid3。**
+
+- 端点（2 个可选）：
+  - 综合搜索：`https://api.bilibili.com/x/web-interface/wbi/search/all/v2`
+  - 分类搜索：`https://api.bilibili.com/x/web-interface/wbi/search/type`（search_type=video）
+- **必须 WBI 签名**：2022 年 8 月起严格执行，缺失返回 -412（请求被拦截）
+- **必须 buvid3 cookie**：可以生成随机值（不需要登录态），但必须带
+- pachong 的 bilibili.py 如果用旧版无签名 API，**可能已失效**，需要验证
+
+**WBI 签名完整流程**（bilibili-API-collect 标准实现，Python 可用）：
+
+```python
+# Step 1: 获取密钥种子
+GET https://api.bilibili.com/x/web-interface/nav
+→ data.wbi_img.img_url → 提取 img_key（URL 文件名）
+→ data.wbi_img.sub_url → 提取 sub_key
+
+# Step 2: 混合密钥（固定混淆表重排）
+mixinKeyEncTab = [46,47,18,2,53,8,23,32,15,50,10,31,58,3,45,35,
+                  27,43,5,49,33,9,42,19,29,28,14,39,12,38,41,13,
+                  37,48,7,16,24,55,40,61,26,17,0,1,60,51,30,4,
+                  22,25,54,21,56,59,6,63,57,62,11,36,20,34,44,52]
+mixin_key = getMixinKey(img_key + sub_key)[:32]
+
+# Step 3: 签名
+params['wts'] = int(time.time())           # 加时间戳
+params = dict(sorted(params.items()))      # 参数排序
+params = {k: filter_chars(v) for k,v}      # 过滤 !'()* 字符
+query = urlencode(params)
+w_rid = md5((query + mixin_key).encode()).hexdigest()
+params['w_rid'] = w_rid
+```
+
+**参考实现**：
+- SocialSisterYi/bilibili-API-collect（最权威，`docs/misc/sign/wbi.md`）
+- 混淆表是固定的 64 位数组，不会变
+- img_key 和 sub_key 会变，每次先调 nav 接口获取（可缓存几小时）
+
+**buvid3 生成**：随机 37 位字符串（如 `unverified_' + 随机UUID），设到 cookie 即可，无需登录。
+
+#### Q4: 淘宝 MTOP 搜索响应里有没有优惠券字段？
+
+**结论：MTOP 搜索接口一般不直接返回 coupon 字段。**
+
+- 当前 tb_search.py 解析的 itemsArray 字段（见第 258-376 行）提取了：title、priceShow、originalPrice、sales、shopInfo、procity、icons、structuredUSPInfo 等
+- **没有**提取到 couponPrice / couponLink / couponEndTime 字段
+- 原因：优惠券是联盟推广体系的数据，MTOP 搜索接口只返回商品基础信息
+- **大淘客 API 已有**：api_client.py 第 162 行提取了 `couponDiscount`（拼多多）和第 180 行 `couponPrice`（淘宝）
+- **建议**：
+  1. 快通道（大淘客）的商品：已有 couponPrice/couponEndTime，直接展示
+  2. 慢通道（爬虫）的商品：先只展示价格，优惠券信息需额外调大淘客详情接口（但需要 item_id 匹配，工作量大）
+  3. **MVP 阶段**：优惠券展示只覆盖大淘客来源的商品，爬虫商品只展示价格——够用
+
+#### Q5: 返利功能合规注意点
+
+**结论：技术上可行，但"冲京东 V1 等级解锁 goods.query"这个想法不现实。**
+
+| 维度 | 评估 |
+|------|------|
+| 大淘客转链 | ✅ 合法，联盟推广本身就是合规商业模式，生成推广链接自购没法律风险 |
+| 京东联盟自购 | ⚠️ 2023 年后对自购返利限制更严，需有效推广金额才能结算佣金 |
+| 冲 V1 解锁 goods.query | ❌ **不可行**：① goods.query 是 OAuth 限制不是等级限制；② V1 需要有效推广金额/订单量达标，个人自购几单根本到不了；③ 即使升 V1 也还是需要 OAuth token |
+| 用户体验 | 生成推广链接需要在结果页加"领券/返利"按钮，调用大淘客转链 API |
+
+**建议**：返利功能做，但目标改为"省点钱"而非"冲等级"。大淘客转链 API 本身就带优惠券，①优惠券增强做好后返利自然就有了。
+
+#### Q6: 漏掉的高价值功能
+
+**3 个被忽略的 P0/P1 功能**：
+
+1. **缓存层**（P0，项目构想写了但没实现）
+   - 用户说"每天多次使用"，同商品 24h 内不重复调 API
+   - 不做缓存的后果：① 慢通道每次 10-30 秒用户等不起；② API 调用频繁触发风控
+   - 实现：搜索结果存 SQLite，下次搜同关键词 24h 内直接返回缓存 + 标注「缓存数据，更新于 X 小时前」
+
+2. **SKU 归一化匹配**（P0，表建了但匹配算法没实现）
+   - schema.sql 建了 products + skus 表，但 app.py 没有匹配逻辑
+   - 当前结果页按"标题前缀分组"（group by title prefix），不是真正的跨平台 SKU 匹配
+   - 用户痛点明确写了："搜耀世16 Ultra 5080 返回 5060/5070 价格"
+   - MVP 实现：品牌+型号+关键规格参数提取 → 模糊匹配 → 跨平台归组
+
+3. **模糊意图解析**（P0，阶段 3 的功能但可提前做原型）
+   - "类似某件的裙子" → 提取关键词 → 搜索
+   - 这是对话式 v2 的子功能，可以先用 DeepSeek API 做意图解析，不需要完整对话系统
+
+### 三、多平台内容联动评估（第二十七节 pi 补充）
+
+**pi 的分波策略合理**：B站+贴吧先做（免 cookie），小红书等 cookie。
+
+补充建议：
+
+| 平台 | 优先级 | 实现方式 | 备注 |
+|------|--------|---------|------|
+| B站 | ✅ 第一波 | WBI 签名 + 随机 buvid3 | 签名代码上面已给，pachong 的旧 API 可能已失效 |
+| 贴吧 | ✅ 第一波 | 百度贴吧搜索 API | 免 cookie，但百度反爬看 UA + 频率 |
+| 知乎 | 建议第二波 | 需 cookie（7-14 天有效） | 种草文，服饰类参考价值高 |
+| 小红书 | 建议第二波 | 需 cookie（1-3 天） | **服饰第一品类的重要来源**，用户优先级最高 |
+| 抖音 | 后续 | 反爬最强，cookie 有效期短 | 好物推荐有价值但维护成本高 |
+
+**小红书 cookie 获取步骤**（pachong 的 get_cookie_guide 流程）：
+1. Chrome 打开 xiaohongshu.com → 登录
+2. F12 → Application → Cookies → 复制 `web_session` 和 `xsecappid` 值
+3. 粘到配置文件，有效期 1-3 天（过期需重新获取）
+
+### 四、总结建议
+
+```
+今天能做的（pi 直接开工）：
+  ① 优惠券增强（大淘客数据已有，前端展示即可）
+  ⑦ SSE 实时进度（前端改造，后端加 streaming response）
+  ③ B站搜索（WBI 签名代码上面已给完整实现）
+
+明天做的：
+  ②盯价 + ⑤曲线（合并做，共享 price_history）
+  贴吧搜索（顺手做，免 cookie）
+
+后天做的：
+  ⑥ 对话式 v2（最大工作量，用 DeepSeek 意图解析）
+
+降级/搁置：
+  ④ 评论接口（用 B站 UP 主评测替代）
+  ⑧ 返利（等优惠券做好后自然延伸）
+  小红书/抖音（等用户提供 cookie）
+
+别漏的：
+  缓存层（24h 去重，防风控 + 提速）
+  SKU 匹配（P0 痛点，标题分组不够）
+```
