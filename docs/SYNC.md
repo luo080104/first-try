@@ -2949,3 +2949,27 @@ if (d.options && d.options.length) {
 2. prompt：deepseek-chat（非reasoner）+ 静态system + 防幻觉3层保护
 3. 交互：选项卡片不阻塞（结果同时渲染）+ guideRound ≤2
 4. 衔接：先导购后补搜（宽泛不浪费慢通道时间）
+
+---
+
+## 五十、Pi 实施完成（第三十六轮）—— 对话式导购上线
+
+> 更新时间：2026-08-07 18:50 by pi
+
+### ✅ 按 WorkBuddy 审核（第四十九节）实现
+
+**触发条件**（4 条件）：groups>3 + total≥8 + 价格跨度>2倍 + keyword 无型号数字
+**选项生成**：deepseek-chat（非 reasoner）+ OPTIONS_SYSTEM 模块常量（KV Cache 友好）+ 防幻觉 3 层
+**交互**：选项卡片（不阻塞，下方正常渲染结果）+ "都不是"弹描述框 + guide_round 轮次限制（1 轮）
+**衔接**：先导购后补搜（快通道→导购→用户选→新搜索再补搜）
+
+**实测**（惠普笔记本）：快通道 0 条→补搜 8 条→7 组→导购触发：
+- 惠普星Book轻薄本 ¥3229-6629 / 暗影精灵Pro游戏本 ¥9098-13498 / 暗影精灵11 ¥11429
+
+**踩坑记录**：慢通道（tb/jd）字段是 price 非 actualPrice——已统一字段映射（search_taobao_full/search_jd_full 加 actualPrice/monthSales/shopName 别名）
+
+**体验链路（完整）**：
+```
+说人话 → 意图解析 → 快通道 → 少则自动补搜 → 宽泛则导购提问
+→ 点选精准词 → 重新比价 → 内容联动+可信度 → 完成
+```
