@@ -5,6 +5,8 @@ import time
 import random
 import json
 import os
+import sqlite3
+import datetime
 import urllib.request
 import urllib.parse
 
@@ -38,6 +40,46 @@ CATEGORY_CIDS = {
     '数码家电': '8',
 }
 
+# ===== 缓存层（24h 内同关键词不重复调 API）=====
+CACHE_DB = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
+CACHE_HOURS = 24
+
+def _ensure_cache_table():
+    conn = sqlite3.connect(CACHE_DB)
+    conn.execute('''CREATE TABLE IF NOT EXISTS search_cache (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        keyword TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        cids TEXT,
+        result TEXT NOT NULL,
+        cached_at TEXT DEFAULT (datetime('now','localtime'))
+    )''')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_cache ON search_cache(keyword, platform)')
+    conn.commit()
+    conn.close()
+
+def _cache_get(keyword: str, platform: str, cids=None):
+    _ensure_cache_table()
+    conn = sqlite3.connect(CACHE_DB)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        'SELECT result, cached_at FROM search_cache WHERE keyword=? AND platform=? AND cids IS ? ORDER BY cached_at DESC LIMIT 1',
+        (keyword, platform, cids)).fetchone()
+    conn.close()
+    if row:
+        cached_at = datetime.datetime.strptime(row['cached_at'], '%Y-%m-%d %H:%M:%S')
+        if datetime.datetime.now() - cached_at < datetime.timedelta(hours=CACHE_HOURS):
+            return json.loads(row['result'])
+    return None
+
+def _cache_set(keyword: str, platform: str, cids, items: list):
+    _ensure_cache_table()
+    conn = sqlite3.connect(CACHE_DB)
+    conn.execute('INSERT INTO search_cache (keyword, platform, cids, result) VALUES (?,?,?,?)',
+                 (keyword, platform, cids, json.dumps(items, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
 def make_sign(params: dict) -> str:
     """老式签名（字典序 + &key=secret，实测可用）"""
     sorted_str = '&'.join(f'{k}={params[k]}' for k in sorted(params))
@@ -51,19 +93,32 @@ def get(api_url: str, biz_params: dict) -> dict:
     with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
         return json.loads(r.read().decode('utf-8'))
 
-def search_goods(keywords: str, category: str = None, page: int = 1, size: int = 20) -> list:
-    """淘宝系商品搜索（大淘客），返回解析后的商品列表"""
+def search_goods(keywords: str, category: str = None, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
+    """淘宝系商品搜索（大淘客），带 24h 缓存"""
+    cids = CATEGORY_CIDS.get(category) if category else None
+    if use_cache:
+        cached = _cache_get(keywords, 'tb', cids)
+        if cached is not None:
+            print(f'💾 淘宝「{keywords}」命中缓存（24h 内）')
+            return cached
     params = {'keyWords': keywords, 'pageId': str(page), 'pageSize': str(size)}
-    if category and category in CATEGORY_CIDS:
-        params['cids'] = CATEGORY_CIDS[category]
+    if cids:
+        params['cids'] = cids
     result = get('goods/get-dtk-search-goods', params)
     if result.get('code') != 0:
         print(f'⚠️ API 错误: {result.get("msg")}')
         return []
-    return parse_goods_list(result.get('data', {}).get('list', []), platform='tb')
+    items = parse_goods_list(result.get('data', {}).get('list', []), platform='tb')
+    _cache_set(keywords, 'tb', cids, items)
+    return items
 
-def search_pdd(keywords: str, page: int = 1, size: int = 20) -> list:
-    """拼多多商品搜索（大淘客 dels/pdd/goods/search）"""
+def search_pdd(keywords: str, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
+    """拼多多商品搜索（大淘客 dels/pdd/goods/search），带 24h 缓存"""
+    if use_cache:
+        cached = _cache_get(keywords, 'pdd', None)
+        if cached is not None:
+            print(f'💾 拼多多「{keywords}」命中缓存（24h 内）')
+            return cached
     params = {'keyword': keywords, 'page': str(page), 'pageSize': str(size)}
     result = get('dels/pdd/goods/search', params)
     if result.get('code') != 0:
@@ -77,7 +132,9 @@ def search_pdd(keywords: str, page: int = 1, size: int = 20) -> list:
     else:
         lst = []
     items = parse_pdd_list(lst)
-    return sort_by_relevance(items, keywords)
+    items = sort_by_relevance(items, keywords)
+    _cache_set(keywords, 'pdd', None, items)
+    return items
 
 def sort_by_relevance(items: list, keyword: str) -> list:
     """按标题相关性排序：含完整关键词的排前，含部分词的次之（解决 PDD 匹配松散问题）"""
