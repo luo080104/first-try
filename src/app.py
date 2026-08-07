@@ -8,6 +8,9 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 import uvicorn
+import asyncio
+from fastapi.responses import StreamingResponse
+import json as _json
 
 from api_client import search_goods, search_pdd, value_score
 from matcher import parse_items, group_by_sku, ADAPTERS
@@ -116,6 +119,64 @@ def submit_post(request: Request,
     init_db()
     save_manual_price(keyword.strip(), title.strip(), platform, shop_name.strip(), price, url.strip(), note.strip())
     return templates.TemplateResponse(request, 'submit.html', {'success': True, 'keyword': keyword})
+
+@app.get('/search_sse')
+async def search_sse(keyword: str = '', category: str = ''):
+    async def gen():
+        def sse(data):
+            return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
+        try:
+            yield sse({'type': 'progress', 'msg': f'正在淘宝搜索「{keyword}」...'})
+            tb_items = await asyncio.to_thread(search_goods, keyword, category or None)
+            yield sse({'type': 'progress', 'msg': f'✅ 淘宝完成（{len(tb_items)} 条），正在拼多多...'})
+            pdd_items = await asyncio.to_thread(search_pdd, keyword)
+            yield sse({'type': 'progress', 'msg': f'✅ 拼多多完成（{len(pdd_items)} 条），正在 SKU 分组...'})
+            all_items = tb_items + pdd_items
+
+            init_db()
+            groups = []
+            if category and category in ADAPTERS and ADAPTERS[category]:
+                parsed = parse_items(all_items, category)
+                grouped = group_by_sku(parsed, category)
+                for key, items in grouped.items():
+                    if not key or key == '未解析':
+                        continue
+                    by_platform = {}
+                    for it in items:
+                        it['value_score'] = value_score(it)
+                        p = it.get('platform', '?')
+                        if p not in by_platform or it['actualPrice'] < by_platform[p]['actualPrice']:
+                            by_platform[p] = it
+                    best = min(by_platform.values(), key=lambda x: x['actualPrice'])
+                    groups.append({'key': key, 'count': len(items),
+                                   'platforms': sorted(by_platform.values(), key=lambda x: x['actualPrice']),
+                                   'best': best})
+                groups.sort(key=lambda g: g['best']['actualPrice'])
+            else:
+                for it in all_items[:20]:
+                    groups.append({'key': it['title'][:30], 'count': 1, 'platforms': [it], 'best': it})
+
+            manual_items = find_manual_prices(keyword)
+            for m in manual_items:
+                groups.append({'key': f'人工录入: {m["title"][:20]}', 'count': 1,
+                               'platforms': [{'platform': m['platform'], 'title': m['title'],
+                                              'actualPrice': m['price'], 'originalPrice': None,
+                                              'shopName': m['shop_name'] + '（人工录入）', 'url': m['url']}],
+                               'best': None})
+
+            conn = get_conn()
+            for it in all_items:
+                save_search_result(conn, it, category or '未分类')
+            conn.close()
+
+            yield sse({'type': 'done', 'keyword': keyword, 'category': category,
+                       'groups': groups, 'total': len(all_items),
+                       'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
+                       'manual_count': len(manual_items)})
+        except Exception as e:
+            yield sse({'type': 'error', 'msg': str(e)[:200]})
+
+    return StreamingResponse(gen(), media_type='text/event-stream')
 
 @app.post('/search', response_class=HTMLResponse)
 def search(request: Request, keyword: str = Form(...), category: str = Form('')):
