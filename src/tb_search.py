@@ -31,7 +31,7 @@ _last_call_time = 0  # 低频约束
 # 多 API 监听模式（来源：xiuyegege multi-API + CSDN 文章 + ShilongLee search.py 交叉验证）
 # 淘宝搜索页可能触发以下任意一个 API，全部监听增加命中率
 MTOP_API_PATTERNS = [
-    'mtop.relationrecommend.wirelessrecommend.recommend',  # 主搜索 API（ShilongLee/Crawler 用的）
+    '/h5/mtop.relationrecommend.wirelessrecommend.recommend/2.0/',  # 主搜索 API（CSDN 精确匹配）
     'mtop.taobao.search.',                                 # 搜索通用前缀
     'mtop.taobao.shop.simple.fetch',                       # 店铺商品列表
     'mtop.taobao.shop.item.list',                          # 店铺商品列表2
@@ -108,13 +108,18 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
     淘宝会伪造两个相同的请求，第一个是假数据，第二个才是真数据。
     所以需要等待多个包，跳过第一个。"""
 
-    # 多 API 同时监听（xiuyegege 模式）
-    for pattern in MTOP_API_PATTERNS:
-        tab.listen.start(pattern)
+    # 单监听主搜索接口（多 pattern 会导致 wait 拿不到包）
+    tab.listen.start(MTOP_API_PATTERNS[0])
 
-    # 搜索页 URL（ShilongLee 用的 uland 入口 + 标准 s.taobao.com）
+    # 搜索页 URL：uland SEM 入口（CSDN 2025-09 实测成功，风控宽松）
     keyword_encoded = urllib.parse.quote(keyword, encoding='utf-8')
-    url = f'https://s.taobao.com/search?q={keyword_encoded}&ie=utf8&page={page_num}'
+    url = (f'https://uland.taobao.com/sem/tbsearch?bc_fl_src=tbsite_T9W2LtnM'
+           f'&channelSrp=bingSomama&clk1=343ce7d3ea06de2cf1a203e8562d1eed'
+           f'&commend=all&ie=utf8&initiative_id=tbindexz_20170306'
+           f'&keyword={keyword_encoded}&page={page_num}'
+           f'&preLoadOrigin=https%3A%2F%2Fwww.taobao.com&q={keyword_encoded}'
+           f'&refpid=mm_2898300158_3078300397_115665800437'
+           f'&search_type=item&sourceId=tb.index&tab=all')
     tab.get(url)
 
     # 登录检测（淘宝搜索需要登录）
@@ -132,8 +137,7 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
             return []
         # 登录后重新访问搜索页
         tab.get(url)
-        for pattern in MTOP_API_PATTERNS:
-            tab.listen.start(pattern)
+        tab.listen.start(MTOP_API_PATTERNS[0])
 
     # 验证码检测
     if _has_captcha(tab):
@@ -152,7 +156,7 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
         except Exception:
             break
 
-        if packet is None:
+        if packet is None or isinstance(packet, bool):
             break
 
         packets_received += 1
@@ -160,15 +164,19 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
 
         try:
             body = packet.response.body
+            if isinstance(body, bytes):
+                body = body.decode('utf-8', errors='replace')
             if isinstance(body, str):
+                # 剥离 JSONP 包装: mtopjsonpN({...})
+                m = re.match(r'mtopjsonp\d+\((.*)\)\s*$', body.strip(), re.DOTALL)
+                body = m.group(1) if m else body
                 data = json.loads(body)
             elif isinstance(body, dict):
                 data = body
-            elif isinstance(body, bytes):
-                data = json.loads(body.decode('utf-8', errors='replace'))
             else:
                 continue
-        except Exception:
+        except Exception as e:
+            print(f'[tb] 包解析失败: {str(e)[:80]} | body前60字: {str(body)[:60]}')
             continue
 
         # 检查是否是搜索结果 API 的响应
@@ -203,9 +211,13 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
             time.sleep(2)
             try:
                 packet = tab.listen.wait(timeout=10)
-                if packet:
+                if packet and not isinstance(packet, bool):
                     body = packet.response.body
+                    if isinstance(body, bytes):
+                        body = body.decode('utf-8', errors='replace')
                     if isinstance(body, str):
+                        m = re.match(r'mtopjsonp\d+\((.*)\)\s*$', body.strip(), re.DOTALL)
+                        body = m.group(1) if m else body
                         data = json.loads(body)
                     elif isinstance(body, dict):
                         data = body
