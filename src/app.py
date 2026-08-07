@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 import json as _json
 
 from api_client import search_goods, search_pdd, value_score
+from llm_parse import parse_intent
 from matcher import parse_items, group_by_sku, ADAPTERS
 from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
 
@@ -194,9 +195,17 @@ def watches_page(request: Request):
 @app.get('/search_sse')
 async def search_sse(keyword: str = '', category: str = ''):
     async def gen():
+        nonlocal keyword, category
         def sse(data):
             return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
         try:
+            # 意图解析（对话式输入支持）
+            intent = await asyncio.to_thread(parse_intent, keyword)
+            search_kw = intent.get('keyword') or keyword
+            search_cat = intent.get('category') or category
+            if search_kw != keyword or search_cat != category:
+                yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
+            keyword, category = search_kw, search_cat
             yield sse({'type': 'progress', 'msg': f'正在淘宝搜索「{keyword}」...'})
             tb_items = await asyncio.to_thread(search_goods, keyword, category or None)
             yield sse({'type': 'progress', 'msg': f'✅ 淘宝完成（{len(tb_items)} 条），正在拼多多...'})
@@ -254,6 +263,11 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
     keyword = keyword.strip()
     if not keyword:
         return templates.TemplateResponse(request, 'index.html', {'categories': CATEGORIES, 'error': '请输入商品名称'})
+
+    # 意图解析（对话式输入支持）
+    intent = parse_intent(keyword)
+    keyword = intent.get('keyword') or keyword
+    category = intent.get('category') or category
 
     init_db()
     # 双平台搜索（带缓存）
