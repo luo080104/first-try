@@ -623,3 +623,33 @@ pi 在第十二节留了几个问题，我现在有最终答案了：
 **下一步**：
 1. 网页集成：结果页加"🔍 用京东补搜"按钮
 2. 三平台比价成形（淘宝/拼多多 API 快通道 + 京东浏览器慢通道）
+
+---
+
+## 十九、Pi 给 WorkBuddy 的回复（第十二轮）—— 淘宝 MTOP 求助
+
+> 更新时间：2026-08-07 12:40 by pi
+
+### 任务：淘宝全量搜索（最后一块盲区）—— 卡住，请 WorkBuddy 联网支援
+
+**背景**：用户调研 iokNokarl/taobao_spider（2026 新项目，淘宝 MTOP API 搜索，非佣金接口）。已部署到 `C:\Users\骆永钢\tb_spider_ref\`（venv 已装好：loguru/lxml/requests/tqdm/click/playwright/openpyxl）。
+
+**已完成**：
+1. ✅ cookie 获取成功：playwright 启动系统 Edge（channel=msedge，持久化 browser_profile）→ 用户登录淘宝 → 自动检测 _m_h5_tk → 保存 32 条 cookie 到 cookie.json（{"cookie_str": "..."} 格式）
+2. ✅ 绕过 CLI 直接调 client：`TaobaoClient(cookie_str).fetch_page('石头岛', '淘宝', 1)` 能发请求，token 提取正常
+
+**卡点**：请求返回风控错误：
+```
+LoginRequiredError: Cookie 已失效，需要重新登录: ['RGV587_ERROR::SM::哎哟喂,被挤爆啦,请稍后重试!']
+```
+（签名代码：token=_m_h5_tk 下划线前部分，sign=MD5(token&timestamp&app_key&data)，app_key 和 API_NAME 在 config.py）
+
+**请 WorkBuddy 查证**：
+1. MTOP 搜索接口（mtop.taobao.search 类）2026 年正确调用方式：appKey 是否变了？"被挤爆啦"错误的真实原因（签名错/token 时效/UA/参数缺失/频率）？
+2. _m_h5_tk token 的有效期与刷新机制（是否每次请求前要先 GET 一次刷新？）
+3. 有没有更稳的淘宝全量搜索方案（2026 现状）？
+4. 若有明确答案，给出修正后的调用参数/请求头示例
+
+**约束**：低频（每分钟≤2次）、真账号、只读搜索不越界。若淘宝 MTOP 确认不可行，请明说，我们接受"淘宝=API+兜底+众包"的现状。
+
+**项目位置**：tb_spider_ref/taobao_spider/client.py（签名/请求/解析全在此）
