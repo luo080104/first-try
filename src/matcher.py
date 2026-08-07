@@ -66,13 +66,61 @@ class ClothingMatcher:
         p = item.get('parsed', {})
         return f"{p.get('brand','')}|{'/'.join(p.get('features', []))}"
 
+# ========== 数码家电适配器 ==========
+
+class DigitalMatcher:
+    """数码家电：品牌 + 型号 + 核心配置（GPU/CPU/内存/存储）"""
+
+    BRANDS = ['联想', '惠普', '戴尔', '华硕', '宏碁', '微星', '机械革命', '神舟', '苹果',
+              '华为', '小米', '荣耀', '三星', '索尼', '松下', '格力', '美的', '海尔', 'TCL', '海信']
+
+    CONFIG_PATTERNS = [
+        (r'rtx\s*\d+', 'gpu'),          # RTX5080/RTX 5080
+        (r'gtx\s*\d+', 'gpu'),
+        (r'酷睿\s*\S*', 'cpu'),          # 酷睿Ultra9
+        (r'i[3579]-?\d+\w*', 'cpu'),     # i7-14700HX
+        (r'锐龙\s*\S*', 'cpu'),          # 锐龙7
+        (r'(\d+)g[bd]', 'ram'),           # 32G/16GB
+        (r'(\d+)t[bd]', 'storage'),       # 1T/1TB
+        (r'(\d+)g[bd]\s*ssd', 'storage'),
+    ]
+
+    @staticmethod
+    def parse(title: str) -> dict:
+        brand = ''
+        for b in DigitalMatcher.BRANDS:
+            if b in title:
+                brand = b
+                break
+        # 系列型号：品牌后第一个连续字母数字（如 耀世16Ultra 暗影精灵Max16）
+        import re as _re
+        m = _re.search(r'([一-龥A-Za-z0-9]{2,20}?(?:\d+)?(?:ultra|max|pro|air|yoga|thinkpad|拯救者|暗影精灵|耀世)[^\s【】]*?)', title, _re.I)
+        series = m.group(1)[:20] if m else ''
+        config = {}
+        low = title.lower()
+        for pat, key in DigitalMatcher.CONFIG_PATTERNS:
+            m2 = _re.search(pat, low)
+            if m2:
+                config[key] = m2.group(0)
+        return {'brand': brand, 'series': series, 'config': config}
+
+    @staticmethod
+    def key(item: dict) -> str:
+        p = item.get('parsed', {})
+        cfg = p.get('config', {})
+        parts = [p.get('brand', ''), p.get('series', '')]
+        for k in ['gpu', 'ram', 'storage']:
+            if k in cfg:
+                parts.append(f'{k}={cfg[k]}')
+        return '|'.join(parts)
+
 # ========== 适配器注册 ==========
 
 ADAPTERS = {
     '服饰': ClothingMatcher,
     '食品': FoodMatcher,
     '日用百货': FoodMatcher,  # 日用规格化商品暂用食品规则（品牌+规格）
-    '数码家电': None,          # 阶段 2 再做
+    '数码家电': DigitalMatcher,
 }
 
 def parse_items(items: list, category: str) -> list:
