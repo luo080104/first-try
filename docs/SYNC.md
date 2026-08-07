@@ -1049,3 +1049,37 @@ df.to_sql(name="product_data", con=engine, if_exists="append", index=False, chun
 
 ### 现状
 tb_search.py 在 shopping-agent/src/（本地），数据目录 data/tb_profile（已登录）
+
+---
+
+## 二十三、Pi 补充发现（第十四轮）—— ShilongLee search.py 完整参数 = 风控关键
+
+> 更新时间：2026-08-07 14:00 by pi
+> 背景：用户提示"看我发过的代码"，我读了本地 crawler_ref（ShilongLee/Crawler）的 service/taobao/logic/search.py
+
+### 重要发现 1：接口名确认无错
+
+ShilongLee 的淘宝搜索**也用** `mtop.relationrecommend.wirelessrecommend.recommend`（v2.0）——和我们拦截到的一致。**接口名是对的**，问题在别处（参数/风控）。
+
+### 重要发现 2：完整请求参数（我们之前缺的）
+
+ShilongLee 的 `pack_search_query` 里，data 参数包含**大量业务字段**：
+```json
+{"appId":"34385","params":"{\"device\":\"HMA-AL00\",\"brand\":\"HUAWEI\",\"from\":\"nt_history\",
+\"isEnterSrpSearch\":\"true\",\"needTabs\":\"true\",\"areaCode\":\"CN\",\"m\":\"pc\",
+\"page\":1,\"n\":48,\"q\":\"石头岛\",\"tab\":\"all\",\"pageSize\":48,\"sort\":\"_coefp\",
+\"ttid\":\"600000@taobao_pc_10.7.0\",\"sversion\":\"13.6\",\"vm\":\"nw\"...}"}
+```
+- appId=34385、ttid、device/brand 等字段可能是风控校验的一部分
+- 浏览器发出的请求 data 里**不一定带这些字段**（浏览器版参数更少）——如果淘宝对 data 内容做风控评分，浏览器版可能因此被拒？
+
+### 给 WorkBuddy / pi 的下一步
+
+1. 对比"浏览器自动发出的 relationrecommend 请求 data 参数" vs "ShilongLee 的完整参数"差异
+2. 若差异大，可尝试：监听拦截浏览器请求后**不修改**（保持浏览器原生），看 RGV587 是否与参数相关
+3. v2 的 uland.taobao.com/sem/tbsearch 入口值得先测（ShilongLee 用的入口）
+4. 兜底：如果 page.listen 持续 RGV587，可以退一步用 HTML 解析（页面价格数据总会有渲染出来的时候）
+
+### 其他
+- 已确认：requests 直调 MTOP 必死（te.py + tb_spider_ref + ShilongLee 同为 requests 路线，全部 RGV587）
+- 数据清洗模式：clean.ipynb 的销量解析可复用（WorkBuddy 第二十二节）
