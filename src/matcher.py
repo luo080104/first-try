@@ -92,10 +92,22 @@ class DigitalMatcher:
             if b in title:
                 brand = b
                 break
-        # 系列型号：品牌后第一个连续字母数字（如 耀世16Ultra 暗影精灵Max16）
+        # 系列型号：系列词表匹配（耀世16Ultra / 暗影精灵Max16 / 战66）
         import re as _re
-        m = _re.search(r'([一-龥A-Za-z0-9]{2,20}?(?:\d+)?(?:ultra|max|pro|air|yoga|thinkpad|拯救者|暗影精灵|耀世)[^\s【】]*?)', title, _re.I)
-        series = m.group(1)[:20] if m else ''
+        SERIES_WORDS = ['耀世', '暗影精灵', '光影精灵', '拯救者', '天选', '灵越',
+                        '星Book', '星book', '战66', '战99', '小新', 'ThinkPad',
+                        'thinkpad', 'Yoga', 'yoga', 'OMEN', 'omen', '暗影', '蛟龙', '极光']
+        series = ''
+        for w in SERIES_WORDS:
+            m = _re.search(w + r'[A-Za-z0-9\s]{0,14}', title, _re.I)
+            if m:
+                series = m.group(0)
+                break
+        # 兜底：品牌后 2-6 字
+        if not series:
+            m2 = _re.search(r'[一-龥]{2,6}\d{0,3}[A-Za-z]{0,6}', title)
+            series = m2.group(0) if m2 else ''
+
         config = {}
         low = title.lower()
         for pat, key in DigitalMatcher.CONFIG_PATTERNS:
@@ -107,12 +119,15 @@ class DigitalMatcher:
     @staticmethod
     def key(item: dict) -> str:
         p = item.get('parsed', {})
-        cfg = p.get('config', {})
-        parts = [p.get('brand', ''), p.get('series', '')]
-        for k in ['gpu', 'ram', 'storage']:
-            if k in cfg:
-                parts.append(f'{k}={cfg[k]}')
-        return '|'.join(parts)
+        # 同品牌+同系列归一化即同组（配置差异用标题展示，跨平台对比优先）
+        brand = p.get('brand', '')
+        series = DigitalMatcher._norm(p.get('series', ''))
+        return f'{brand}|{series}'
+
+    @staticmethod
+    def _norm(s: str) -> str:
+        """系列名归一化：去空格、小写（耀世16Ultra == 耀世16 Ultra）"""
+        return s.replace(' ', '').replace('-', '').lower()[:25]
 
 # ========== 适配器注册 ==========
 
