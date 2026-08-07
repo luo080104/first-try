@@ -4,55 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>比价结果 - {{ keyword }}</title>
+    <link rel="stylesheet" href="/static/style.css">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-               background: #f5f6fa; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px 16px 60px; }
-        .top { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-        .back { font-size: 24px; text-decoration: none; color: #636e72;
-                border: 2px solid #dfe6e9; border-radius: 10px; padding: 4px 14px; }
-        .top h1 { font-size: 20px; color: #2d3436; flex: 1; }
-        .stat { color: #95a5a6; font-size: 14px; text-align: center; margin-bottom: 16px; }
-        .group { background: #fff; border-radius: 14px; padding: 16px;
-                 box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 14px; }
-        .group-head { display: flex; justify-content: space-between; align-items: center;
-                      margin-bottom: 10px; }
-        .sku { font-size: 16px; font-weight: 600; color: #2d3436; }
-        .count { font-size: 13px; color: #b2bec3; }
-        .item { display: flex; justify-content: space-between; align-items: center;
-                padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; }
-        .item.best { background: #e8f7ee; border: 1.5px solid #27ae60; }
-        .item .plat { font-size: 13px; font-weight: 600; color: #0984e3;
-                      background: #ebf4fe; border-radius: 6px; padding: 3px 8px; }
-        .item.best .plat { background: #27ae60; color: #fff; }
-        .item .info { flex: 1; margin: 0 10px; min-width: 0; }
-        .item .title { font-size: 14px; color: #2d3436; white-space: nowrap;
-                       overflow: hidden; text-overflow: ellipsis; }
-        .item .shop { font-size: 12px; color: #b2bec3; margin-top: 2px; }
-        .item .link { font-size: 12px; color: #0984e3; text-decoration: none; font-weight: 600; margin-left: 6px; }
-        .hist-box { margin-top: 6px; padding: 8px 10px; background: #f8f9fa; border-radius: 8px;
-                    font-size: 12px; color: #636e72; line-height: 1.8; }
-        .history-tip { background: #eaf2fb; border: 1px solid #b3d4f5; border-radius: 10px;
-                       padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #2c6fbb; }
-        .fallback { background: #fff7e6; border: 1.5px solid #f0a500; border-radius: 14px;
-                    padding: 16px; margin-bottom: 14px; }
-        .fb-title { font-size: 15px; font-weight: 600; color: #b7791f; margin-bottom: 6px; }
-        .fb-desc { font-size: 13px; color: #8a6d3b; margin-bottom: 10px; line-height: 1.6; }
-        .fb-copy { display: flex; gap: 8px; align-items: center; }
-        .fb-copy span { flex: 1; font-size: 14px; background: #fff; border: 1px dashed #f0a500;
-                        border-radius: 8px; padding: 8px 10px; color: #2d3436; }
-        .fb-copy button { padding: 8px 20px; font-size: 14px; background: #f0a500; color: #fff;
-                          border: none; border-radius: 8px; cursor: pointer; }
-        .price { text-align: right; }
-        .price .now { font-size: 18px; font-weight: 700; color: #d63031; }
-        .price .old { font-size: 12px; color: #b2bec3; text-decoration: line-through; }
-        .price .coupon { font-size: 11px; color: #ff5000; font-weight: 600; margin-top: 2px; }
-        .badge { font-size: 11px; background: #27ae60; color: #fff; border-radius: 4px;
-                 padding: 2px 6px; margin-left: 4px; }
-        .empty { text-align: center; color: #b2bec3; padding: 40px 0; font-size: 16px; }
-        .back-home { display: block; text-align: center; margin-top: 24px;
-                     color: #0984e3; text-decoration: none; font-size: 16px; }
+        .sub-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
+        .sub-btns .btn { flex: 1; min-width: 140px; }
+        .loading-tip { display: none; text-align: center; font-size: 15px; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -117,16 +73,16 @@
             </div>
             {% endfor %}
         {% else %}
-            <div class="empty">没有搜到结果<br>（该商品可能未设置推广佣金）</div>
+            <div class="empty">没有搜到结果<br>（该商品可能未设置推广佣金）<br><br>试试：<br>① 用上面的「淘宝/京东补搜」<br>② 换个关键词（如品牌英文名）</div>
         {% endif %}
 
-        <div style="text-align:center;margin-top:16px">
-            <button onclick="tbSearch()" id="tb-btn" style="padding:12px 24px;font-size:16px;background:#ff5000;color:#fff;border:none;border-radius:10px;cursor:pointer">🛒 用淘宝补搜（约10-30秒）</button>
+        <div class="sub-btns">
+            <button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">🛒 用淘宝补搜</button>
             <button onclick="biliSearch()" id="bili-btn" style="padding:12px 24px;font-size:16px;background:#00a1d6;color:#fff;border:none;border-radius:10px;cursor:pointer">📺 B站/贴吧（约1分钟）</button>
-            <button onclick="jdSearch()" id="jd-btn" style="padding:12px 24px;font-size:16px;background:#e4393c;color:#fff;border:none;border-radius:10px;cursor:pointer">🔍 用京东补搜（约10-30秒）</button>
-            <div id="jd-loading" style="display:none;color:#e4393c;margin-top:10px;font-size:14px">正在京东搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
-            <div id="tb-loading" style="display:none;color:#ff5000;margin-top:10px;font-size:14px">正在淘宝搜索「{{ keyword }}」…（会弹出浏览器窗口）</div>
-            <div id="bili-loading" style="display:none;color:#00a1d6;margin-top:10px;font-size:14px">正在搜索「{{ keyword }}」相关内容（B站/小红书/贴吧）…（约1分钟）</div>
+            <button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">🔍 用京东补搜</button>
+            <div id="jd-loading" class="loading-tip" style="color:#e4393c">正在京东搜索「{{ keyword }}」…</div>
+            <div id="tb-loading" class="loading-tip" style="color:#ff5000">正在淘宝搜索「{{ keyword }}」…</div>
+            <div id="bili-loading" class="loading-tip" style="color:#00a1d6">正在搜索「{{ keyword }}」相关内容…</div>
         </div>
         <div id="jd-results"></div>
         <a href="/" class="back-home">← 再查一个</a>
@@ -141,8 +97,8 @@
             fd.append('target_price', parseFloat(target));
             fetch('/watch', {method: 'POST', body: fd})
                 .then(r => r.json())
-                .then(() => alert('✅ 已加入盯价！目标 ¥' + target + '，去「盯价清单」查看'))
-                .catch(() => alert('盯价失败'));
+                .then(() => showToast('✅ 已加入盯价！目标 ¥' + target))
+                .catch(() => showToast('盯价失败，请重试'));
         }
         function loadHistory(platform, itemId, el) {
             var box = el.closest('.item').querySelector('.hist-box');
@@ -283,6 +239,19 @@
                 setTimeout(() => btn.innerText = '复制', 1500);
             });
         }
+    </script>
+    <div id="toast"></div>
+    <button id="to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+    <script>
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(function(){ t.style.display = 'none'; }, 2000);
+        }
+        window.addEventListener('scroll', function() {
+            document.getElementById('to-top').style.display = window.scrollY > 600 ? 'block' : 'none';
+        });
     </script>
 </body>
 </html>
