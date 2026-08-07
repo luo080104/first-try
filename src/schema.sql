@@ -149,3 +149,11 @@ CREATE TABLE IF NOT EXISTS comment_sentiment (
     analyzed_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sentiment ON comment_sentiment(platform, content_id);
+
+-- ========== 慢通道搜索缓存（避免重复开浏览器，价格敏感 → 短 TTL 6h）==========
+
+CREATE TABLE IF NOT EXISTS slow_search_cache (
+    keyword TEXT PRIMARY KEY,           -- 搜索词（归一化小写）
+    items TEXT NOT NULL,                -- JSON 数组（tb_full + jd_full 合并结果）
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);

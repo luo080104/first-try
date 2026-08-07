@@ -12,6 +12,38 @@ def get_conn() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
+# ---------- 慢通道搜索缓存（6h TTL，避免重复开浏览器）----------
+SLOW_CACHE_HOURS = 6
+
+def get_slow_cache(keyword: str) -> list | None:
+    """读慢通道缓存：6h 内命中返回 items 列表，否则 None"""
+    try:
+        conn = get_conn()
+        row = conn.execute(
+            "SELECT items FROM slow_search_cache WHERE keyword=? "
+            "AND created_at > datetime('now','localtime', ?)",
+            (keyword, f'-{SLOW_CACHE_HOURS} hours')).fetchone()
+        conn.close()
+        if row:
+            return json.loads(row['items'])
+    except Exception:
+        pass
+    return None
+
+def set_slow_cache(keyword: str, items: list):
+    """写慢通道缓存（upsert）"""
+    try:
+        conn = get_conn()
+        conn.execute(
+            "INSERT INTO slow_search_cache (keyword, items) VALUES (?,?) "
+            "ON CONFLICT(keyword) DO UPDATE SET items=excluded.items, "
+            "created_at=datetime('now','localtime')",
+            (keyword, json.dumps(items, ensure_ascii=False)))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
 def init_db():
     """建库建表（幂等：已存在则跳过）"""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)

@@ -131,7 +131,7 @@ def search_jd(keyword: str, max_items: int = 30, login_wait: int = 150) -> list:
             tab.wait.doc_loaded()
             time.sleep(2)
 
-        # 等待 React 渲染出商品卡片（新版搜索页是 React 应用，最多等 20 秒）
+        # 等待 React 渲染出商品卡片（新版搜索页是 React 应用，最多等 20 秒，0.5s 轮询）
         cards = []
         deadline = time.time() + 20
         while time.time() < deadline:
@@ -141,16 +141,16 @@ def search_jd(keyword: str, max_items: int = 30, login_wait: int = 150) -> list:
             cards = tab.eles('xpath://*[contains(@class,"goodsCardWrapper")]', timeout=3)
             if len(cards) > 0:
                 break
-            time.sleep(1)
+            time.sleep(0.5)
         if not cards:
             print('⚠️ 京东商品卡片未渲染出来（可能页面改版或风控），本次返回空')
             return []
 
         # 触发懒加载（滚动 2 次，随机间隔，xiuyegege 模式）
         tab.run_js('window.scrollTo(0, document.body.scrollHeight)')
-        time.sleep(random.uniform(2, 4))
+        time.sleep(random.uniform(1.5, 2.5))
         tab.run_js('window.scrollTo(0, document.body.scrollHeight / 2)')
-        time.sleep(random.uniform(1, 2))
+        time.sleep(random.uniform(1, 1.5))
 
         items = []
         seen = set()
@@ -175,7 +175,12 @@ def search_jd(keyword: str, max_items: int = 30, login_wait: int = 150) -> list:
 
         _collect_cards()
 
-        # 第 1 页滚动 2 次加载更多（懒加载）
+        # 加速：首屏已够（>=20 条）直接返回，不再滚动/翻页（多数场景 10s 内完成）
+        if len(items) >= 20:
+            print(f'[jd] 首屏 {len(items)} 条已够，跳过滚动+翻页（加速）')
+            return items[:max_items]
+
+        # 首屏不足才滚动 2 次加载更多（懒加载）
         for _ in range(2):
             if len(items) >= max_items:
                 break
@@ -188,7 +193,7 @@ def search_jd(keyword: str, max_items: int = 30, login_wait: int = 150) -> list:
             else:
                 break
 
-        # 第 2 页（翻页 URL），仍不够再抓一页
+        # 第 2 页（翻页 URL），首屏+滚动仍不够才翻页（兜底）
         if len(items) < max_items:
             try:
                 tab.get(f'https://search.jd.com/Search?keyword={keyword}&enc=utf-8&page=2')

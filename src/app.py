@@ -108,7 +108,7 @@ def search_jd_full(keyword: str) -> list:
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, get_slow_cache, set_slow_cache
 
 app = FastAPI(title='购物助手')
 templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -333,14 +333,22 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东（用户要求：默认所有，不分平台）
             slow_items = []
             if len(all_items) < 5:
-                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东）...'})
-                tb_full, jd_full = await asyncio.gather(
-                    asyncio.to_thread(search_taobao_full, keyword),
-                    asyncio.to_thread(search_jd_full, keyword),
-                )
-                slow_items = tb_full + jd_full
-                all_items = tb_items + pdd_items + slow_items
-                yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
+                # 6h 内同词已补搜过 → 直接复用缓存（不开浏览器，秒出）
+                cached = get_slow_cache(keyword)
+                if cached:
+                    slow_items = cached
+                    all_items = tb_items + pdd_items + slow_items
+                    yield sse({'type': 'progress', 'msg': f'⚡ 命中补搜缓存（{len(slow_items)} 条，6h 内有效），正在合并比价...'})
+                else:
+                    yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东）...'})
+                    tb_full, jd_full = await asyncio.gather(
+                        asyncio.to_thread(search_taobao_full, keyword),
+                        asyncio.to_thread(search_jd_full, keyword),
+                    )
+                    slow_items = tb_full + jd_full
+                    all_items = tb_items + pdd_items + slow_items
+                    set_slow_cache(keyword, slow_items)
+                    yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             else:
                 yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条，正在 SKU 分组...'})
 
