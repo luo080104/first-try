@@ -14,6 +14,8 @@ import json as _json
 
 from api_client import search_goods, search_pdd, value_score
 from llm_parse import parse_intent
+from score import score_content
+from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
 from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
 
@@ -76,18 +78,32 @@ def search_bili_api(keyword: str = ''):
                 items.append({'type': 'bili', 'title': (d.get('title','') or '')[:60],
                               'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
                               'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
-                              'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80]})
+                              'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80],
+                              'content_id': str(d.get('video_id','')), 'pub_ts': d.get('create_time','')})
             elif plat == 'tieba':
                 items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
                               'author': d.get('author',''), 'play': 0, 'like': 0,
                               'comment': d.get('comment_count',0), 'url': d.get('url',''),
-                              'desc': d.get('tieba_name','')})
+                              'desc': d.get('tieba_name',''),
+                              'content_id': str(d.get('note_id','')), 'pub_ts': d.get('publish_time','')})
             else:
                 items.append({'type': 'xhs', 'title': (d.get('title','') or '')[:60],
                               'author': d.get('nickname',''), 'play': 0,
                               'like': d.get('liked_count',0), 'comment': d.get('comment_count',0),
-                              'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60]})
-        return {'items': items[:30]}
+                              'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60],
+                              'content_id': str(d.get('note_id','')), 'pub_ts': d.get('time','')})
+        # 给每条内容打分（可信度引擎）
+        for it in items:
+            it['content_id'] = it.get('content_id', '')
+            sc = score_content(it, keyword)
+            it['score'] = sc['score']
+            it['flags'] = sc['flags']
+            it['sent'] = sc['sentiment']
+        trap = detect_trap(keyword)
+        result = {'items': items[:30]}
+        if trap.get('has_trap') or trap.get('has_fake_original'):
+            result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
+        return result
 
     # 3. 缓存不足才调 MediaCrawler（uv 路径）
     uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
