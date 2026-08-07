@@ -931,3 +931,89 @@ tb_spider_ref 的 config.py 里 API_NAME 就是 `mtop.relationrecommend.wireless
 
 > 更新时间：2026-08-07 13:40 by WorkBuddy
 > 用法：pi 读完后拉取代码，测试 `python src/tb_search.py 石头岛`
+
+---
+
+## 第二十三节：用户补充 2 个 GitHub 项目分析（2026-08-07 by WorkBuddy）
+
+用户发了两个新 GitHub 项目，我逐一分析：
+
+### 1. 2427775883/sOPgwwnZOH ❌ 无用
+
+- **性质**：付费毕设展示项目（"Python 计算机毕业设计分享"）
+- **仓库内容**：只有 README.md，源码需通过语雀付费链接获取
+- **结论**：**跳过，无任何可借鉴源码**
+
+### 2. 1git-zhu/taobao-project ✅ 有价值
+
+三个文件：
+
+#### te.py — 淘宝 MTOP 爬虫（requests 直调）
+
+- **API**：`mtop.relationrecommend.wirelessrecommend.recommend`（和我们完全一致）
+- **AppKey**：`12574478`（和我们完全一致）
+- **技术**：requests + 手动 MD5 签名（和 tb_spider_ref 一样，**也会遇 RGV587**）
+- **值得借鉴的点**：
+  1. **Token 过期检测逻辑**：检测 `FAIL_SYS_TOKEN_EMPTY` 和 `FAIL_SYS_ILLEGAL_ACCESS` → 刷新 Cookie → 重试（最多 3 次）
+  2. **防封延时**：每页间隔 18-25 秒随机延时
+  3. **字段提取确认**：icons→优惠券、structuredUSPInfo→属性、hotListInfo→热榜、summaryTips→卖点——和我们 v2 完全一致
+
+#### tt.py — 家居关键词列表（不相关，跳过）
+
+#### clean.ipynb — 数据清洗 notebook ⭐ 强烈推荐 pi 借鉴
+
+这是最有价值的部分，包含 5 个实用的数据清洗模式：
+
+**① 销量文本解析**（`parse_sale_volume` 函数）：
+```python
+# "2万+人付款" → 20000~23000 随机数
+# "900+人付款" → 900~1080 随机数
+# "1人付款"   → 1
+# "1万+人看过" → 10000~13000 随机数
+# NaN         → None
+```
+→ pi 后续处理爬虫数据时可直接复用此函数
+
+**② 发货地拆分**（`split_location` 函数）：
+```python
+# "江苏 苏州" → 省=江苏, 市=苏州
+# "北京"     → 省=北京, 市=北京
+# NaN        → None, None
+```
+→ 和我们 tb_search.py v2 的省市拆分逻辑一致，可交叉验证
+
+**③ 属性提取**（`extract_style_material` 函数）：
+```python
+# 从 structuredUSPInfo 属性列表中正则提取"版型"和"面料"
+# ['版型:修身型', '面料:棉95%', ...] → 版型=修身型, 面料=棉95%
+```
+→ pi 可扩展此模式提取更多结构化属性（品牌/CPU/分辨率等）
+
+**④ 热门标签清洗**（`clean_hot_tags` 函数）：
+```python
+# {'rank_short_text': '板鞋好评榜·第2名'} → ['板鞋好评榜·第2名']
+# NaN → []
+# {}  → []
+```
+→ 统一格式为 list，便于后续展示和比较
+
+**⑤ MySQL 入库**：
+```python
+from sqlalchemy import create_engine
+df.to_sql(name="product_data", con=engine, if_exists="append", index=False, chunksize=1000)
+```
+→ 我们用 SQLite，但 `to_sql` 模式可以复用
+
+### 总结
+
+| 文件 | 评价 | 对我们有用吗 |
+|------|------|-------------|
+| te.py | requests 直调，会遇到 RGV587 | ⚠️ Token 检测逻辑可参考，但技术路线不用 |
+| tt.py | 关键词列表 | ❌ 不相关 |
+| clean.ipynb | 数据清洗 5 个实用模式 | ✅ **强烈推荐 pi 借鉴**，尤其销量解析函数 |
+
+**te.py 再次验证了我们的判断**：requests 直调 MTOP 必遇 RGV587，page.listen 才是正路。
+**clean.ipynb 的清洗模式**值得 pi 在爬虫数据入库前复用。
+
+> 更新时间：2026-08-07 13:50 by WorkBuddy
+> 用法：pi 后续做数据清洗时参考 clean.ipynb 的模式
