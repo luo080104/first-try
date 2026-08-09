@@ -4476,6 +4476,46 @@ pi 已提交 v5 代码（commit 078c376），与审核方案一致度极高，�
 
 # 📤 给 WorkBuddy 的审阅包（2026-08-09 全天成果汇总）
 
+## 🔄 距上次共享（v5.2 方案审核）以来的全部工作
+
+### 1️⃣ 上次审核意见落实情况（你上次提的全修了 ✅）
+
+| 项 | 落实 |
+|---|---|
+| 🔴 P0 DeepSeek 旧模型名停服 | ✅ 5 处全换：llm_parse(意图/导购)→V4-Flash、extract/sentiment→V4-Flash、compare AI建议→V4-Pro+reasoning_effort=max |
+| 🟡 P1-1 循环引用 | ✅ 新建 content_reader.py 独立模块，app/compare 都引用它 |
+| 🟡 P1-2 API 无重试 | ✅ compare.py 新增 _call_llm_retry（指数退避 5s→10s + 超时120s + 降级文案） |
+| 🟡 P1-3 AI 建议 6 次 R1 | ✅ advice_cache 表 6h 缓存 + 失败不缓存 + 前端 cached 标记 |
+| 🟢 P2×4 | ✅ 死代码/import 提级/glob 函数内/盯价比例 WATCH_DEFAULT_RATIO 常量 |
+
+### 2️⃣ v5 采集引擎（方案批准后开工，commit 078c376）
+
+- crawl_tasks 表（30 种子词 + source 字段按你要求）
+- crawl.py：API 快通道 + 浏览器慢通道（tb30s/jd12-20s/vip12-20s 串行）+ 断点续跑 + 失败重试 + 自动扩展（≥CRAWL_NEWWORD_MIN=3 次 + 排除短词/噪音词，按你规则）
+- 5 个接口：/api/crawl、/api/crawl_status、/api/crawl_tasks、/api/crawl_add、/crawl 采集中心页
+- 双模式搜索：📚历史（读库秒出）/ ⚡实时（use_cache=False 现场抓）
+
+### 3️⃣ v5.2 六项（commit 1e83f46 + 95a9948）
+
+| 项 | 落实 |
+|---|---|
+| ① 唯品会 API | ✅ search_vip()（折淘客）+ 官方文档校准（storeInfo 店铺名/sourceType 自营标记/排序）——**但授权未完成**（见下） |
+| ② 低价警示（P0 提级） | ✅ 组内最低 < 均价 70% → 红条（前端已渲染） |
+| ③ 偏好记忆 | ✅ llm_parse 自动提取（"不要拼多多"/"要纯棉"）+ user_preferences 表 + /api/prefs + ⚙️按钮 |
+| ④ 来源标注 | ✅ content_limited 标记 + 前端提示 |
+| ⑤ 需求追问 | ✅ 预算卡 3 档 + ⚡直接搜→ 跳过（不打扰） |
+| ⑥ 单斤价/店铺/正品（P2） | ⏳ 待做 |
+
+### 4️⃣ 唯品会浏览器通道（commit 378ec65，API 授权失败后的替代）
+
+- 折淘客授权失败：`user has no union auth`（用户 SID 非联盟授权 SID，重新授权未果）
+- 调试过程：search.vip.com 废弃 / m.vip.com 强制跳首页 / **category.vip.com/suggest.php 可用**（需 PC 登录态）
+- vip_search.py：12-20s 低频 + 端口 9302 + 登录态复用
+- 接入：SSE 慢通道补搜（三路并行 9300/9301/9302）+ deep_crawl + 采集引擎
+- 实测「球鞋」20 条真实数据（¥89~¥227 含原价/折扣/链接）
+
+
+
 ## 今日 4 个 commit
 
 | commit | 内容 |
