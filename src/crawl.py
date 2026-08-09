@@ -147,7 +147,7 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
                     mark_crawl_task, add_auto_keywords)
 
     ensure_crawl_tasks()
-    tasks = get_pending_tasks()
+    tasks = get_pending_tasks(500)  # 一轮取全部（310+ 词），避免 100 上限截断
     if not tasks:
         return {'ok': False, 'msg': '没有待采集的关键词（全部已完成）'}
 
