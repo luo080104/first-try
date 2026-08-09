@@ -4444,3 +4444,30 @@ pi 已提交 v5 代码（commit 078c376），与审核方案一致度极高，�
 
 - P2：单斤价展示 + 店铺类型标注（自营/百亿补贴）+ 正品保障推荐
 - 折淘客 key 注册引导（用户操作）
+
+---
+
+# ✅ 唯品会浏览器通道打通（pi，2026-08-09）
+
+## 背景
+折淘客 API 授权未完成（user has no union auth，用户 SID 非联盟授权 SID）→ 改用浏览器直爬（用户批准爬虫）。
+
+## 关键发现（调试过程）
+1. `search.vip.com` 域名已废弃（Edge 错误页）
+2. `m.vip.com/search.html` 无条件重定向 index.html（SPA，接口带签名）
+3. PC 搜索入口 **`category.vip.com/suggest.php?keyword=xxx&ff=235|12|页码|1`** ✅ 可用（已登录态）
+4. 商品卡片：`div.c-goods-item`，链接 `detail.vip.com/detail-{brandId}-{productId}.html`
+5. 登录态：www.vip.com 和 m.vip.com 分开；搜索页用 PC 登录态（cookie: VipUID/PASSPORT_ACCESS_TOKEN/_C_Auth）
+
+## 交付
+- `src/vip_search.py`：唯品会搜索爬虫（端口 9302、12-20s 随机低频、登录态复用 vip_profile）
+- `app.search_vip_full()`：字段统一（actualPrice/monthSales/shopName/url/goodsId）
+- 接入三处：SSE 慢通道补搜（淘宝+京东+唯品会并行，端口已分开 9300/9301/9302）、deep_crawl 深采、crawl.py 采集引擎
+- `login_vip_m.py` 保留（m 站登录，备用）
+
+## 实测
+「球鞋」→ 20 条真实数据：¥89~¥227，含原价/折扣/详情链接 ✅
+
+## 说明
+- 折淘客 API 通道保留（search_vip API 版），授权完成后自动双通道
+- 唯品会浏览器通道需要 PC 登录态（用户已扫码 luo****ing）

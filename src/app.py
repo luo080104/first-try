@@ -53,6 +53,24 @@ def search_jd_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     except Exception as e:
         print(f'[jd_full] 失败: {str(e)[:80]}')
         return []
+
+def search_vip_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
+    """唯品会全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
+    try:
+        import vip_search
+        items = vip_search.search_vip(keyword, max_items=max_items, page=page)
+        for it in items:
+            if 'actualPrice' not in it and it.get('price') is not None:
+                it['actualPrice'] = it['price']
+            it['monthSales'] = it.get('sales') or 0
+            it['shopName'] = it.get('shop') or ''
+            it['title'] = it.get('title', '')
+            it['platform'] = 'vip'
+            it['_source'] = 'browser'
+        return items
+    except Exception as e:
+        print(f'[vip_full] 失败: {str(e)[:80]}')
+        return []
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
@@ -219,7 +237,7 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
     if not keyword:
         return {'ok': False, 'msg': '请输入关键词'}
     pages = min(max(pages, 1), 5)
-    results = {'tb': [], 'jd': []}
+    results = {'tb': [], 'jd': [], 'vip': []}
     # 淘宝翻页（tb_search 已支持 page）
     try:
         for p in range(1, pages + 1):
@@ -238,6 +256,15 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
                 break
     except Exception as e:
         print(f'[deep_crawl jd] {str(e)[:80]}')
+    # 唯品会翻页（12-20s 随机抖动）
+    try:
+        for p in range(1, pages + 1):
+            items = await asyncio.to_thread(search_vip_full, keyword, p)
+            results['vip'] += items
+            if len(items) < 8:
+                break
+    except Exception as e:
+        print(f'[deep_crawl vip] {str(e)[:80]}')
     # 入库
     conn = get_conn()
     added = 0
@@ -249,7 +276,7 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
     conn.commit()
     conn.close()
     total = sum(len(v) for v in results.values())
-    return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} = {total} 条，入库 {added} 条'}
+    return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} + 唯品会 {len(results["vip"])} = {total} 条，入库 {added} 条'}
 
 @app.get('/search_sse')
 async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live'):
@@ -313,15 +340,16 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     yield sse({'type': 'progress', 'msg': f'🔕 已按你的偏好排除：{"、".join(excluded)}'})
             all_items = tb_items + pdd_items + vip_items
 
-            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东（用户要求：默认所有，不分平台）
+            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东 + 唯品会（用户要求：默认所有，不分平台）
             slow_items = []
             if len(all_items) < 5:
-                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东）...'})
-                tb_full, jd_full = await asyncio.gather(
+                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会）...'})
+                tb_full, jd_full, vip_full = await asyncio.gather(
                     asyncio.to_thread(search_taobao_full, keyword),
                     asyncio.to_thread(search_jd_full, keyword),
+                    asyncio.to_thread(search_vip_full, keyword),
                 )
-                slow_items = tb_full + jd_full
+                slow_items = tb_full + jd_full + vip_full
                 all_items = tb_items + pdd_items + vip_items + slow_items
                 yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             else:
