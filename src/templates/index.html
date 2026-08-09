@@ -54,6 +54,7 @@
         <div id="progress" style="display:none;text-align:center;color:#0984e3;font-size:15px;margin-top:16px"></div>
         <div id="sse-result"></div>
         <div class="quick">
+            <a class="q1" href="/compare">⚖️ 帮我比</a>
             <a class="q1" href="/items">🛍️ 商品库</a>
             <a class="q2" href="/watches">🎯 盯价清单</a>
             <a class="q2" href="/submit">📝 录入好价</a>
@@ -62,6 +63,10 @@
         <div class="tips">提示：选品类比价更准（能按规格分组）<br><a href="/submit" style="color:#27ae60;font-size:14px;">📝 录入好价（补盲区）</a> ・ <a href="/watches" style="color:#0984e3;font-size:14px;">🎯 盯价清单</a></div>
     </div>
     <script>
+        // 支持 ?q= 预填搜索词（对比页「改用对话」跳转）
+        var urlParams = new URLSearchParams(window.location.search);
+        var urlQ = urlParams.get('q');
+        if (urlQ) { document.getElementById('kw').value = urlQ; doSearch(); }
         document.querySelectorAll('.cat').forEach(el => {
             el.addEventListener('click', () => {
                 document.querySelectorAll('.cat').forEach(e => e.classList.remove('active'));

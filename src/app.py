@@ -474,5 +474,62 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
         'subsidies': subsidies,
     })
 
+# ========== v3.5 对比页（Mode 2「帮我比」）==========
+
+@app.get('/compare', response_class=HTMLResponse)
+def compare_page(request: Request):
+    """对比页入口"""
+    return templates.TemplateResponse(request, 'compare.html', {'categories': CATEGORIES})
+
+@app.post('/api/compare')
+async def api_compare(keyword: str = Form(''), category: str = Form('')):
+    """三平台搜索 + SKU 合并 + 内容摘要（快路径，不调 R1）"""
+    from compare import search_compare, parse_link, content_summary
+    kw = keyword.strip()
+    link_info = parse_link(kw)
+    # 链接输入：提取平台+ID，用 ID 查不到详情就回退为关键词搜索
+    if link_info:
+        kw = re.sub(r'https?://\S+', '', kw).strip() or kw
+    if not kw:
+        return {'ok': False, 'msg': '请输入商品关键词或链接'}
+    data = await asyncio.to_thread(search_compare, kw, category)
+    content = await asyncio.to_thread(content_summary, kw)
+    return {'ok': True, 'keyword': kw, 'groups': [
+        {'key': g['key'],
+         'platforms': [{'platform': p, 'title': it.get('title', ''), 'price': it.get('actualPrice'),
+                        'original': it.get('originalPrice'), 'coupon': it.get('couponPrice') or it.get('coupon_amount') or 0,
+                        'shop': it.get('shopName') or '', 'url': it.get('url') or '',
+                        'goodsId': it.get('goodsId') or '', 'sales': it.get('monthSales') or 0}
+                       for p, it in g['platforms'].items()],
+         'best_price': g['best']['actualPrice']}
+        for g in data['groups'][:6]],
+        'subsidies': data['subsidies'], 'content': content,
+        'tb_count': data['tb_count'], 'pdd_count': data['pdd_count']}
+
+@app.post('/api/advice')
+async def api_advice(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
+    """AI 建议面板（R1，异步加载）"""
+    from compare import search_compare, gen_advice
+    from db import get_conn
+    data = await asyncio.to_thread(search_compare, keyword, category)
+    group = next((g for g in data['groups'] if g['key'] == group_key), None)
+    if not group:
+        return {'ok': False, 'msg': '未找到该商品组'}
+    # 查历史（取组内第一个有 goodsId 的商品）
+    history = []
+    conn = get_conn()
+    for p, it in group['platforms'].items():
+        gid = it.get('goodsId') or ''
+        if gid:
+            rows = conn.execute('''
+                SELECT price, queried_at FROM price_history
+                WHERE platform=? AND item_id=? ORDER BY queried_at DESC LIMIT 30
+            ''', (p, str(gid))).fetchall()
+            history += [dict(r) for r in rows]
+            break
+    conn.close()
+    advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history)
+    return {'ok': True, 'advice': advice}
+
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8001)

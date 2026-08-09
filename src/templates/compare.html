@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>帮我比 - Go购</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .cmp-box { background: #fff; border-radius: 16px; padding: 20px;
+                   box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        input[type=text] { width: 100%; font-size: 18px; padding: 14px 16px;
+                           border: 2px solid #dfe6e9; border-radius: 12px;
+                           outline: none; min-height: 52px; }
+        input[type=text]:focus { border-color: #0984e3; box-shadow: 0 0 0 3px rgba(9,132,227,0.15); }
+        .cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+        .cat { flex: 1; min-width: 78px; padding: 10px 0; text-align: center;
+               border: 2px solid #dfe6e9; border-radius: 24px; font-size: 14px;
+               cursor: pointer; background: #fff; color: #636e72; }
+        .cat.active { background: #0984e3; border-color: #0984e3; color: #fff; }
+        #cmp-btn { width: 100%; font-size: 18px; padding: 14px; }
+        .progress { display: none; text-align: center; color: #0984e3; font-size: 15px;
+                    margin-top: 16px; line-height: 1.8; }
+        .cmp-card { background: #fff; border-radius: 14px; padding: 16px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 14px; }
+        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-title { font-size: 17px; font-weight: 700; color: #2d3436; }
+        .price-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .price-cell { flex: 1; border-radius: 12px; padding: 12px 10px; text-align: center;
+                      background: #f8f9fa; border: 1.5px solid #dfe6e9; }
+        .price-cell.best { background: #e8f7ee; border-color: #27ae60; }
+        .price-cell .pname { font-size: 13px; font-weight: 600; color: #636e72; }
+        .price-cell .pprice { font-size: 20px; font-weight: 700; color: #d63031; margin: 4px 0; }
+        .price-cell .pmeta { font-size: 11px; color: #b2bec3; line-height: 1.6; }
+        .price-cell.best .pprice { color: #27ae60; }
+        .best-tag { font-size: 10px; background: #27ae60; color: #fff; border-radius: 4px;
+                    padding: 1px 5px; margin-left: 4px; }
+        .content-bar { background: #f0f7ff; border: 1px solid #b3d4f5; border-radius: 12px;
+                       padding: 12px 14px; margin-top: 10px; font-size: 13px; color: #2c6fbb; line-height: 1.7; }
+        .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
+                       border-radius: 12px; padding: 10px 14px; margin-top: 10px;
+                       font-size: 13px; line-height: 1.8; }
+        .advice-box { background: #fffbea; border: 1.5px solid #f0c040; border-radius: 14px;
+                      padding: 14px 16px; margin-top: 12px; font-size: 14px; line-height: 2;
+                      color: #5a4a1f; white-space: pre-line; }
+        .advice-loading { color: #b7791f; font-size: 13px; margin-top: 8px; }
+        .card-actions { display: flex; gap: 10px; margin-top: 12px; }
+        .card-actions a, .card-actions button { flex: 1; text-align: center; padding: 12px;
+                       font-size: 14px; border-radius: 10px; text-decoration: none; border: none; cursor: pointer; }
+        .act-watch { background: #27ae60; color: #fff; }
+        .act-chat { background: #0984e3; color: #fff; }
+        .act-link { background: #f8f9fa; color: #2d3436; border: 1.5px solid #dfe6e9 !important; }
+        .link-tip { font-size: 12px; color: #b2bec3; margin-top: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top">
+            <a href="/" class="back">←</a>
+            <h1>⚖️ 帮我比</h1>
+        </div>
+        <div class="cmp-box">
+            <input type="text" id="kw" placeholder="商品关键词，或粘贴链接（淘宝/京东/拼多多）">
+            <div class="cats" id="cats">
+                {% for c in categories %}<div class="cat {% if not c %}active{% endif %}" data-cat="{{ c }}">{{ c or '全品类' }}</div>{% endfor %}
+            </div>
+            <button id="cmp-btn" class="btn btn-primary" onclick="doCompare()">🔍 开始对比</button>
+            <div class="progress" id="progress">⏳ 正在搜索三平台…</div>
+            <div class="link-tip">💡 支持粘贴链接：淘宝 item.taobao.com ・ 京东 item.jd.com ・ 拼多多 yangkeduo.com</div>
+        </div>
+        <div id="results"></div>
+        <a href="/" class="back-home">← 回首页</a>
+    </div>
+
+    <script>
+        var currentKw = '', currentCat = '';
+        document.querySelectorAll('.cat').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.cat').forEach(e => e.classList.remove('active'));
+                el.classList.add('active');
+            });
+        });
+        document.getElementById('kw').addEventListener('keydown', e => { if (e.key === 'Enter') doCompare(); });
+
+        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', dy:'抖音'}[p] || p; }
+
+        function doCompare() {
+            var kw = document.getElementById('kw').value.trim();
+            if (!kw) { alert('请输入商品关键词或链接'); return; }
+            var catEl = document.querySelector('.cat.active');
+            var cat = catEl ? catEl.dataset.cat : '';
+            currentKw = kw; currentCat = cat;
+            var prog = document.getElementById('progress');
+            var box = document.getElementById('results');
+            prog.style.display = 'block'; prog.innerText = '⏳ 正在搜索三平台…';
+            box.innerHTML = '';
+            var fd = new FormData();
+            fd.append('keyword', kw); fd.append('category', cat);
+            fetch('/api/compare', {method: 'POST', body: fd})
+                .then(r => r.json()).then(d => {
+                    prog.style.display = 'none';
+                    if (!d.ok) { box.innerHTML = '<div style="text-align:center;color:#d63031;padding:30px">' + esc(d.msg) + '</div>'; return; }
+                    if (!d.groups.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:30px">没搜到结果（该商品可能未设置推广佣金，可去首页用补搜）</div>'; return; }
+                    renderGroups(d, box);
+                })
+                .catch(() => { prog.style.display = 'none'; box.innerHTML = '<div style="text-align:center;color:#d63031;padding:30px">搜索失败</div>'; });
+        }
+
+        function renderGroups(d, box) {
+            var html = '<div class="stat">淘宝 ' + d.tb_count + ' + 拼多多 ' + d.pdd_count + ' 条候选，' + d.groups.length + ' 个同款组</div>';
+            if (d.subsidies && d.subsidies.length) {
+                html += '<div class="subsidy-bar">' + d.subsidies.map(function(s) {
+                    return '🎯 <b>[' + esc(s.category) + ']</b> ' + esc(s.requirements) +
+                        (s.max_price ? '（限价 ¥' + s.max_price + ' 内）' : '') + ' 至 ' + (s.valid_to || '长期');
+                }).join('<br>') + '</div>';
+            }
+            d.groups.forEach(function(g) {
+                var best = g.platforms.slice().sort(function(a, b) { return a.price - b.price; })[0];
+                html += '<div class="cmp-card"><div class="card-head">' +
+                    '<span class="card-title">📦 ' + esc(g.key) + '</span>' +
+                    '<span style="font-size:12px;color:#b2bec3">' + g.platforms.length + ' 平台</span></div>';
+                html += '<div class="price-row">';
+                g.platforms.forEach(function(it) {
+                    var isBest = it === best;
+                    html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
+                        '<div class="pname">' + platName(it.platform) + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
+                        '<div class="pprice">¥' + it.price + '</div>' +
+                        '<div class="pmeta">' + esc(it.shop || '') +
+                        (it.coupon > 0 ? '<br>券¥' + it.coupon : '') +
+                        (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
+                });
+                html += '</div>';
+                if (d.content && d.content.count) {
+                    html += '<div class="content-bar">📺 博主评测：' + esc(d.content.platforms) +
+                        ' ・ 平均可信度 ⭐' + d.content.avg_score + '/100</div>';
+                }
+                html += '<div class="advice-loading" id="adv-' + g.key + '-loading">🤖 AI 顾问分析中…（约 15 秒）</div>';
+                html += '<div class="advice-box" id="adv-' + g.key + '" style="display:none"></div>';
+                html += '<div class="card-actions">' +
+                    '<button class="act-watch" onclick="watchBest(\'' + esc(g.key).replace(/'/g,'') + '\',' + (best ? best.price : 0) + ')">🔔 到价提醒</button>' +
+                    '<a class="act-chat" href="/?q=' + encodeURIComponent(currentKw) + '">💬 改用对话</a>' +
+                    (best && best.url ? '<a class="act-link" href="' + esc(best.url) + '" target="_blank" rel="noopener">去购买 ↗</a>' : '') +
+                    '</div></div>';
+                loadAdvice(g.key);
+            });
+            box.innerHTML = html;
+        }
+
+        function loadAdvice(groupKey) {
+            var fd = new FormData();
+            fd.append('keyword', currentKw);
+            fd.append('category', currentCat);
+            fd.append('group_key', groupKey);
+            fetch('/api/advice', {method: 'POST', body: fd})
+                .then(r => r.json()).then(d => {
+                    var box = document.getElementById('adv-' + groupKey);
+                    var loading = document.getElementById('adv-' + groupKey + '-loading');
+                    if (loading) loading.style.display = 'none';
+                    if (box) { box.style.display = 'block'; box.innerText = d.ok ? d.advice : ('⚠️ ' + (d.msg || '分析失败')); }
+                })
+                .catch(() => {
+                    var loading = document.getElementById('adv-' + groupKey + '-loading');
+                    if (loading) loading.innerText = '⚠️ AI 分析失败（可稍后重试）';
+                });
+        }
+
+        function watchBest(title, price) {
+            if (!price) { alert('暂无价格可盯'); return; }
+            var target = prompt('当前最低 ¥' + price + '，目标价（低于此价提醒）：', (price * 0.9).toFixed(0));
+            if (!target) return;
+            var fd = new FormData();
+            fd.append('title', title); fd.append('current_price', price);
+            fd.append('target_price', parseFloat(target));
+            fetch('/watch', {method: 'POST', body: fd})
+                .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
+                .catch(() => alert('盯价失败'));
+        }
+    </script>
+</body>
+</html>
