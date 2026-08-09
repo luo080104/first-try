@@ -97,7 +97,7 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回入库件数"""
     from api_client import search_goods, search_pdd, search_vip
     from db import get_conn, upsert_product_item
-    from app import search_taobao_full, search_jd_full, search_vip_full
+    from app import search_taobao_full, search_vip_full
 
     all_items = []
     # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
@@ -106,17 +106,12 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     vip_items = await asyncio.to_thread(search_vip, keyword)
     all_items += tb_items + pdd_items + vip_items
 
-    # 慢通道：浏览器翻页（串行，频率受限：tb 30s / jd 12-20s / vip 12-20s）
+    # 慢通道：浏览器翻页（串行，频率受限：tb 30s / vip 12-20s）
+    # 注：京东不走浏览器（搜索页验证码多，案例启发）→ 改为采集轮次的全局榜单通道 crawl_jd_by_elite
     tb_full, jd_full, vip_full = [], [], []
     for p in range(1, pages + 1):
         batch = await asyncio.to_thread(search_taobao_full, keyword, p)
         tb_full += batch
-        if len(batch) < 8:
-            break
-        await asyncio.sleep(2)
-    for p in range(1, pages + 1):
-        batch = await asyncio.to_thread(search_jd_full, keyword, p)
-        jd_full += batch
         if len(batch) < 8:
             break
         await asyncio.sleep(2)
@@ -157,35 +152,58 @@ async def run_crawl_round(pages: int = 3) -> dict:
     ok_count = fail_count = new_total = 0
     all_new_items = []
 
-    for task in tasks:
-        kw, cat = task['keyword'], task.get('category') or ''
-        _set_progress(current=f'{kw}（{cat or "未分类"}）')
+    try:
+        # 京东榜单通道（无需 token/浏览器/验证码）：每轮开始先全局拉一批京东商品入库
+        jd_added = 0
         try:
-            added, items = await _crawl_one_keyword(kw, cat, pages)
-            mark_crawl_task(kw, 'done', added)
-            ok_count += 1
-            new_total += added
-            all_new_items += items
-            print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条）')
+            from jd_api import crawl_jd_by_elite
+            jd_items = await asyncio.to_thread(crawl_jd_by_elite, 2, 20)
+            if jd_items:
+                conn = get_conn()
+                for it in jd_items:
+                    if upsert_product_item(conn, it, ''):
+                        jd_added += 1
+                conn.commit()
+                conn.close()
+                print(f'[crawl] 🛡️ 京东榜单通道: +{jd_added} 件（无浏览器无验证码）')
         except Exception as e:
-            mark_crawl_task(kw, 'failed', 0)
-            fail_count += 1
-            with _lock:
-                _progress['errors'].append(f'{kw}: {str(e)[:60]}')
-            print(f'[crawl] ❌ {kw}: {str(e)[:80]}')
-        _set_progress(done=ok_count + fail_count,
-                      new_items=new_total,
-                      elapsed=int(time.time() - t0))
+            print(f'[crawl] ⚠️ 京东榜单通道失败: {str(e)[:80]}')
 
-    # 自动扩展：从本轮新入库商品标题提取新词（≥3 次 + 排除短词）
-    new_words = find_new_words(all_new_items)
-    added_words = add_auto_keywords(new_words) if new_words else 0
+        for task in tasks:
+            kw, cat = task['keyword'], task.get('category') or ''
+            _set_progress(current=f'{kw}（{cat or "未分类"}）')
+            try:
+                added, items = await _crawl_one_keyword(kw, cat, pages)
+                mark_crawl_task(kw, 'done', added)
+                ok_count += 1
+                new_total += added
+                all_new_items += items
+                print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条）')
+            except Exception as e:
+                mark_crawl_task(kw, 'failed', 0)
+                fail_count += 1
+                with _lock:
+                    _progress['errors'].append(f'{kw}: {str(e)[:60]}')
+                print(f'[crawl] ❌ {kw}: {str(e)[:80]}')
+            _set_progress(done=ok_count + fail_count,
+                          new_items=new_total,
+                          elapsed=int(time.time() - t0))
 
-    _set_progress(running=False, current='', elapsed=int(time.time() - t0))
+        # 自动扩展：从本轮新入库商品标题提取新词（≥3 次 + 排除短词）
+        new_words = find_new_words(all_new_items)
+        added_words = add_auto_keywords(new_words) if new_words else 0
+    except Exception as e:
+        # 无人值守兜底：任何非词级异常都不能让 running 卡死
+        with _lock:
+            _progress['errors'].append(f'[轮次异常] {str(e)[:100]}')
+        print(f'[crawl] ⚠️ 轮次异常（已恢复）: {str(e)[:120]}')
+        new_words, added_words = [], 0
+    finally:
+        _set_progress(running=False, current='', elapsed=int(time.time() - t0))
     return {
         'ok': True,
         'total': len(tasks), 'done': ok_count, 'failed': fail_count,
-        'new_items': new_total, 'new_words': new_words[:20],
+        'new_items': new_total + jd_added if 'jd_added' in dir() else new_total, 'new_words': new_words[:20],
         'added_words': added_words,
         'elapsed': int(time.time() - t0),
     }

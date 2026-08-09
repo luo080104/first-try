@@ -513,7 +513,7 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')
-async def api_crawl(pages: int = Form(3)):
+async def api_crawl(pages: int = Form(2)):
     """启动一轮采集（后台任务，进度查 /api/crawl_status）"""
     from crawl import run_crawl_round, get_progress
     if get_progress().get('running'):

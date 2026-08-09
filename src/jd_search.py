@@ -91,6 +91,8 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
 
         cards = tab.eles('xpath://*[contains(@class,"goodsCardWrapper")]', timeout=5)
         items = []
+        # WorkBuddy debug：cards=0 → 登录态假死/页面失败；cards>0 → 解析问题
+        print(f"[JD debug] '{keyword}' page={page}: cards={len(cards)}")
         for c in cards[:max_items + 4]:
             try:
                 txt = c.text.replace('\n', '|').strip()
@@ -141,6 +143,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
                 'goodsId': sku_id,
                 'url': f'https://item.jd.com/{sku_id}.html' if sku_id else '',
             })
+        print(f"[JD debug] '{keyword}' page={page}: cards={len(cards)}, items={len(items)}")
         return items[:max_items]
     finally:
         browser.quit()

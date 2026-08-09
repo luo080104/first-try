@@ -41,10 +41,12 @@
             <div class="add-row">
                 <button class="btn btn-tb" onclick="startCrawl()">▶️ 开始一轮采集</button>
                 <select id="pages" style="padding:10px">
-                    <option value="1">每词翻 1 页（约 20 分钟）</option>
-                    <option value="3" selected>每词翻 3 页（约 40-60 分钟）</option>
-                    <option value="5">每词翻 5 页（约 1.5 小时）</option>
+                    <option value="1">每词翻 1 页（快）</option>
+                    <option value="2" selected>每词翻 2 页（推荐，WorkBuddy）</option>
+                    <option value="3">每词翻 3 页（全）</option>
                 </select>
+                <input type="time" id="schedule-time" style="padding:10px" title="定时开始时间">
+                <button class="btn" onclick="scheduleCrawl()">⏰ 定时开始</button>
             </div>
             <div id="progress"></div>
         </div>
@@ -135,6 +137,26 @@
                 alert(d.msg);
                 if (d.ok) { POLLING = true; pollStatus(); }
             });
+        }
+
+        // v6 定时采集：设时间到点自动开始（纯前端 setTimeout，WorkBuddy 方案）
+        var _schedTimer = null;
+        function scheduleCrawl() {
+            var t = document.getElementById('schedule-time').value;
+            if (!t) { alert('请先选时间（如 23:00）'); return; }
+            var now = new Date();
+            var parts = t.split(':');
+            var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +parts[0], +parts[1], 0);
+            if (target <= now) target.setDate(target.getDate() + 1);  // 已过点则明天
+            var waitMs = target - now;
+            if (_schedTimer) clearTimeout(_schedTimer);
+            _schedTimer = setTimeout(function() {
+                alert('⏰ 定时采集时间到，开始采集！');
+                startCrawl();
+            }, waitMs);
+            var hh = ('0' + target.getHours()).slice(-2) + ':' + ('0' + target.getMinutes()).slice(-2);
+            document.getElementById('schedule-time').value = hh;
+            alert('✅ 已定时 ' + hh + ' 开始采集（电脑保持开机）');
         }
 
         function addWord() {
