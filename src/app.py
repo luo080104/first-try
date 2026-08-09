@@ -1,5 +1,5 @@
 import re
-# app.py - 购物助手网页版 v1.0（雏形）
+# app.py - Go购网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
 import sys
 import os
@@ -108,9 +108,9 @@ def search_jd_full(keyword: str) -> list:
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies
 
-app = FastAPI(title='购物助手')
+app = FastAPI(title='Go购')
 templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
 app.mount('/static', StaticFiles(directory=os.path.join(templates_dir, 'static')), name='static')
 
@@ -393,11 +393,13 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     yield sse({'type': 'guide', 'options': options})
 
             content = await asyncio.to_thread(read_content_items, keyword)
+            subsidies = await asyncio.to_thread(find_subsidies, keyword, search_cat)
             yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                        'groups': groups, 'total': len(all_items),
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
                        'manual_count': len(manual_items), 'content': content,
-                       'slow_count': len(slow_items), 'options': options})
+                       'slow_count': len(slow_items), 'options': options,
+                       'subsidies': subsidies})
         except Exception as e:
             yield sse({'type': 'error', 'msg': str(e)[:200]})
 
@@ -458,10 +460,14 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
         save_search_result(conn, it, category or '未分类')
     conn.close()
 
+    # 国补/优惠标注
+    subsidies = find_subsidies(keyword, category)
+
     return templates.TemplateResponse(request, 'result.html', {
         'keyword': keyword, 'category': category,
         'groups': groups[:10], 'total': len(all_items),
         'tb_count': len(tb_items), 'pdd_count': len(pdd_items), 'manual_count': len(manual_items),
+        'subsidies': subsidies,
     })
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ API_URL = 'https://api.deepseek.com/chat/completions'
 TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.log')
 
 # 静态指令（system message，前缀缓存友好）
-SYSTEM_PROMPT = """你是购物比价助手的意图解析器。提取规则：
+SYSTEM_PROMPT = """你是Go购的意图解析器。提取规则：
 1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
 2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
 只输出 JSON 格式：{"keyword": "...", "category": "..."}"""
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
 # ========== 对话式导购（WorkBuddy 审核版）==========
 
-OPTIONS_SYSTEM = """你是购物导购助手。根据搜索结果标题，将商品聚类为3-5个选项。
+OPTIONS_SYSTEM = """你是Go购的导购助手。根据搜索结果标题，将商品聚类为3-5个选项。
 规则：
 1. 按产品系列或价格区间聚类，不要按平台聚类
 2. 每个选项：label（≤15字简洁名称）、search_kw（品牌+型号，可直接搜索）、price_hint（从输入标题提取的价格区间字符串）

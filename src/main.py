@@ -1,4 +1,4 @@
-# main.py - 购物助手命令行入口 v2.0（阶段 2 雏形）
+# main.py - Go购命令行入口 v2.0（阶段 2 雏形）
 # 用法: python src/main.py "羽绒服" [品类]
 # 流程: 双平台搜索 → SKU 分组 → 比价展示 → 存入 SQLite
 import sys

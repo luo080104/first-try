@@ -72,9 +72,9 @@ def detect_trap(keyword: str) -> dict:
             cur = recs[-1]['price']
             best = {
                 'has_trap': trap,
-                'trap_msg': f'疑似先涨后降：近期涨到 ¥{peak:.0f} 后回落，当前 ¥{cur:.0f}，可能比涨价前贵',
+                'trap_msg': f'疑似先涨后降：近期涨到 ¥{peak:.0f} 后回落，当前 ¥{cur:.0f}，可能比涨价前贵' if trap else '',
                 'has_fake_original': fake_orig,
-                'fake_msg': f'虚标原价：标价 ¥{o_median:.0f} 而实际中位价 ¥{median:.0f}（1.5 倍以上）',
+                'fake_msg': f'虚标原价：标价 ¥{o_median:.0f} 而实际中位价 ¥{median:.0f}（1.5 倍以上）' if fake_orig else '',
                 'data_count': len(rows),
             }
             break

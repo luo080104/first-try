@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>购物比价助手</title>
+    <title>Go购 - 全网比价助手</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
         .search-box { background: #fff; border-radius: 16px; padding: 24px;
@@ -30,12 +30,15 @@
             .sub-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
         .sub-btns .btn { flex: 1; min-width: 140px; }
         .loading-tip { display: none; text-align: center; font-size: 15px; margin-top: 10px; }
+        .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
+                       border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+                       font-size: 14px; line-height: 1.9; box-shadow: 0 2px 10px rgba(255,107,53,0.3); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🛒 购物比价助手</h1>
-        <div class="subtitle">淘宝 + 拼多多，一个词查全网</div>
+        <h1>🛒 Go购</h1>
+        <div class="subtitle">淘宝 + 京东 + 拼多多，一个词查全网</div>
         <div class="search-box">
             <input type="text" id="kw" placeholder="说人话也行：帮我看石头岛的外套">
             <input type="hidden" id="cat" value="">
@@ -240,9 +243,78 @@
                     return read();
                 }).catch(() => { prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败</div>'; });
         }
+        function loadHistory(el) {
+            var item = el.closest('.item');
+            var box = item.querySelector('.hist-box');
+            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+            var platform = el.getAttribute('data-plat');
+            var gid = decodeURIComponent(el.getAttribute('data-gid'));
+            box.innerHTML = '加载中…';
+            box.style.display = 'block';
+            fetch('/history?platform=' + platform + '&item_id=' + encodeURIComponent(gid))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.length) { box.innerHTML = '暂无历史记录（价格会随每次查询自动积累）'; return; }
+                    var summary = data[data.length - 1].summary;
+                    var diff = summary.current - summary.lowest;
+                    var advice = diff <= 0 ? '✅ 当前价 = 历史最低，可以买' :
+                        '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
+                    box.innerHTML = '<div class="hist-advice">历史最低 ¥' + summary.lowest.toFixed(2) +
+                        '（共记录 ' + summary.count + ' 次）</div>' +
+                        '<div class="hist-advice" style="color:' + (diff <= 0 ? '#27ae60' : '#e67e22') + '">' + advice + '</div>' +
+                        '<div class="hist-chart" id="hist-chart-' + platform + '-' + encodeURIComponent(gid) + '"></div>' +
+                        '<div class="hist-rows">' + data.slice(0, 8).map(function(d) {
+                            return d.queried_at.slice(0, 16) + ' → ¥' + d.price +
+                                (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '');
+                        }).join('<br>') + '</div>';
+                    drawChart(platform, gid, data);
+                })
+                .catch(() => box.innerHTML = '加载失败');
+        }
+        function drawChart(platform, gid, data) {
+            var cid = 'hist-chart-' + platform + '-' + encodeURIComponent(gid);
+            function paint() {
+                var el = document.getElementById(cid);
+                if (!el || !window.echarts) return;
+                var pts = data.slice(0, -1).reverse().map(function(d) {
+                    return [d.queried_at.slice(5, 16), d.price];
+                });
+                var chart = echarts.init(el);
+                chart.setOption({
+                    grid: { left: 44, right: 12, top: 14, bottom: 24 },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: pts.map(p => p[0]), axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10 } },
+                    series: [{
+                        name: '价格', type: 'line', data: pts.map(p => p[1]),
+                        smooth: true, symbolSize: 6,
+                        lineStyle: { color: '#ff6b35', width: 2.5 },
+                        itemStyle: { color: '#ff6b35' },
+                        areaStyle: { color: 'rgba(255,107,53,0.12)' },
+                        markPoint: { data: [{ type: 'min', name: '最低' }] }
+                    }]
+                });
+            }
+            if (window.echarts) { paint(); return; }
+            var s = document.createElement('script');
+            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
+            s.onload = paint;
+            document.head.appendChild(s);
+        }
         function renderResult(d, box) {
             var html = '<div class="stat">淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' +
                 (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ' + d.total + ' 条候选</div>';
+            if (d.subsidies && d.subsidies.length) {
+                html += '<div class="subsidy-bar">';
+                d.subsidies.forEach(function(s) {
+                    html += '🎯 <b>[' + s.category + ']</b> ' + s.requirements +
+                        (s.region ? '（' + s.region + '）' : '') +
+                        (s.valid_to ? ' 至 ' + s.valid_to : '') +
+                        (s.source_url ? ' <a href="' + s.source_url + '" target="_blank" rel="noopener" style="color:#fff">来源↗</a>' : '') +
+                        '<br>';
+                });
+                html += '</div>';
+            }
             if (!d.groups.length) {
                 html += '<div class="empty">没有搜到结果（该商品可能未设置推广佣金）</div>';
                 html += '<div class="sub-btns" style="margin-top:20px">' +
@@ -258,10 +330,13 @@
                 html += '<div class="group"><div class="group-head"><span class="sku">📦 ' + g.key + '</span><span class="count">' + g.count + ' 个候选</span></div>';
                 g.platforms.forEach(function(it) {
                     var isBest = g.best && it === g.best;
+                    var gid = it.goodsId || it.item_id || '';
                     html += '<div class="item' + (isBest ? ' best' : '') + '">' +
                         '<span class="plat">' + (it.platform === 'tb' ? '淘宝' : '拼多多') + '</span>' +
                         '<div class="info"><div class="title">' + it.title + '</div>' +
-                        '<div class="shop">' + (it.shopName || '') + (isBest ? '<span class="badge">最低价</span>' : '') + '</div></div>' +
+                        '<div class="shop">' + (it.shopName || '') + (isBest ? '<span class="badge">最低价</span>' : '') +
+                        (gid ? '<a class="link" href="javascript:void(0)" data-plat="' + it.platform + '" data-gid="' + encodeURIComponent(gid) + '" onclick="loadHistory(this)">📈 历史价</a>' : '') +
+                        '</div><div class="hist-box" style="display:none"></div></div>' +
                         '<div class="price"><div class="now">¥' + it.actualPrice + '</div>' +
                         (it.coupon_amount > 0 ? '<div class="coupon">券后省 ¥' + it.coupon_amount + '</div>' : '') +
                         (it.originalPrice > it.actualPrice ? '<div class="old">¥' + it.originalPrice + '</div>' : '') +

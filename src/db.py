@@ -149,3 +149,61 @@ def check_watches():
             if w['current_price'] <= w['target_price']:
                 hits.append(w)
     return hits
+
+# ========== 国补/优惠政策 ==========
+
+# 关键词 → 品类映射（用于政策匹配商品标题/搜索词）
+SUBSIDY_KEYWORDS = {
+    '数码家电': ['笔记本', '电脑', '手机', '平板', '电视', '冰箱', '空调', '洗衣机', '相机', '耳机',
+                '显示器', '显卡', '游戏本', '轻薄本', '电竞', 'mate', 'iphone', 'ipad', 'redmi', '荣耀', '小米'],
+    '食品': ['牛奶', '纯奶', '酸奶', '坚果', '零食', '粮油', '咖啡', '茶叶', '礼盒'],
+    '服饰': ['羽绒服', '外套', '鞋', '运动鞋', '卫衣', '裤'],
+}
+
+def add_subsidy(region, category, amount, requirements, valid_from='', valid_to='', source_url=''):
+    """人工维护国补/优惠政策"""
+    conn = get_conn()
+    cur = conn.execute('''
+        INSERT INTO subsidy_policies (region, category, amount, requirements, valid_from, valid_to, source_url)
+        VALUES (?,?,?,?,?,?,?)
+    ''', (region, category, amount, requirements, valid_from, valid_to, source_url))
+    conn.commit()
+    conn.close()
+    return cur.lastrowid
+
+def list_subsidies():
+    """全部政策（管理用）"""
+    conn = get_conn()
+    cur = conn.execute('''
+        SELECT * FROM subsidy_policies
+        WHERE (valid_to = '' OR valid_to >= date('now','localtime'))
+        ORDER BY updated_at DESC
+    ''')
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def find_subsidies(keyword: str, category: str = '') -> list:
+    """按搜索词/品类匹配生效中的政策"""
+    conn = get_conn()
+    kw = (keyword or '').lower()
+    rows = conn.execute('''
+        SELECT * FROM subsidy_policies
+        WHERE (valid_to = '' OR valid_to >= date('now','localtime'))
+    ''').fetchall()
+    conn.close()
+    hits = []
+    for r in rows:
+        d = dict(r)
+        # 1) 品类直接命中；2) 政策要求文本含搜索词；3) 品类关键词映射命中
+        req = (d.get('requirements') or '').lower()
+        if category and d.get('category') == category:
+            hits.append(d); continue
+        if kw and kw in req:
+            hits.append(d); continue
+        for c, words in SUBSIDY_KEYWORDS.items():
+            if any(w in kw for w in words):
+                if d.get('category') == c:
+                    hits.append(d)
+                    break
+    return hits

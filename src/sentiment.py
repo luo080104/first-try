@@ -115,9 +115,9 @@ if __name__ == '__main__':
     import sys, time
     platform = sys.argv[1] if len(sys.argv) > 1 else 'bili'
     path_map = {
-        'bili': 'C:/Users/骆永钢/mc_ref/data/bili/jsonl/search_comments_*.jsonl',
-        'xhs': 'C:/Users/骆永钢/mc_ref/data/xhs/jsonl/search_comments_*.jsonl',
-        'tieba': 'C:/Users/骆永钢/mc_ref/data/tieba/jsonl/search_comments_*.jsonl',
+        'bili': 'C:/Users/luoji/mc_ref/data/bili/jsonl/search_comments_*.jsonl',
+        'xhs': 'C:/Users/luoji/mc_ref/data/xhs/jsonl/search_comments_*.jsonl',
+        'tieba': 'C:/Users/luoji/mc_ref/data/tieba/jsonl/search_comments_*.jsonl',
     }
     print(f'=== 分析 {platform} 评论 ===')
     t0 = time.time()

@@ -29,16 +29,22 @@ class FoodMatcher:
     @staticmethod
     def parse(title: str) -> dict:
         brand = extract_brand(title)
-        # 规格：250ml*12 / 200ml×10 / 250mlx16盒
-        m = re.search(r'(\d+)\s*ml\s*[×x*＊]\s*(\d+)', title)
+        # 规格：250ml*12 / 200ml×10 / 250mlx16盒 / 12盒*250ml（反向）/ 250ml*12盒*2箱（倍增）
+        m = re.search(r'(\d+)\s*ml\s*[×xX*＊]\s*(\d+)(?:\s*(?:盒|瓶|包|提)\s*[×xX*＊]\s*(\d+)\s*(?:箱|提|件))?', title, re.I)
         spec = None
         if m:
-            spec = {'ml': int(m.group(1)), 'count': int(m.group(2))}
+            count = int(m.group(2)) * (int(m.group(3)) if m.group(3) else 1)
+            spec = {'ml': int(m.group(1)), 'count': count}
         else:
-            # 兜底：只提容量
-            m2 = re.search(r'(\d+)\s*ml', title)
+            # 反向：12盒*250ml / 12瓶×200ml
+            m2 = re.search(r'(\d+)\s*(?:盒|瓶|包|提)\s*[×xX*＊]\s*(\d+)\s*ml', title, re.I)
             if m2:
-                spec = {'ml': int(m2.group(1)), 'count': None}
+                spec = {'ml': int(m2.group(2)), 'count': int(m2.group(1))}
+            else:
+                # 兜底：只提容量
+                m3 = re.search(r'(\d+)\s*ml', title)
+                if m3:
+                    spec = {'ml': int(m3.group(1)), 'count': None}
         return {'brand': brand, 'spec': spec}
 
     @staticmethod
@@ -51,9 +57,10 @@ class FoodMatcher:
 # ========== 服饰适配器 ==========
 
 class ClothingMatcher:
-    """匹配键：品牌 + 长度/性别/填充特征词（标题无显式款号，弱匹配）"""
+    """匹配键：品牌 + 长度/性别/系列款号特征词（标题无显式款号时弱匹配）"""
 
-    FEATURES = ['短款', '长款', '中长款', '连帽', '收腰', '男', '女', '鹅绒', '白鸭绒', '鸭绒', '面包服']
+    FEATURES = ['短款', '长款', '中长款', '连帽', '收腰', '男', '女', '鹅绒', '白鸭绒', '鸭绒', '面包服',
+                '白月光', '极寒', '星空', '奥莱', '反季']
 
     @staticmethod
     def parse(title: str) -> dict:
@@ -99,9 +106,16 @@ class DigitalMatcher:
                         'thinkpad', 'Yoga', 'yoga', 'OMEN', 'omen', '暗影', '蛟龙', '极光']
         series = ''
         for w in SERIES_WORDS:
-            m = _re.search(w + r'[A-Za-z0-9\s]{0,14}', title, _re.I)
+            m = _re.search(w + r' ?[A-Za-z0-9]{0,12}', title, _re.I)
             if m:
                 series = m.group(0)
+                # 截断：遇到 GPU/CPU 关键词就停（避免吞掉配置数字）
+                cut = _re.search(r'(?i)(rtx\s*\d|gtx\s*\d|酷睿|锐龙|i[3579]-?\d|u\s*\d|amd|intel)', series)
+                if cut:
+                    series = series[:cut.start()]
+                # 清理尾部连续 3-4 位数字组（GPU 列表：5060 5070ti 5080）与孤立 CPU 代号（U9/i7）
+                series = _re.sub(r'(?i)(\s+\d{3,4}[a-z]?)+$', '', series.strip())
+                series = _re.sub(r'(?i)\s+[a-z]\d+$', '', series.strip())
                 break
         # 兜底：品牌后 2-6 字
         if not series:

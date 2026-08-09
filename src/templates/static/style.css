@@ -1,4 +1,4 @@
-/* 购物助手公共样式 v2（WorkBuddy 审核版）
+/* Go购公共样式 v2（WorkBuddy 审核版）
    设计：主色橙 #ff6b35 / 深蓝 #1e2a3a / 强调绿 #27ae60 / 淘宝橙 #ff5000 / 京东红 #e4393c / B站粉 #00a1d6 / 小红书红 #ff2442
    字号：正文 16px 起，价格 22px（长辈友好）
    断点：480px / 768px */
@@ -107,3 +107,15 @@ body {
 @media (min-width: 768px) {
     .container { max-width: 720px; }
 }
+
+/* 价格历史图表 */
+.hist-box { margin-top: 8px; padding: 10px 12px; background: #f8f9fa; border-radius: 10px;
+            font-size: 12px; color: #636e72; line-height: 1.8; width: 100%; }
+.hist-chart { height: 190px; margin: 8px 0; }
+.hist-advice { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.hist-rows { font-size: 12px; color: #636e72; max-height: 120px; overflow-y: auto; }
+
+/* 国补/优惠提示条 */
+.subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
+               border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
+               font-size: 14px; line-height: 1.9; box-shadow: 0 2px 10px rgba(255,107,53,0.3); }

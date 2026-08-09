@@ -1,4 +1,4 @@
--- 购物助手 SQLite 数据库结构 v1.0
+-- Go购 SQLite 数据库结构 v1.0
 -- 数据库文件：shopping-agent/data/shopping.db
 
 -- ========== 商品与 SKU ==========

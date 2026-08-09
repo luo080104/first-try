@@ -19,6 +19,11 @@
         </div>
         <div class="stat">淘宝 {{ tb_count }} 条 + 拼多多 {{ pdd_count }} 条{% if manual_count %} + 人工录入 {{ manual_count }} 条{% endif %} = {{ total + manual_count }} 条候选</div>
         <div class="history-tip">📊 想看官方历史价格？淘宝 App 商品页 → 保障 → 价格保护（我们自己的价格曲线正在积累中）</div>
+        {% if subsidies %}
+        <div class="subsidy-bar">
+            {% for s in subsidies %}🎯 <b>[{{ s.category }}]</b> {{ s.requirements }}{% if s.region %}（{{ s.region }}）{% endif %}{% if s.valid_to %} 至 {{ s.valid_to }}{% endif %}{% if s.source_url %} <a href="{{ s.source_url }}" target="_blank" rel="noopener" style="color:#fff">来源↗</a>{% endif %}<br>{% endfor %}
+        </div>
+        {% endif %}
 
         {% if tb_count == 0 %}
         <div class="fallback">
@@ -112,15 +117,48 @@
                     var summary = data[data.length - 1].summary;
                     var diff = summary.current - summary.lowest;
                     var advice = diff <= 0 ? '✅ 当前价 = 历史最低，可以买' :
-                                 '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
-                    var rows = data.slice(0, 8).map(d =>
-                        '<div>' + d.queried_at.slice(0, 16) + ' → ¥' + d.price +
-                        (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '') + '</div>'
-                    ).join('');
+                        '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
+                    var cid = 'hist-chart-' + platform + '-' + encodeURIComponent(itemId);
                     box.innerHTML = '<div style="color:#d63031;font-weight:600;margin-bottom:4px">' +
-                        '历史最低 ¥' + summary.lowest.toFixed(2) + '（共记录 ' + summary.count + ' 次）' + advice + '</div>' + rows;
+                        '历史最低 ¥' + summary.lowest.toFixed(2) + '（共记录 ' + summary.count + ' 次）</div>' +
+                        '<div style="font-weight:600;margin-bottom:4px;color:' + (diff <= 0 ? '#27ae60' : '#e67e22') + '">' + advice + '</div>' +
+                        '<div id="' + cid + '" class="hist-chart"></div>' +
+                        '<div class="hist-rows">' + data.slice(0, 8).map(function(d) {
+                            return d.queried_at.slice(0, 16) + ' → ¥' + d.price +
+                                (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '');
+                        }).join('<br>') + '</div>';
+                    drawChart(cid, data);
                 })
                 .catch(() => box.innerHTML = '加载失败');
+        }
+        function drawChart(cid, data) {
+            function paint() {
+                var el = document.getElementById(cid);
+                if (!el || !window.echarts) return;
+                var pts = data.slice(0, -1).reverse().map(function(d) {
+                    return [d.queried_at.slice(5, 16), d.price];
+                });
+                var chart = echarts.init(el);
+                chart.setOption({
+                    grid: { left: 44, right: 12, top: 14, bottom: 24 },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: pts.map(p => p[0]), axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10 } },
+                    series: [{
+                        name: '价格', type: 'line', data: pts.map(p => p[1]),
+                        smooth: true, symbolSize: 6,
+                        lineStyle: { color: '#ff6b35', width: 2.5 },
+                        itemStyle: { color: '#ff6b35' },
+                        areaStyle: { color: 'rgba(255,107,53,0.12)' },
+                        markPoint: { data: [{ type: 'min', name: '最低' }] }
+                    }]
+                });
+            }
+            if (window.echarts) { paint(); return; }
+            var s = document.createElement('script');
+            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
+            s.onload = paint;
+            document.head.appendChild(s);
         }
         function biliSearch() {
             var btn = document.getElementById('bili-btn');
