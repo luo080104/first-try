@@ -93,8 +93,8 @@ def find_new_words(items: list) -> list:
 
 # ========== 单个关键词采集 ==========
 
-async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
-    """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回入库件数"""
+async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
+    """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回 (入库件数, items)"""
     from api_client import search_goods, search_pdd, search_vip
     from db import get_conn, upsert_product_item
     from app import search_taobao_full, search_vip_full
@@ -123,15 +123,19 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
         await asyncio.sleep(2)
     all_items += tb_full + jd_full + vip_full
 
-    # 入库（platform+item_id 去重）
-    conn = get_conn()
-    added = 0
-    for it in all_items:
-        it['_source'] = 'browser' if it.get('_source') == 'browser' else 'api'
-        if upsert_product_item(conn, it, category or ''):
-            added += 1
-    conn.commit()
-    conn.close()
+    # 入库（platform+item_id 去重；try/finally 保证连接不泄漏——无人值守 8 小时关键）
+    conn = None
+    try:
+        conn = get_conn()
+        added = 0
+        for it in all_items:
+            it['_source'] = 'browser' if it.get('_source') == 'browser' else 'api'
+            if upsert_product_item(conn, it, category or ''):
+                added += 1
+        conn.commit()
+    finally:
+        if conn:
+            conn.close()
     return added, all_items
 
 
@@ -162,12 +166,16 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
             from jd_api import crawl_jd_by_elite
             jd_items = await asyncio.to_thread(crawl_jd_by_elite, 2, 20)
             if jd_items:
-                conn = get_conn()
-                for it in jd_items:
-                    if upsert_product_item(conn, it, ''):
-                        jd_added += 1
-                conn.commit()
-                conn.close()
+                conn = None
+                try:
+                    conn = get_conn()
+                    for it in jd_items:
+                        if upsert_product_item(conn, it, ''):
+                            jd_added += 1
+                    conn.commit()
+                finally:
+                    if conn:
+                        conn.close()
                 print(f'[crawl] 🛡️ 京东榜单通道: +{jd_added} 件（无浏览器无验证码）')
         except Exception as e:
             print(f'[crawl] ⚠️ 京东榜单通道失败: {str(e)[:80]}')
