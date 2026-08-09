@@ -510,6 +510,34 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
         'subsidies': subsidies,
     })
 
+# ========== v6 多用户（角色切换，WorkBuddy 定案：不登录，localStorage）==========
+
+@app.get('/api/family')
+def api_family():
+    """家庭品类库（15 细品类 → 大品类 + 采集词）"""
+    from db import FAMILY_CATEGORIES
+    return {'categories': [{'name': sub, 'big': big, 'words': words}
+                           for sub, big, words in FAMILY_CATEGORIES]}
+
+@app.post('/api/family_tasks')
+async def api_family_tasks(categories: str = Form('')):
+    """把用户勾选的品类的采集词加入采集计划（幂等）
+    categories: 逗号分隔的细品类名，如 '女士服装,护肤品'；空=全部"""
+    from db import FAMILY_CATEGORIES, get_conn
+    conn = get_conn()
+    added = 0
+    pick = [c.strip() for c in categories.replace('，', ',').split(',') if c.strip()] if categories.strip() else []
+    for sub, big, words in FAMILY_CATEGORIES:
+        if pick and sub not in pick:
+            continue
+        for w in words:
+            cur = conn.execute('''
+                INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?, 'family')
+            ''', (w, big))
+            added += cur.rowcount
+    conn.commit(); conn.close()
+    return {'ok': True, 'msg': f'已把 {len(pick) if pick else 15} 个品类的采集词加入计划（+{added} 个新词）'}
+
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')

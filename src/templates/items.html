@@ -257,6 +257,9 @@
         document.getElementById('f-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadItems(1); });
         document.getElementById('crawl-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') deepCrawl(); });
         loadRecs();
+        // v6 多用户：支持 ?cat= 直达过滤（从首页品类卡片跳来）
+        var urlCat = new URLSearchParams(location.search).get('cat');
+        if (urlCat) { document.getElementById('f-cat').value = urlCat; }
         loadItems(1);
     </script>
 </body>

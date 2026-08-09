@@ -60,7 +60,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>🛒 Go购</h1>
+        <h1>🛒 Go购 <span style="font-size:14px;cursor:pointer;color:#0984e3" onclick="toggleRoleMenu()" id="role-bar">👤 <span id="role-name">嘉铭</span> ▼</span></h1>
+        <div id="role-menu" style="display:none;background:#fff;border:1px solid #dfe6e9;border-radius:12px;padding:10px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08)"></div>
+        <div id="member-cats"></div>
         <div class="subtitle" style="font-size:17px;color:#ff6b35;font-weight:600">购物就是一场旅行，让我们Go购 ✈️</div>
         <div class="subtitle" style="margin-top:2px">淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网</div>
         <div class="search-box">
@@ -293,6 +295,84 @@
             fetch('/api/prefs', {method: 'POST', body: fd}).then(r => r.json()).then(d => alert(d.msg));
         }
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        // ===== v6 多用户：角色切换（localStorage，WorkBuddy 定案）=====
+        var FAMILY = [];  // 品类库（后端拉）
+        function getMembers() {
+            try { return JSON.parse(localStorage.getItem('gobuy_members') || '[]'); }
+            catch (e) { return []; }
+        }
+        function saveMembers(m) { localStorage.setItem('gobuy_members', JSON.stringify(m)); }
+        function getCurrent() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
+        function setCurrent(n) { localStorage.setItem('gobuy_current', n); }
+        function loadFamily() {
+            fetch('/api/family').then(r => r.json()).then(d => {
+                FAMILY = d.categories || [];
+                renderRole();
+            });
+        }
+        function renderRole() {
+            var members = getMembers();
+            var cur = getCurrent();
+            if (!members.some(m => m.name === cur)) {
+                members.unshift({name: cur, categories: []});
+                saveMembers(members);
+            }
+            document.getElementById('role-name').innerText = cur;
+            // 角色菜单
+            var menu = document.getElementById('role-menu');
+            menu.innerHTML = members.map(function(m) {
+                return '<div style="padding:8px 12px;cursor:pointer;border-radius:8px" ' +
+                    (m.name === cur ? 'style="padding:8px 12px;cursor:pointer;border-radius:8px;background:#eaf2fb;color:#0984e3"' : '') +
+                    ' onmouseover="this.style.background=&#39;#f8f9fa&#39;" onmouseout="this.style.background=&#39;&#39;" ' +
+                    'onclick="switchRole(\'' + esc(m.name) + '\')">👤 ' + esc(m.name) +
+                    (m.categories && m.categories.length ? ' <span style="color:#b2bec3;font-size:12px">' + m.categories.length + ' 个品类</span>' : '') + '</div>';
+            }).join('') +
+            '<div style="padding:8px 12px;cursor:pointer;color:#27ae60;border-top:1px solid #eee" onclick="openAddMember()">➕ 添加成员</div>';
+            // 品类卡片
+            var me = members.find(m => m.name === cur) || {name: cur, categories: []};
+            var cats = document.getElementById('member-cats');
+            if (me.categories && me.categories.length) {
+                cats.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">' +
+                    me.categories.map(function(c) {
+                        return '<a href="/items?cat=' + encodeURIComponent(c) + '" style="background:#fff;border:2px solid #dfe6e9;border-radius:12px;padding:8px 16px;font-size:14px;color:#2d3436;text-decoration:none">' + esc(c) + ' →</a>';
+                    }).join('') + '</div>';
+            } else {
+                cats.innerHTML = '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:14px">还没选品类，点「➕ 添加成员」或右上角 👤 设置你的品类（如：女士服装、护肤品）</div>';
+            }
+        }
+        function toggleRoleMenu() {
+            var m = document.getElementById('role-menu');
+            m.style.display = m.style.display === 'none' ? 'block' : 'none';
+        }
+        function switchRole(name) {
+            setCurrent(name);
+            document.getElementById('role-menu').style.display = 'none';
+            renderRole();
+        }
+        function openAddMember() {
+            var name = prompt('成员名字（如：妈妈）：');
+            if (!name) return;
+            var cats = FAMILY.map(function(c) { return c.name; });
+            var picks = prompt('选择品类（逗号分隔，可多选）：\n\n' + cats.join('、'));
+            if (picks === null) return;
+            var picked = picks ? picks.replace(/，/g, ',').split(',').map(s => s.trim()).filter(s => cats.includes(s)) : [];
+            var members = getMembers();
+            if (!members.some(m => m.name === name)) {
+                members.push({name: name, categories: picked});
+            } else {
+                members.find(m => m.name === name).categories = picked;
+            }
+            saveMembers(members);
+            setCurrent(name);
+            document.getElementById('role-menu').style.display = 'none';
+            renderRole();
+            // 把该成员品类的采集词加入计划（后台准备数据）
+            if (picked.length) {
+                var fd = new FormData();
+                fd.append('categories', picked.join(','));
+                fetch('/api/family_tasks', {method: 'POST', body: fd}).then(r => r.json());
+            }
+        }
         function showLoading() {
             var ov = document.getElementById('loading-overlay');
             ov.style.display = 'flex';
@@ -525,6 +605,7 @@
             html += '<div style="text-align:center;margin-top:16px"><a href="/" class="back-home">← 再查一个</a></div>';
             box.innerHTML = html;
         }
+        loadFamily();  // v6 多用户：初始化角色/品类
     </script>
 </body>
 </html>
