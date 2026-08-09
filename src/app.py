@@ -513,14 +513,16 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')
-async def api_crawl(pages: int = Form(2)):
-    """启动一轮采集（后台任务，进度查 /api/crawl_status）"""
+async def api_crawl(pages: int = Form(2), max_minutes: int = Form(480)):
+    """启动一轮采集（后台任务，进度查 /api/crawl_status）。
+    max_minutes: 硬性时长上限（默认 480 分钟 = 8 小时），到点自动停"""
     from crawl import run_crawl_round, get_progress
     if get_progress().get('running'):
         return {'ok': False, 'msg': '采集已在运行中，请稍候'}
     pages = min(max(pages, 1), 5)
-    asyncio.create_task(run_crawl_round(pages))
-    return {'ok': True, 'msg': f'采集已启动（每词翻 {pages} 页，后台运行）'}
+    max_minutes = min(max(max_minutes, 10), 720)  # 10 分钟 ~ 12 小时
+    asyncio.create_task(run_crawl_round(pages, max_seconds=max_minutes * 60))
+    return {'ok': True, 'msg': f'采集已启动（每词翻 {pages} 页，最长跑 {max_minutes} 分钟，到点自动停）'}
 
 @app.get('/api/crawl_status')
 def api_crawl_status():

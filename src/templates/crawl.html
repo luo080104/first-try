@@ -45,6 +45,11 @@
                     <option value="2" selected>每词翻 2 页（推荐，WorkBuddy）</option>
                     <option value="3">每词翻 3 页（全）</option>
                 </select>
+                <select id="max-minutes" style="padding:10px" title="最长运行时长（到点自动停）">
+                    <option value="240">最长 4 小时</option>
+                    <option value="480" selected>最长 8 小时</option>
+                    <option value="720">最长 12 小时</option>
+                </select>
                 <input type="time" id="schedule-time" style="padding:10px" title="定时开始时间">
                 <button class="btn" onclick="scheduleCrawl()">⏰ 定时开始</button>
             </div>
@@ -117,12 +122,18 @@
                 var box = document.getElementById('progress');
                 if (d.running) {
                     box.style.display = 'block';
+                    var etaTxt = '';
+                    if (d.eta > 0) {
+                        var h = Math.floor(d.eta / 3600), m = Math.round((d.eta % 3600) / 60);
+                        etaTxt = '｜⏳ 预计还需 <b>' + (h ? h + ' 小时 ' : '') + m + ' 分钟</b>';
+                    }
                     box.innerHTML = '<b>🔨 采集中：' + esc(d.current) + '</b><br>' +
-                        '进度 ' + d.done + ' / ' + d.total + ' 词｜已入库 <b>' + d.new_items + '</b> 件｜耗时 ' + d.elapsed + ' 秒' +
+                        '进度 ' + d.done + ' / ' + d.total + ' 词｜已入库 <b>' + d.new_items + '</b> 件｜每词均速 ' + d.avg_per_word + 's' +
+                        etaTxt + '｜已跑 ' + Math.round(d.elapsed / 60) + ' 分钟' +
                         (d.errors && d.errors.length ? '<br><span class="err">失败：' + d.errors.slice(-3).map(esc).join('；') + '</span>' : '');
-                    setTimeout(pollStatus, 2000);
+                    setTimeout(pollStatus, 5000);
                 } else if (box.style.display === 'block') {
-                    box.innerHTML = '✅ <b>本轮采集结束</b>：完成 ' + d.done + '/' + d.total + ' 词，失败 ' + (d.errors || []).length + '，新增入库 <b>' + d.new_items + '</b> 件，耗时 ' + d.elapsed + ' 秒';
+                    box.innerHTML = '✅ <b>本轮采集结束</b>：完成 ' + d.done + '/' + d.total + ' 词，失败 ' + (d.errors || []).length + '，新增入库 <b>' + d.new_items + '</b> 件，耗时 ' + Math.round(d.elapsed / 60) + ' 分钟';
                     setTimeout(function(){ box.style.display = 'none'; }, 20000);
                     loadTasks();
                 }
@@ -131,8 +142,10 @@
 
         function startCrawl() {
             var pages = document.getElementById('pages').value;
+            var mm = document.getElementById('max-minutes').value;
             var fd = new FormData();
             fd.append('pages', pages);
+            fd.append('max_minutes', mm);
             fetch('/api/crawl', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
                 alert(d.msg);
                 if (d.ok) { POLLING = true; pollStatus(); }

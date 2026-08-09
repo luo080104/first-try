@@ -135,8 +135,10 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     return added, all_items
 
 
-async def run_crawl_round(pages: int = 3) -> dict:
-    """跑一轮采集：pending+failed 词 → 报告。断点续跑核心：done 跳过"""
+async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
+    """跑一轮采集：pending+failed 词 → 报告。
+    max_seconds: 硬性时长上限（默认 8 小时），到点自动停止，未完成词保持 pending 下轮继续。
+    进度含 avg_per_word/eta 精准预估（实测均值 × 剩余量）。"""
     from db import (ensure_crawl_tasks, get_pending_tasks,
                     mark_crawl_task, add_auto_keywords)
 
@@ -150,11 +152,12 @@ async def run_crawl_round(pages: int = 3) -> dict:
                   round=_progress['round'] + 1)
     t0 = time.time()
     ok_count = fail_count = new_total = 0
+    jd_added = 0
     all_new_items = []
+    word_times = []  # 每词耗时（秒），用于 ETA 精准预估
 
     try:
         # 京东榜单通道（无需 token/浏览器/验证码）：每轮开始先全局拉一批京东商品入库
-        jd_added = 0
         try:
             from jd_api import crawl_jd_by_elite
             jd_items = await asyncio.to_thread(crawl_jd_by_elite, 2, 20)
@@ -170,24 +173,40 @@ async def run_crawl_round(pages: int = 3) -> dict:
             print(f'[crawl] ⚠️ 京东榜单通道失败: {str(e)[:80]}')
 
         for task in tasks:
+            # 硬性时长上限：到点即停（当前词跑完才停，不中断进行中操作）
+            elapsed_now = time.time() - t0
+            if elapsed_now > max_seconds:
+                print(f'[crawl] ⏰ 已达时长上限 {max_seconds//3600} 小时，停止（剩余 {len(tasks) - (ok_count + fail_count)} 词下轮继续）')
+                with _lock:
+                    _progress['errors'].append(f'[时长上限] 跑满 {max_seconds//3600} 小时自动停止，剩余词下轮继续')
+                break
             kw, cat = task['keyword'], task.get('category') or ''
             _set_progress(current=f'{kw}（{cat or "未分类"}）')
+            w0 = time.time()
             try:
                 added, items = await _crawl_one_keyword(kw, cat, pages)
                 mark_crawl_task(kw, 'done', added)
                 ok_count += 1
                 new_total += added
                 all_new_items += items
-                print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条）')
+                word_times.append(time.time() - w0)
+                print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条，耗时 {time.time()-w0:.0f}s）')
             except Exception as e:
                 mark_crawl_task(kw, 'failed', 0)
                 fail_count += 1
+                word_times.append(time.time() - w0)
                 with _lock:
                     _progress['errors'].append(f'{kw}: {str(e)[:60]}')
                 print(f'[crawl] ❌ {kw}: {str(e)[:80]}')
-            _set_progress(done=ok_count + fail_count,
+            # 进度 + ETA（实测均值 × 剩余量，越跑越准）
+            done_now = ok_count + fail_count
+            avg = sum(word_times) / len(word_times) if word_times else 0
+            eta = avg * (len(tasks) - done_now) if avg else 0
+            _set_progress(done=done_now,
                           new_items=new_total,
-                          elapsed=int(time.time() - t0))
+                          elapsed=int(elapsed_now),
+                          avg_per_word=int(avg) if avg else 0,
+                          eta=int(eta))
 
         # 自动扩展：从本轮新入库商品标题提取新词（≥3 次 + 排除短词）
         new_words = find_new_words(all_new_items)
@@ -203,9 +222,10 @@ async def run_crawl_round(pages: int = 3) -> dict:
     return {
         'ok': True,
         'total': len(tasks), 'done': ok_count, 'failed': fail_count,
-        'new_items': new_total + jd_added if 'jd_added' in dir() else new_total, 'new_words': new_words[:20],
+        'new_items': new_total + jd_added, 'new_words': new_words[:20],
         'added_words': added_words,
         'elapsed': int(time.time() - t0),
+        'stopped_by_timeout': (ok_count + fail_count) < len(tasks) and time.time() - t0 > max_seconds,
     }
 
 
