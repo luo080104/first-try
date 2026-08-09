@@ -142,9 +142,10 @@ def search_pdd(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
 
 # ===== v5.2 唯品会搜索（折淘客 API，省柴柴案例同源）=====
 
-def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
-    """唯品会搜索（折淘客 open_vip_queryWithOauth）。未配置 ZTK key 返回 []。
-    字段映射参考 shopping-price-compare 的 normalizeVip。"""
+def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = True,
+               sort: str = '') -> list:
+    """唯品会搜索（折淘客 open_vip_queryWithOauth，按官方文档 2026-08-09 校准）。
+    未配置 ZTK key 返回 []。sort: PRICE价格/DISCOUNT折扣/SALES销量（空=综合）"""
     if not ZTK_APPKEY or not ZTK_VIP_SID:
         print('⚠️ 未配置 ZTK_APPKEY/ZTK_VIP_SID，唯品会通道跳过')
         return []
@@ -155,6 +156,9 @@ def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
             return cached
     params = {'appkey': ZTK_APPKEY, 'sid': ZTK_VIP_SID,
               'keyword': keywords, 'page': str(page), 'pageSize': str(size)}
+    if sort in ('PRICE', 'DISCOUNT', 'SALES'):
+        params['fieldName'] = sort
+        params['order'] = '1'  # 逆序：价格从低到高/销量从高到低
     url = 'https://api.zhetaoke.com:10001/api/open_vip_queryWithOauth.ashx?' + urllib.parse.urlencode(params)
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
@@ -173,6 +177,9 @@ def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
         if not gid or not title:
             continue
         carousel = g.get('goodsCarouselPictures') or []
+        # 店铺名：storeInfo.storeName（如"唯品自营"）优先，兜底品牌名；sourceType 0=自营 1=MP
+        store = (g.get('storeInfo') or {}).get('storeName') or ''
+        shop = store if store else (g.get('brandName') or '')
         items.append({
             'goodsId': gid,
             'title': title[:100],
@@ -180,11 +187,13 @@ def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
             'originalPrice': float(g.get('marketPrice') or 0) or None,
             'coupon_amount': 0,
             'monthSales': g.get('productSales') or 0,
-            'shopName': g.get('brandName') or '',
+            'shopName': shop[:60],
             'brand': g.get('brandName') or '',
             'platform': 'vip',
             'url': g.get('destUrl') or '',
             'img': (g.get('goodsThumbUrl') or g.get('goodsMainPicture') or (carousel[0] if carousel else '')) or '',
+            'shop_type': '自营' if str(g.get('sourceType')) == '0' else '',  # P2 店铺类型铺路
+            'category': g.get('categoryName') or '',
         })
     items = sort_by_relevance(items, keywords)
     _cache_set(keywords, 'vip', None, items)
