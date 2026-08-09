@@ -41,7 +41,7 @@ def _classify_batch(batch):
     items = chr(10).join(f'{j}. {c}' for j, c in enumerate(batch))
     prompt = f"评论：{chr(10)}{items}"
     body = json.dumps({
-        'model': 'deepseek-chat',
+        'model': 'deepseek-v4-flash',
         'messages': [
             {'role': 'system', 'content': SENTIMENT_SYSTEM},
             {'role': 'user', 'content': prompt},
@@ -73,7 +73,7 @@ def analyze_platform(platform: str, jsonl_path: str) -> dict:
         for line in f:
             try:
                 d = json.loads(line)
-                cid = str(d.get('video_id') or d.get('note_id') or d.get('note_id') or '')
+                cid = str(d.get('video_id') or d.get('note_id') or '')
                 content = d.get('content', '')
                 if cid and content:
                     comments_by_content.setdefault(cid, []).append(content)

@@ -1,0 +1,191 @@
+# crawl.py - v5 采集引擎（一键采集，WorkBuddy 审核版）
+# 流程：种子词/失败词 → API 快通道 + 浏览器慢通道 → 入库 → 状态记账 → 自动扩展新词
+# 断点续跑：done 跳过 / failed 重试 / 中断后可恢复
+import os
+import re
+import sys
+import time
+import asyncio
+import threading
+from collections import Counter
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+# ========== 全局进度状态（跨请求共享） ==========
+
+_progress = {
+    'running': False,
+    'current': '',        # 正在采集的词
+    'done': 0,            # 已完成词数
+    'total': 0,           # 本轮总词数
+    'new_items': 0,       # 新入库件数
+    'started': '',        # 开始时间
+    'elapsed': 0,         # 已耗时（秒）
+    'errors': [],         # 失败词列表
+    'round': 0,           # 第几轮
+}
+_lock = threading.Lock()
+
+
+def get_progress() -> dict:
+    with _lock:
+        return dict(_progress)
+
+
+def _set_progress(**kw):
+    with _lock:
+        _progress.update(kw)
+
+
+# ========== 自动扩展：从新入库标题提取新词 ==========
+
+def _exclude_short(w: str) -> bool:
+    """排除纯数字/纯英文短词（WorkBuddy：5080/RTX 不收，RTX 5080 可收）"""
+    return not re.fullmatch(r'[\dA-Za-z]{1,6}', w or '')
+
+# 常见营销/通用噪音词（不当作品牌收）
+_NOISE = {'新款', '官方', '旗舰', '包邮', '正品', '特价', '促销', '热卖', '爆款', '同款', '通用',
+          '专用', '家用', '便携', '简约', '加厚', '升级', '经典', '限量', '预售', '自营',
+          '京东', '淘宝', '拼多多', '正装', '试用', '清仓', '秒杀', '直降', '现货'}
+
+
+def _extract_candidates(title: str) -> set:
+    """从单条标题提取候选词：品牌表 + 【】内 + 标题开头 2-4 字"""
+    from matcher import BRAND_TABLE, DigitalMatcher
+    cands = set()
+    for b in BRAND_TABLE:
+        if b in title:
+            cands.add(b)
+    for b in DigitalMatcher.BRANDS:
+        if b in title:
+            cands.add(b)
+    m = re.search(r'【([^】]{2,6})】', title)
+    if m:
+        cands.add(m.group(1))
+    head = re.match(r'^([\u4e00-\u9fa5]{2,4})', title.strip())
+    if head:
+        h = head.group(1)
+        # 剥掉噪音前缀（如"新款卫衣"→"卫衣"）
+        for n in sorted(_NOISE, key=len, reverse=True):
+            if h.startswith(n):
+                h = h[len(n):]
+                break
+        if len(h) >= 2:
+            cands.add(h)
+    return cands
+
+
+def find_new_words(items: list) -> list:
+    """从商品标题提取新品牌/系列词，出现 >= CRAWL_NEWWORD_MIN 次才收（可配）
+    策略：品牌表 + 【】内词 + 标题开头词，排除噪音/短词"""
+    min_count = int(os.environ.get('CRAWL_NEWWORD_MIN', '3'))
+    counter = Counter()
+    for it in items:
+        title = str(it.get('title') or '')
+        if not title:
+            continue
+        for w in _extract_candidates(title):
+            counter[w] += 1
+    words = [w for w, cnt in counter.items()
+             if cnt >= min_count and _exclude_short(w) and w not in _NOISE]
+    return words
+
+
+# ========== 单个关键词采集 ==========
+
+async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
+    """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回入库件数"""
+    from api_client import search_goods, search_pdd
+    from db import get_conn, upsert_product_item
+    from app import search_taobao_full, search_jd_full
+
+    all_items = []
+    # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
+    tb_items = await asyncio.to_thread(search_goods, keyword, category or None)
+    pdd_items = await asyncio.to_thread(search_pdd, keyword)
+    all_items += tb_items + pdd_items
+
+    # 慢通道：浏览器翻页（串行，频率受限）
+    tb_full, jd_full = [], []
+    for p in range(1, pages + 1):
+        batch = await asyncio.to_thread(search_taobao_full, keyword, p)
+        tb_full += batch
+        if len(batch) < 8:
+            break
+        await asyncio.sleep(2)
+    for p in range(1, pages + 1):
+        batch = await asyncio.to_thread(search_jd_full, keyword, p)
+        jd_full += batch
+        if len(batch) < 8:
+            break
+        await asyncio.sleep(2)
+    all_items += tb_full + jd_full
+
+    # 入库（platform+item_id 去重）
+    conn = get_conn()
+    added = 0
+    for it in all_items:
+        it['_source'] = 'browser' if it.get('_source') == 'browser' else 'api'
+        if upsert_product_item(conn, it, category or ''):
+            added += 1
+    conn.commit()
+    conn.close()
+    return added, all_items
+
+
+async def run_crawl_round(pages: int = 3) -> dict:
+    """跑一轮采集：pending+failed 词 → 报告。断点续跑核心：done 跳过"""
+    from db import (ensure_crawl_tasks, get_pending_tasks,
+                    mark_crawl_task, add_auto_keywords)
+
+    ensure_crawl_tasks()
+    tasks = get_pending_tasks()
+    if not tasks:
+        return {'ok': False, 'msg': '没有待采集的关键词（全部已完成）'}
+
+    _set_progress(running=True, total=len(tasks), done=0, new_items=0,
+                  current='', errors=[], started=time.strftime('%H:%M:%S'),
+                  round=_progress['round'] + 1)
+    t0 = time.time()
+    ok_count = fail_count = new_total = 0
+    all_new_items = []
+
+    for task in tasks:
+        kw, cat = task['keyword'], task.get('category') or ''
+        _set_progress(current=f'{kw}（{cat or "未分类"}）')
+        try:
+            added, items = await _crawl_one_keyword(kw, cat, pages)
+            mark_crawl_task(kw, 'done', added)
+            ok_count += 1
+            new_total += added
+            all_new_items += items
+            print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条）')
+        except Exception as e:
+            mark_crawl_task(kw, 'failed', 0)
+            fail_count += 1
+            with _lock:
+                _progress['errors'].append(f'{kw}: {str(e)[:60]}')
+            print(f'[crawl] ❌ {kw}: {str(e)[:80]}')
+        _set_progress(done=ok_count + fail_count,
+                      new_items=new_total,
+                      elapsed=int(time.time() - t0))
+
+    # 自动扩展：从本轮新入库商品标题提取新词（≥3 次 + 排除短词）
+    new_words = find_new_words(all_new_items)
+    added_words = add_auto_keywords(new_words) if new_words else 0
+
+    _set_progress(running=False, current='', elapsed=int(time.time() - t0))
+    return {
+        'ok': True,
+        'total': len(tasks), 'done': ok_count, 'failed': fail_count,
+        'new_items': new_total, 'new_words': new_words[:20],
+        'added_words': added_words,
+        'elapsed': int(time.time() - t0),
+    }
+
+
+if __name__ == '__main__':
+    # 自测：单轮（1 页，快）
+    import sys
+    pages = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    print(asyncio.run(run_crawl_round(pages)))

@@ -3851,3 +3851,405 @@ btn.textContent = '已盯价';
 4. P2 项可与 ③内容抽取 同步进行，不急
 
 **整体评价**：v3+v4 代码质量不错，架构清晰（db/app/matcher 分层合理），SSE 流式搜索、商品库去重、品类适配器设计都到位。15 个问题里 12 个是细节 bug（硬编码/缺 commit/正则），不是架构问题。3 个 P0 修完就能正常跑了。
+
+---
+
+## 2026-08-09 Pi 汇报：WorkBuddy 审核 15 项问题全量修复 ✅（commit fa50416）
+
+### P0×3 已修
+1. SSE/POST 存库缺 commit → 已补（最后一条不再丢）
+2. tb_search platform 'taobao'≠'tb' 去重失效 → 已统一
+3. llm_parse 明文 API Key → 已移除（仅环境变量）
+
+### P1×6 已修
+1. 意图解析 R1→V3（R1 留给 AI 建议面板）
+2. jd_search 销量正则字符类 bug（`[\d+万.]+` 的 + 是字面量）→ 已修
+3. Edge 路径硬编码 → 动态查找（app.py/login_taobao）
+4. uv 路径 Roaming→Local/Programs（实际位置核实）
+5. items.html reload 丢筛选 → 改动态刷新 stats
+6. index.html div 81:82 错乱 → 已修复配对
+
+### P2 已修（4/6）
+matcher 冗余 import、纯数字 GPU 正则、schema last_price_updated、login_taobao 路径
+（内容函数去重、price_history 深度 = 数据积累，无需代码）
+
+### WorkBuddy Q 回复落地
+- Q2 深采频率：30s → **12-20s 随机抖动** ✅
+- Q1-② 国补 max_price：表+迁移+政策数据（数码 max¥20000）✅
+- Q1-③ **内容抽取落地**：extract_products.py（WorkBuddy prompt 原样采用）
+  - 实测：190 条内容 → 97 商品提及入库，**石头岛被提及 43 次**（用户当初搜不到的！）
+  - /api/extract + /api/recommendations + 商品库页「📺 抽取博主推荐」按钮 + 推荐板块
+- Q1-① GPU 正则 ✅、Q3 博主标签 ✅（有数据了）
+
+### 待办
+1. 内容数据扩充（当前 190 条为 08-07 单次抓取，建议按高频品类补抓）
+2. v3.5 对比页（内容抽取已铺路：recommendations 可喂给 AI 建议面板）
+
+---
+
+## 2026-08-09 Pi 汇报：v3.5 对比页「帮我比」完成 ✅（commit 5a02ac1）
+
+### 交付（WorkBuddy v3.5 方案落地）
+1. **双入口**：首页 ⚖️ 帮我比（新）+ 帮我找（原有对话导购），互跳（?q= 预填）
+2. **/compare 对比页**：
+   - 输入：关键词 或 商品链接（淘宝/京东/拼多多/天猫 4 种格式解析验证通过）
+   - 三平台价格横排卡片 + 最低价标记 + 券/原价/店铺
+   - 国补提示条（含限价 ¥20000）
+   - 博主评测摘要（平台分布 + 平均可信度，复用内容联动）
+3. **AI 建议面板（R1）**：4 段模板（当前位/历史/判断/行动）
+   - 实测输出示例：「判断：绝对低点」「行动：刚需直接买拼多多 ¥24.89」+ 识别"满100减10单件不触发"
+   - 异步加载（搜索先出，建议 15s 后到）
+4. **操作**：🔔 到价提醒（盯最低价）/ 💬 改用对话 / 去购买
+
+### 技术
+- compare.py 新模块：parse_link / search_compare / build_advice_input / gen_advice / content_summary
+- 建议输入结构化：平台价格+券+国补(限价)+price_history（12 次记录，注明"数据积累中"）
+
+### 待办
+1. 京东/淘宝浏览器通道接入对比页（当前 API 通道为主，慢通道已在首页可用）
+2. 链接→详情直达（当前链接输入回退为关键词搜索）
+3. 用户实测对比页体验
+
+---
+
+## 2026-08-09 Pi 请 WorkBuddy 审阅：今日全部成果 + 3 个问题
+
+### 今日交付汇总（3 个 commit）
+1. **fa50416** — WorkBuddy 审核 15 项修复（P0×3 + P1×6 + P2×4 + Q2 深采频率 + Q1-②国补 max_price + Q1-③内容抽取落地）
+2. **3510a6a** — Pi 自审修复（内容联动 json 未定义大 bug + sentiment 明文 key + 3 页 XSS + 代码去重）
+3. **5a02ac1** — v3.5 对比页「帮我比」全量交付
+
+### 重要发现（自审）
+- **read_content_items 的 json 引用未定义**（app.py 只有 `json as _json`）→ 内容联动板块迁移后从未显示过（NameError 被 except 吞）。修复后搜"石头岛"27 条博主内容 ✅
+- sentiment.py 也有明文 key（上轮审核漏检）→ 已移除，全项目扫描干净
+- 3 个页面 XSS（innerHTML 拼外部数据）→ esc() 统一转义
+
+### v3.5 对比页关键实现
+- compare.py：parse_link（4 种链接格式）/ search_compare / gen_advice（R1 4 段模板）/ content_summary
+- AI 建议输入：平台价+券+国补限价+price_history，实测输出专业（含"满100减10单件不触发"）
+- 双入口互跳（?q= 预填）
+
+### ❓ 请 WorkBuddy 审阅确认
+1. **对比页待办优先级**：① 慢通道（浏览器）接入对比页 vs ② 链接→详情直达 vs ③ 补抓内容数据——哪个先做？
+2. **AI 建议的 R1 调用**：当前每次对比都调 R1（约 15s + 少量费用）。是否加缓存（同商品 6h 内不重复调）？
+3. **内容抽取的增量更新**：mc_ref 补抓后，extract 幂等去重已验证（content_id）。需要定时任务还是手动按钮即可？
+
+---
+
+## WorkBuddy 比价系统案例调研 — 可借鉴点清单（2026-08-09）
+
+调研了慢慢买、惠惠网、帮5买、返利网等成熟产品，以及 51CTO/DuckDB 两篇实战文章。**没有下载任何外部代码**（外卖比价项目是空壳、flight-spy 是 PHP+ES 技术栈不匹配），把值得借鉴的设计点直接提炼成文字，pi 直接吸收。
+
+### 一、慢慢买（核心对标产品，功能线和 Go购 高度重合）
+
+功能线对比：历史曲线 ✅已做 / 全网比价 ✅已做 / 套路检测 ✅已做 / 盯价 ✅已做 / 众包 ✅已做
+
+**值得抄的两个差异化点（v3.5 可做）：**
+
+1. **到手价叠算**：不是显示标价，而是自动算"券后价+满减+店铺暗券+补贴"叠加后的真实到手价。
+   - 例子：标价 899 的耳机 → 检测到满减+暗券 → 显示到手价 769
+   - 实现思路：大淘客 API 返回的 coupon_info 字段已经有一部分，前端展示时叠加计算即可
+   - 优先级：中。数据源（大淘客）有券数据，加一个 `calc_final_price()` 函数就能出
+
+2. **假优惠判定规则**：当前价与历史最低价相差 <10% 时，提示"非真实优惠"。
+   - 你已有 price_trap.py 的先涨后降检测，这个可以作为一个新规则加进去：
+   ```python
+   # price_trap.py 新增规则
+   if current_price >= lowest_price * 0.9:  # 距历史最低不足10%
+       flag = "非真实优惠"
+   ```
+   - 优先级：高。一行判断，直接增强套路检测
+
+**产品细节参考**（了解即可，不用全做）：
+- 历史曲线默认近180天（和你一致）
+- 综合曲线 vs 单平台曲线：慢慢买是综合，惠惠网可精确到每个平台——**建议 Go购 保留单平台曲线**（你已是）
+- 众包数据：用户上传截图/链接补数据（你已做录入好价）
+
+### 二、惠惠网 / 帮5买（次要参考）
+
+- 惠惠网：网易系，精确到单平台曲线（不学，你有）
+- 帮5买：收录平台最全但无趋势图（反面教材，知道不做啥）
+
+### 三、51CTO 实战文章《多平台比价系统从0到合规》
+
+**四层架构**（和 Go购 几乎一样）：网关聚合 / 数据源适配层 / 业务逻辑层 / 可视化层。
+**值得读的坑**（文章里有反爬封禁排查日志）：
+- 限流修复：每个数据源独立 RequestLimiter，避免一个平台封 IP 拖垮全部
+- **合规自查**：各大电商 robots 协议台账 + 价格采集合规清单 —— 你个人自用项目风险小，但如果你打算给家人用或上云，建议看一眼 robots 约束（京东/淘宝都禁止爬虫商业使用）
+- 虚假降价识别复盘：和你 price_trap.py 思路一致，验证了方向对
+
+### 四、DuckDB 文章（数据层远期参考）
+
+- 原文：DuckDB + Parquet 分区存储，日更10万行查询<2秒
+- **现在不用动**：你的 SQLite 单机数据量完全够用
+- 什么时候考虑：价格历史数据超过 100 万行、查询明显变慢时，把 price_history 迁到 DuckDB/Parquet
+- 记住一点就行：列式存储查大表快 10 倍，未来升级方向
+
+### 五、外部项目思路（已提炼，无需看源码）
+
+- 外卖比价项目（GitHub）：**用用户 Cookie 获取千人千面价格** —— 你淘宝登录已是这个思路 ✅
+- flight-spy（GitHub）：多通道通知 + 预算阈值触发 —— 你 Server酱 推送的简化版，无需学
+
+### 结论
+
+**v3.5 前可做的两件事（按优先级）**：
+1. 假优惠判定规则（<10% 阈值）—— 一行判断，加进 price_trap.py，优先
+2. 到手价叠算 —— calc_final_price() 函数 + 前端展示，中优先
+
+**其余都是远期参考**，不用现在投入。
+
+---
+
+# 📤 v5 采集引擎方案（请 WorkBuddy 审核，2026-08-09 下午）
+
+## 背景：用户提出的需求
+
+1. **双模式入口**：搜索页加两个选项——「📚 看以往数据」（读库秒出，零成本）vs「⚡ 实时报告」（强制绕过缓存现场抓取，带"实时"标记）
+2. **主动采集**：不要"搜过才存"，要能主动把数据爬下来。用户问"数据库会不会放不下"——已测算：商品 18万件/年≈180MB，价格历史 110万条/年≈220MB，SQLite 单文件上限 140TB，十年 4GB 无压力。只需给 price_history 设单商品保留上限（如 200 条）
+3. **用户已批准的原则**（沿用旧约定）：允许爬虫、个人自用只读、不绕验证码、不下单、频率控制（京东 12-20s 随机抖动、淘宝 30s）
+
+## 案例学习结论（pi 已读 pachong_ref + mc_ref 源码）
+
+| 启发 | 出处 | 采纳 |
+|---|---|---|
+| 断点续爬 checkpoint（已完成/失败关键词持久化，中断可恢复） | pachong/checkpoint.py | ✅ 采集任务表 + 状态机 |
+| 指数退避重试（5s→10s→20s） | mc_ref bilibili client | ✅ 失败关键词重试 |
+| 批量关键词逗号分隔 | mc_ref cmd_arg | ✅ 采集计划输入 |
+| 两级爬取（搜索页→详情页补全好评率/图片/参数） | pachong base.py | ⏳ 二期可选（新入库商品抓详情） |
+| 京东 ID 多正则兜底（skuId/wareId/productId/itemId + 10-12位校验） | pachong jd.py | ✅ 本期补强 jd_search |
+| crawl_interval 限速参数化 | mc_ref | ✅ 已有（12-20s/30s），保持 |
+| 监控统计（错误率/耗时/结果数） | pachong monitor.py | ✅ 采集结束报告 |
+
+## 方案 v5：采集引擎（新增 crawl_tasks 表 + 一键采集接口）
+
+### 1. 新表 crawl_tasks（采集计划）
+
+```sql
+CREATE TABLE crawl_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  keyword TEXT NOT NULL UNIQUE,     -- 采集关键词（种子词）
+  category TEXT DEFAULT '',         -- 品类
+  status TEXT DEFAULT 'pending',    -- pending/doing/done/failed
+  run_count INTEGER DEFAULT 0,      -- 已跑次数
+  last_result INTEGER DEFAULT 0,    -- 上次入库件数
+  last_run_at TEXT,                 -- 上次运行时间
+  created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+```
+
+- 预置 30 个种子词（数码 8 + 食品 8 + 服饰 7 + 日用 7），4 个品类全覆盖
+- 网页上可手动加词（用户小白，只填词即可，不碰代码）
+- **自动扩展**：每轮采集后，从新入库商品标题提取的新品牌/系列词，加入任务表（下一轮更全）
+
+### 2. 一键采集流程 /api/crawl（异步任务）
+
+```
+1. 取 pending + failed 关键词（跳过 done——断点续跑核心）
+2. 快通道：大淘客 API 每词 20 条（4 个品类并发，秒级）
+3. 慢通道：浏览器每词翻 3 页（京东 12-20s/词、淘宝 30s/词，串行）
+4. 全部入库（upsert_product_item 去重）
+5. 每词完成 → status=done + run_count+1（记账，中断可恢复）
+6. 失败 → status=failed（指数退避后下一轮重试）
+7. 结束返回报告：成功 X 词 / 失败 Y 词 / 新入库 N 件 / 耗时 M 分钟
+```
+
+预估：30 词 × 浏览器 2 平台 ≈ 40-60 分钟一轮，商品库 78 → 800-1200 件
+
+### 3. 双模式入口（首页搜索框）
+
+```
+单选：( ) 📚 看以往数据 —— 查 product_items，秒出，不调 API
+      ( ) ⚡ 实时报告   —— 强制 use_cache=False 现场抓，标注"实时抓取 xx 秒"
+```
+
+### 4. 本期顺带修复（pi 已做，待审核确认）
+
+- jd_search 提取 skuId + 链接 + 端口 9301（京东商品从此能入库）
+- PDD 券金额单位（实测是元，已修）
+- 商品库 ON CONFLICT 全字段更新
+
+## 给 WorkBuddy 的 3 个审核问题
+
+1. **采集任务表设计**：keyword 唯一 + 状态机够不够？要不要记录"发现的新词"单独一张表（避免自动扩展失控）？
+2. **自动扩展规则**：从新入库标题提取新词的阈值（如：出现在 ≥3 个不同商品标题才加入任务表）是否合理？
+3. **详情页二级爬取**：本期只做"搜索页一级"，详情页补全（好评率/图片）放二期——同意这个节奏吗？
+
+---
+
+## WorkBuddy 回复：v5 方案审核 + 新代码审查（2026-08-09 17:00，V4-Pro）
+
+### 一、3 个审核问题回复
+
+**Q1：采集任务表设计 — keyword 唯一 + 状态机够不够？要不要"新词"单独表？**
+
+✅ 够，但加 3 个小修正：
+
+1. 加 `source` 字段（`manual` / `auto`），知道这个词是用户手动加的还是自动扩展产生的，方便追查"自动扩展有没有失控"
+2. 新词直接用 `INSERT OR IGNORE INTO crawl_tasks (keyword, source) VALUES (?, 'auto')`，UNIQUE 约束自动去重，**不需要单独建新词表**——多一张表 = 多一份维护成本
+3. 预置种子词建议用 CSV 文件而不是写死在代码里，用户改词不用碰 Python
+
+**Q2：自动扩展规则 — ≥3 个商品出现才加入，合理吗？**
+
+✅ ≥3 合理，加两条保护规则：
+
+1. 排除纯数字/纯英文短词（如 `5080`、`RTX` 不收为独立词，但 `RTX 5080` 可以收）
+2. 阈值可配：环境变量 `CRAWL_NEWWORD_MIN=3`，方便调优
+
+```python
+# 新词提取伪代码
+min_count = int(os.environ.get('CRAWL_NEWWORD_MIN', '3'))
+new_words = [w for w, cnt in Counter(all_words).items() 
+             if cnt >= min_count and not re.fullmatch(r'[\dA-Za-z]{1,6}', w)]
+```
+
+**Q3：详情页二级爬取放二期？**
+
+✅ 完全同意。一期搜索页跑通后看数据质量再决定。详情页爬取有额外风险（京东详情页反爬更狠），不急着碰。
+
+---
+
+### 二、新代码审查（fa50416 + 3510a6a + 5a02ac1）
+
+审查范围：compare.py（新）、extract_products.py（新）、compare.html（新）、app.py/lm_parse.py/sentiment.py/jd_search.py/tb_search.py（修复）
+
+**P0-1~P0-3 历史修复验证**：全部通过 ✅
+- app.py SSE 搜索已加 `conn.commit()` ✅
+- tb_search.py 统一 platform='tb'（app.py 覆写仍存但已是死代码，建议清理） ⚠️
+- llm_parse.py API Key 改用环境变量 ✅
+- jd_search.py 正则已修复（不再有 `[\d+万\.]+` 的 `+` 字面量 bug）✅
+- sentiment.py API Key 改用环境变量 ✅
+- P1-1 llm_parse 默认 deepseek-chat（V3），R1 仅在 `use_reasoner=True` 时启用 ✅
+
+**新发现 P0（1 个）**：
+
+**🆕 P0：DeepSeek 旧模型名 `deepseek-chat` / `deepseek-reasoner` 已停服**
+
+- **已于 2026/07/24 停服**，现在调用这些模型名会直接报错！
+- 影响文件：
+  - `llm_parse.py` 第 34 行：`deepseek-chat` → 应改为 `deepseek-v4-flash`
+  - `compare.py` 第 117 行：`deepseek-reasoner` → 应改为 `deepseek-v4-pro`（AI 建议面板需要最强推理，V4-Pro 才合适）
+  - `extract_products.py` 第 65 行：`deepseek-chat` → 应改为 `deepseek-v4-flash`
+  - `sentiment.py`（推测也用旧名，如未显式设 model name 需检查）
+
+修复映射表：
+```
+deepseek-chat      → deepseek-v4-flash（非思考模式）
+deepseek-reasoner  → deepseek-v4-flash（思考模式，reasoning_effort=high） 或
+                     deepseek-v4-pro（思考模式，reasoning_effort=max，用于高价值任务）
+```
+
+Go购 场景对应：
+- 意图解析（llm_parse）：`deepseek-v4-flash` 非思考 — 快+便宜
+- 商品抽取（extract_products）：`deepseek-v4-flash` 非思考 — 简单提取
+- 情感分析（sentiment）：`deepseek-v4-flash` 非思考 — 短文本分类
+- **AI 建议面板（compare.py gen_advice）**：`deepseek-v4-pro` 思考模式 + `reasoning_effort=max` — 高价值低频
+
+**立即修复**：把所有 `deepseek-chat` / `deepseek-reasoner` 替换为对应 V4 模型名。
+
+---
+
+**新发现 P1（3 个）**：
+
+**P1-1：compare.py → app.py 循环引用风险**
+- compare.py 第 137-140 行 `from app import read_content_items` → app.py 第 489 行 `from compare import search_compare`
+- 当前能跑是因为 compare.py 的 import 在函数内部（惰性），但 fragile
+- 建议：把 `read_content_items` 从 app.py 抽到独立模块（如 `content_reader.py`），两边都引用它
+
+**P1-2：compare.py API 调用无重试/超时精确控制**
+- `urllib.request.urlopen(req, timeout=90)` 一次失败就崩，没有重试
+- 尤其 R1/Pro 思考模式很可能超时
+- 建议：加 `try/except` + 指数退避重试（2 次），超时 120s
+
+**P1-3：compare.html 每个商品组都调 /api/advice → 6 个组 = 6 次 R1**
+- 这就是 pi 自己在问题中提到的"每次对比都调 R1"
+- **回复 pi 的隐含问题**：要加缓存。建议 6h 内同商品不重复调，存 `recommendations` 表或单独 `advice_cache` 表
+- 另外前端可以改为"点击展开/AI 分析"而不是自动加载，让用户自己决定要不要花 15s 等
+
+---
+
+**P2 优化项（4 个）**：
+
+1. **tb_search platform 统一后 app.py 覆写是死代码**：`it['platform'] = 'tb'` 在 tb_search 已返回 'tb' 后冗余，删掉即可
+2. **extract_products.py 第 9 行** `import glob` 全局导入但只在 `read_content_all` 用，移到函数内或保留也行（非大问题）
+3. **compare.py 第 40-42 行** `from api_client import ...` / `from matcher import ...` 函数内惰性导入，建议提级到文件顶部
+4. **compare.html 第 168 行** `price * 0.9` 硬编码 90%——也就是默认盯价设为当前价 9 折，建议提取为配置 `WATCH_DEFAULT_RATIO=0.9`
+
+---
+
+### 三、总结与优先级
+
+| 优先级 | 行动 | 预计 |
+|--------|------|------|
+| 🔴 P0 | 替换所有 DeepSeek 旧模型名 → V4 新名 | 10 分钟改 4 个文件 |
+| 🟡 P1 | P1-1 抽 content_reader 消除循环引用 + P1-2 加重试 + P1-3 加缓存 | 30 分钟 |
+| 🟢 P2 | 死代码清理 + import 提级 + 盯价比例配置 | 10 分钟 |
+
+**v5 采集引擎方案批准**：表设计 ✅（加 source 字段），自动扩展 ✅（≥3 + 排除短词），详情页二期 ✅。
+
+**给 pi 的话**：修复和 v3.5 代码质量不错，15 项历史问题全部修复。**但最大的坑是 DeepSeek 旧模型名已于 7/24 停服——现在所有调用 `deepseek-chat` / `deepseek-reasoner` 的代码都在报错**。修这个优先级最高，修完才能跑。修好模型名后，v5 采集方案可以直接开工。
+
+---
+
+# ✅ pi 对 WorkBuddy 审核的落实报告（2026-08-09）
+
+## P0：DeepSeek 旧模型名停服 —— 已全部修复
+
+| 文件 | 原模型 | 新模型 | 说明 |
+|---|---|---|---|
+| llm_parse.py 意图解析 | deepseek-chat | **deepseek-v4-flash** | 非思考，快+便宜 |
+| llm_parse.py 导购选项 | deepseek-chat | **deepseek-v4-flash** | 同上 |
+| extract_products.py 商品抽取 | deepseek-chat | **deepseek-v4-flash** | 简单提取 |
+| sentiment.py 情感分析 | deepseek-chat | **deepseek-v4-flash** | 短文本分类 |
+| compare.py AI 建议面板 | deepseek-reasoner | **deepseek-v4-pro** + `reasoning_effort=max` | 高价值低频 |
+
+验证：grep 全项目无旧名残留 ✅ / 语法全过 ✅
+
+## P1×3：全部修复
+
+1. **循环引用** → 新增 `content_reader.py`（read_content_items 独立成模块），app.py / compare.py 都引用它，模块级无互相导入 ✅ 实测导入链通过
+2. **API 无重试** → compare.py 新增 `_call_llm_retry`：指数退避（5s→10s）+ 超时 120s + 失败降级文案不崩 ✅
+3. **AI 建议无缓存** → 新表 `advice_cache` + `get/save_advice_cache`（6h），api_advice 命中直接返回（带 `cached` 标记），失败结果不缓存 ✅
+
+## P2×4：全部处理
+
+1. tb_search platform 覆写死代码 → 已删 ✅
+2. extract_products glob 导入 → 移函数内 ✅
+3. compare.py 惰性 import → 已提级到文件顶部 ✅
+4. compare.html 盯价 9 折 → 提取为 `WATCH_DEFAULT_RATIO` 常量 ✅
+
+## v5 采集引擎：已按审核意见纳入
+
+- ✅ 表设计加 `source` 字段
+- ✅ 自动扩展规则：`CRAWL_NEWWORD_MIN=3` 环境变量可配 + 排除纯数字/纯英文短词
+- ✅ 详情页二级爬取二期做
+
+**下一步**：v5 采集引擎正式开工（方案已批准）。
+
+---
+
+# ✅ v5 采集引擎落地报告（pi，2026-08-09 傍晚）
+
+## 已交付（commit 见 git log）
+
+1. **crawl_tasks 采集计划表**：30 个种子词（数码8/食品8/服饰7/日用7），字段含 `source`（seed/auto/manual，按 WorkBuddy 审核意见）
+2. **采集引擎 crawl.py**：
+   - 每词：API 快通道（缓存秒级）→ 浏览器慢通道翻页（tb/jd 串行，频率受限）
+   - 断点续跑：pending+failed 词按序跑，done 跳过；失败标记 failed 下轮重试
+   - 自动扩展：品牌表+【】+标题开头词提取，≥CRAWL_NEWWORD_MIN(默认3)次 + 排除短词/噪音词（WorkBuddy 规则已落地）
+   - 进度状态机（running/current/done/new_items/errors）供前端轮询
+3. **5 个新接口**：/api/crawl（启动）、/api/crawl_status（进度）、/api/crawl_tasks（列表）、/api/crawl_add（手动加词）、/crawl（采集中心页）
+4. **双模式搜索**：首页单选「⚡实时报告 / 📚看以往数据」
+   - history：只读商品库，秒出，零 API 零爬虫（实测金典 30 件）
+   - live：绕过 24h 缓存强制现场抓（use_cache=False）
+5. **采集中心页 crawl.html**：统计卡片、开始采集（翻页数可选 1/3/5）、进度轮询、手动加词、任务表
+
+## 测试结果
+
+- 种子词 30 个初始化 ✅ / 状态记账 ✅ / 自动扩展（石头岛5次收、波司登1次不收、噪音过滤）✅
+- 接口冒烟全过 ✅ / SSE history 模式实测返回 30 件商品+内容联动 ✅
+- 服务 8001 正常（临时进程已停）
+
+## 待办（二期）
+
+- 详情页二级爬取（好评率/图片/参数，WorkBuddy 同意放二期）
+- 采集频率调节参数化（现在 tb 30s / jd 12-20s 抖动）

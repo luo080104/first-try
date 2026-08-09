@@ -20,6 +20,13 @@
         .cat.active { background: #ff6b35; border-color: #ff6b35; color: #fff; }
         .cat.empty { border-style: dashed; }
         #search-btn { width: 100%; font-size: 20px; padding: 14px; margin-top: 8px; }
+        .mode-pick { display: flex; gap: 10px; margin: 14px 0 4px; }
+        .mode-pick label { flex: 1; padding: 10px 0; text-align: center; border: 2px solid #dfe6e9;
+                           border-radius: 12px; cursor: pointer; font-size: 15px; color: #636e72;
+                           background: #fff; transition: all 0.2s; }
+        .mode-pick input { display: none; }
+        .mode-pick label.sel { border-color: #ff6b35; background: #fff5f0; color: #ff6b35; font-weight: 600; }
+        .mode-tip { font-size: 12px; color: #b2bec3; text-align: center; margin: 4px 0 0; }
         #progress { display: none; text-align: center; color: #ff6b35; font-size: 16px;
                     margin-top: 18px; line-height: 1.8; }
         .quick { display: flex; gap: 12px; margin-top: 18px; justify-content: center; }
@@ -49,6 +56,11 @@
                 <div class="cat" data-cat="日用百货">🧴 日用百货</div>
                 <div class="cat" data-cat="数码家电">💻 数码家电</div>
             </div>
+            <div class="mode-pick" id="mode-pick">
+                <label class="sel" onclick="pickMode('live', this)"><input type="radio" name="mode" value="live" checked>⚡ 实时报告<small>（现场抓取，最新）</small></label>
+                <label onclick="pickMode('history', this)"><input type="radio" name="mode" value="history">📚 看以往数据<small>（读库秒出，零成本）</small></label>
+            </div>
+            <div class="mode-tip" id="mode-tip">⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多</div>
             <button type="button" id="search-btn" class="btn btn-tb" onclick="doSearch()">开始比价</button>
         </div>
         <div id="progress" style="display:none;text-align:center;color:#0984e3;font-size:15px;margin-top:16px"></div>
@@ -56,6 +68,7 @@
         <div class="quick">
             <a class="q1" href="/compare">⚖️ 帮我比</a>
             <a class="q1" href="/items">🛍️ 商品库</a>
+            <a class="q1" href="/crawl">📥 采集中心</a>
             <a class="q2" href="/watches">🎯 盯价清单</a>
             <a class="q2" href="/submit">📝 录入好价</a>
         </div>
@@ -210,10 +223,17 @@
         }
 
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        function pickMode(mode, el) {
+            document.querySelectorAll('#mode-pick label').forEach(function(l) { l.classList.remove('sel'); });
+            el.classList.add('sel');
+            var tip = document.getElementById('mode-tip');
+            tip.innerText = mode === 'live' ? '⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多' : '📚 历史模式：只读商品库，秒出（不爬取）';
+        }
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();
             if (!kw) { alert('请输入商品名称'); return; }
             var cat = document.getElementById('cat').value;
+            var mode = document.querySelector('input[name=mode]:checked').value;
             var prog = document.getElementById('progress');
             var box = document.getElementById('sse-result');
             var btn = document.getElementById('search-btn');
@@ -222,7 +242,7 @@
             prog.innerHTML = '<span class="spinner"></span>开始搜索...';
             box.innerHTML = '';
             var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
-            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round)
+            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode)
                 .then(resp => {
                     var reader = resp.body.getReader();
                     var decoder = new TextDecoder();
@@ -309,8 +329,13 @@
             document.head.appendChild(s);
         }
         function renderResult(d, box) {
-            var html = '<div class="stat">淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' +
-                (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ' + d.total + ' 条候选</div>';
+            var html = '';
+            if (d.mode === 'history') {
+                html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' + d.total + ' 件），如需最新价格请切「⚡ 实时报告」</div>';
+            }
+            html += '<div class="stat">' + (d.mode === 'history' ? '📚 商品库查询结果' : '⚡ 实时抓取') + '：' +
+                (d.mode === 'history' ? '' : '淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' +
+                (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ') + d.total + ' 条候选</div>';
             if (d.subsidies && d.subsidies.length) {
                 html += '<div class="subsidy-bar">';
                 d.subsidies.forEach(function(s) {

@@ -4,7 +4,6 @@
 import sys
 import os
 import json
-import glob
 import urllib.request
 
 API_URL = 'https://api.deepseek.com/chat/completions'
@@ -31,6 +30,7 @@ PLATFORMS = {
 
 def read_content_all(keyword: str = '') -> list:
     """读三平台 jsonl 内容（可选关键词过滤），返回统一结构"""
+    import glob  # WorkBuddy P2-2：函数内导入
     out = []
     for plat, cfg in PLATFORMS.items():
         files = sorted(glob.glob(os.path.join(MC_DIR, 'data', plat, 'jsonl', cfg['file'] + '_*.jsonl')))
@@ -62,7 +62,7 @@ def _call_llm(content_texts: list, batch_keywords: str) -> list:
     user_text = json.dumps([{'content_id': c['content_id'], 'platform': c['platform'],
                              'text': c['title']} for c in content_texts], ensure_ascii=False)
     body = json.dumps({
-        'model': 'deepseek-chat',
+        'model': 'deepseek-v4-flash',
         'messages': [
             {'role': 'system', 'content': EXTRACT_SYSTEM},
             {'role': 'user', 'content': user_text},

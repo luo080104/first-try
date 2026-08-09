@@ -182,3 +182,25 @@ CREATE INDEX IF NOT EXISTS idx_items_cat ON product_items(category);
 CREATE INDEX IF NOT EXISTS idx_items_price ON product_items(price);
 CREATE INDEX IF NOT EXISTS idx_items_brand ON product_items(brand);
 CREATE INDEX IF NOT EXISTS idx_items_title ON product_items(title);
+
+-- ========== v5 AI 建议缓存（6h 内同商品不重复调 V4-Pro）==========
+CREATE TABLE IF NOT EXISTS advice_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cache_key TEXT NOT NULL UNIQUE,     -- keyword|group_key
+    advice TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
+-- ========== v5 采集计划（一键采集引擎）==========
+CREATE TABLE IF NOT EXISTS crawl_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    keyword TEXT NOT NULL UNIQUE,        -- 采集关键词
+    category TEXT DEFAULT '',            -- 品类
+    status TEXT DEFAULT 'pending',       -- pending/doing/done/failed
+    run_count INTEGER DEFAULT 0,         -- 已跑次数
+    last_result INTEGER DEFAULT 0,       -- 上次入库件数
+    last_run_at TEXT,                    -- 上次运行时间
+    source TEXT DEFAULT 'seed',          -- seed=种子词 auto=自动扩展 manual=手动
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_crawl_status ON crawl_tasks(status);

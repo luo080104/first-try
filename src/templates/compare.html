@@ -72,6 +72,8 @@
     </div>
 
     <script>
+        // 默认盯价 = 当前价 × 9 折（WorkBuddy P2-4：配置化）
+        const WATCH_DEFAULT_RATIO = 0.9;
         var currentKw = '', currentCat = '';
         document.querySelectorAll('.cat').forEach(el => {
             el.addEventListener('click', () => {
@@ -166,7 +168,7 @@
 
         function watchBest(title, price) {
             if (!price) { alert('暂无价格可盯'); return; }
-            var target = prompt('当前最低 ¥' + price + '，目标价（低于此价提醒）：', (price * 0.9).toFixed(0));
+            var target = prompt('当前最低 ¥' + price + '，目标价（低于此价提醒）：', (price * WATCH_DEFAULT_RATIO).toFixed(0));
             if (!target) return;
             var fd = new FormData();
             fd.append('title', title); fd.append('current_price', price);

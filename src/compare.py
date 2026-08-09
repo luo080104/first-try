@@ -4,9 +4,16 @@ import os
 import re
 import sys
 import json
+import time
 import urllib.request
+import urllib.error
 
 sys.path.insert(0, os.path.dirname(__file__))
+
+from api_client import search_goods, search_pdd
+from matcher import parse_items, group_by_sku, ADAPTERS
+from db import find_subsidies, get_conn
+from content_reader import read_content_items
 
 API_URL = 'https://api.deepseek.com/chat/completions'
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
@@ -37,10 +44,6 @@ def parse_link(url: str) -> dict:
 
 def search_compare(keyword: str, category: str = '') -> dict:
     """三平台搜索 + SKU 合并 → 对比数据"""
-    from api_client import search_goods, search_pdd
-    from matcher import parse_items, group_by_sku, ADAPTERS
-    from db import find_subsidies
-
     tb_items = search_goods(keyword, category or None)
     pdd_items = search_pdd(keyword)
     all_items = tb_items + pdd_items
@@ -108,33 +111,50 @@ def build_advice_input(keyword: str, group: dict, subsidies: list, history_rows:
         lines.append('- 历史记录: 暂无（价格随查询自动积累）')
     return '\n'.join(lines)
 
-def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list) -> str:
-    """R1 生成 4 段建议"""
-    if not API_KEY:
-        return '【当前位】无法分析（未配置 API Key）\n【历史】-\n【判断】-\n【行动】-'
-    user_text = build_advice_input(keyword, group, subsidies, history_rows)
+def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, timeout: int = 120, retries: int = 2) -> str:
+    """调 DeepSeek，带指数退避重试（WorkBuddy P1-2）"""
     body = json.dumps({
-        'model': 'deepseek-reasoner',
+        'model': model,
         'messages': [
-            {'role': 'system', 'content': ADVICE_SYSTEM},
+            {'role': 'system', 'content': system},
             {'role': 'user', 'content': user_text},
         ],
-        'max_tokens': 800,
+        'max_tokens': max_tokens,
         'temperature': 0.3,
+        'reasoning_effort': 'max' if model == 'deepseek-v4-pro' else None,
     }).encode('utf-8')
     req = urllib.request.Request(API_URL, data=body, headers={
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {API_KEY}',
     })
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        data = json.loads(resp.read().decode('utf-8'))
-    return data['choices'][0]['message']['content']
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            return data['choices'][0]['message']['content']
+        except Exception as e:
+            last_err = e
+            if attempt < retries:
+                time.sleep(5 * (2 ** attempt))  # 指数退避：5s → 10s
+    raise last_err
+
+
+def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list) -> str:
+    """AI 建议面板（V4-Pro 思考模式；失败给降级文案不崩，WorkBuddy P1-2）"""
+    if not API_KEY:
+        return '【当前位】无法分析（未配置 API Key）\n【历史】-\n【判断】-\n【行动】-'
+    user_text = build_advice_input(keyword, group, subsidies, history_rows)
+    try:
+        return _call_llm_retry(user_text, 'deepseek-v4-pro', ADVICE_SYSTEM, 800)
+    except Exception as e:
+        print(f'[advice] 生成失败: {str(e)[:80]}')
+        return f'【当前位】AI 建议暂时不可用（{str(e)[:40]}），请稍后再试\n【历史】-\n【判断】-\n【行动】-'
 
 # ========== 内容摘要（博主评测一句话）==========
 
 def content_summary(keyword: str) -> dict:
     """相关内容摘要：条数 + 平均可信度 + 高频词（简单规则，不调 LLM）"""
-    from app import read_content_items
     try:
         r = read_content_items(keyword)
     except Exception:

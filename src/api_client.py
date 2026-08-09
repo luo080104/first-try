@@ -151,15 +151,22 @@ def sort_by_relevance(items: list, keyword: str) -> list:
     return sorted(items, key=score, reverse=True)
 
 def parse_pdd_list(raw_list: list) -> list:
-    """解析拼多多返回字段 → 统一结构"""
+    """解析拼多多返回字段 → 统一结构（券金额单位=元，实测大淘客返回元；>100 时按分兜底）"""
     items = []
     for g in raw_list:
+        coupon = g.get('couponDiscount') or g.get('coupon_discount', 0)
+        try:
+            coupon = float(coupon)
+            if coupon > 100:  # 个别接口返回分（如 500=5 元），容错转换
+                coupon = coupon / 100
+        except (TypeError, ValueError):
+            coupon = 0
         items.append({
             'goodsId': g.get('goodsSign') or g.get('goods_id'),
             'title': g.get('goodsName') or g.get('goods_name', ''),
             'actualPrice': g.get('minGroupPrice') or g.get('min_on_sale_group_price', 0) / 100,
             'originalPrice': g.get('marketPrice'),
-            'coupon_amount': (g.get('couponDiscount') or g.get('coupon_discount', 0)) / 100,
+            'coupon_amount': coupon,
             'monthSales': g.get('salesTip') or g.get('sales_tip', 0),
             'shopName': g.get('mallName') or g.get('mall_name', ''),
             'brand': g.get('brandName', ''),
@@ -195,7 +202,7 @@ if __name__ == '__main__':
     items = search_goods(kw)
     print(f'「{kw}」返回 {len(items)} 条：')
     for i, it in enumerate(items[:5], 1):
-        print(f'  {i}. {it["title"][:35]} | ¥{it["actualPrice"]} | 券¥{it["couponPrice"]} | 月销{it["monthSales"]}')
+        print(f'  {i}. {it["title"][:35]} | ¥{it["actualPrice"]} | 券¥{it["coupon_amount"]} | 月销{it["monthSales"]}')
 
 
 def value_score(item: dict) -> float:

@@ -72,6 +72,24 @@ def save_price(conn, sku_id, platform, item_id, title, price, original_price,
     conn.commit()
     return cur.lastrowid
 
+def _platform_url(item: dict) -> str:
+    """按平台生成正确商品链接（有自带 url 直接用，否则按平台拼）"""
+    url = item.get('url') or ''
+    if url:
+        return str(url)[:300]
+    gid = str(item.get('goodsId') or item.get('item_id') or '')
+    if not gid:
+        return None
+    plat = item.get('platform', 'tb')
+    if plat == 'pdd':
+        return f'https://mobile.yangkeduo.com/goods.html?goods_id={gid}'
+    if plat == 'jd':
+        return f'https://item.jd.com/{gid}.html'
+    if item.get('is_tmall'):
+        return f'https://detail.tmall.com/item.htm?id={gid}'
+    return f'https://item.taobao.com/item.htm?id={gid}'
+
+
 def save_search_result(conn, item: dict, category: str):
     """保存一条搜索结果：商品 → SKU → 价格历史（方案 B：全链路）"""
     # 商品归一化：阶段 1 先用"品牌 + 关键词前缀"做最简匹配，阶段 2 完善
@@ -89,7 +107,7 @@ def save_search_result(conn, item: dict, category: str):
         original_price=item.get('originalPrice'),
         coupon_amount=item.get('couponPrice', 0),
         coupon_expire=None,
-        url=item.get('goodsId', '') and f"https://detail.tmall.com/item.htm?id={item.get('goodsId')}" or None,
+        url=_platform_url(item),
     )
 
 def recent_prices(conn, limit=10):
@@ -240,6 +258,13 @@ def upsert_product_item(conn, item: dict, category: str = ''):
             title=excluded.title, price=excluded.price,
             original_price=COALESCE(excluded.original_price, product_items.original_price),
             coupon_amount=excluded.coupon_amount, sales=excluded.sales,
+            brand=COALESCE(NULLIF(excluded.brand, ''), product_items.brand),
+            series=COALESCE(NULLIF(excluded.series, ''), product_items.series),
+            category=COALESCE(NULLIF(excluded.category, ''), product_items.category),
+            shop_name=COALESCE(NULLIF(excluded.shop_name, ''), product_items.shop_name),
+            url=COALESCE(NULLIF(excluded.url, ''), product_items.url),
+            img=COALESCE(NULLIF(excluded.img, ''), product_items.img),
+            is_ad=excluded.is_ad,
             last_seen=datetime('now','localtime')
     ''', (
         platform, item_id, title, brand, series, category,
@@ -254,16 +279,16 @@ def upsert_product_item(conn, item: dict, category: str = ''):
     return item_id
 
 def _parse_sales(v) -> int:
-    """销量解析容错：'15.5万+' → 155000，'50000' → 50000，其他 → 0"""
+    """销量解析容错：'15.5万+' → 155000，'已售1.2万' → 12000，'50000' → 50000，其他 → 0"""
     if isinstance(v, (int, float)):
         return int(v)
     s = str(v).strip()
     if not s:
         return 0
-    m = re.match(r'([\d.]+)\s*万', s)
+    m = re.search(r'([\d.]+)\s*万', s)  # search：兼容'已售1.2万'这类带前缀的文案
     if m:
         return int(float(m.group(1)) * 10000)
-    m = re.match(r'(\d+)', s)
+    m = re.search(r'(\d+)', s)
     return int(m.group(1)) if m else 0
 
 def query_items(keyword: str = '', category: str = '', platform: str = '',
@@ -333,3 +358,123 @@ def list_recommendations(limit=50):
     ''', (limit,)).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+# ========== v5 AI 建议缓存（6h，WorkBuddy P1-3）==========
+
+ADVICE_CACHE_HOURS = 6
+
+def get_advice_cache(cache_key: str):
+    """取 6h 内 AI 建议缓存，无/过期返回 None"""
+    conn = get_conn()
+    row = conn.execute(
+        'SELECT advice, created_at FROM advice_cache WHERE cache_key=?', (cache_key,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    import datetime as _dt
+    try:
+        created = _dt.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
+        if _dt.datetime.now() - created < _dt.timedelta(hours=ADVICE_CACHE_HOURS):
+            return row['advice']
+    except Exception:
+        pass
+    return None
+
+def save_advice_cache(cache_key: str, advice: str):
+    """写入 AI 建议缓存（upsert）"""
+    conn = get_conn()
+    conn.execute('''
+        INSERT INTO advice_cache (cache_key, advice) VALUES (?,?)
+        ON CONFLICT(cache_key) DO UPDATE SET
+            advice=excluded.advice, created_at=datetime('now','localtime')
+    ''', (cache_key, advice))
+    conn.commit()
+    conn.close()
+
+# ========== v5 采集计划（一键采集引擎）==========
+
+SEED_WORDS = [
+    # 数码家电 8
+    ('游戏本', '数码家电'), ('笔记本电脑', '数码家电'), ('手机', '数码家电'),
+    ('显示器', '数码家电'), ('平板电脑', '数码家电'), ('机械键盘', '数码家电'),
+    ('无线耳机', '数码家电'), ('显卡', '数码家电'),
+    # 食品 8
+    ('纯牛奶', '食品'), ('坚果礼盒', '食品'), ('零食大礼包', '食品'),
+    ('咖啡豆', '食品'), ('茶叶', '食品'), ('酸奶', '食品'),
+    ('巧克力', '食品'), ('螺蛳粉', '食品'),
+    # 服饰 7
+    ('羽绒服', '服饰'), ('卫衣', '服饰'), ('运动鞋', '服饰'),
+    ('冲锋衣', '服饰'), ('牛仔裤', '服饰'), ('连衣裙', '服饰'), ('毛衣', '服饰'),
+    # 日用百货 7
+    ('洗衣液', '日用百货'), ('抽纸', '日用百货'), ('洗发水', '日用百货'),
+    ('沐浴露', '日用百货'), ('洗面奶', '日用百货'), ('保温杯', '日用百货'),
+    ('垃圾袋', '日用百货'),
+]
+
+
+def ensure_crawl_tasks():
+    """首次建表后插入种子词（幂等）"""
+    conn = get_conn()
+    for kw, cat in SEED_WORDS:
+        conn.execute('''
+            INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?, 'seed')
+        ''', (kw, cat))
+    conn.commit()
+    conn.close()
+
+
+def get_pending_tasks(limit: int = 100) -> list:
+    """取待采集词（pending + failed），按失败优先 + 创建顺序"""
+    conn = get_conn()
+    rows = conn.execute('''
+        SELECT * FROM crawl_tasks
+        WHERE status IN ('pending','failed')
+        ORDER BY CASE status WHEN 'failed' THEN 0 ELSE 1 END, id ASC LIMIT ?
+    ''', (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def mark_crawl_task(keyword: str, status: str, result_count: int = 0):
+    """更新任务状态（done/failed/doing）"""
+    conn = get_conn()
+    conn.execute('''
+        UPDATE crawl_tasks SET status=?, run_count=run_count+1,
+               last_result=?, last_run_at=datetime('now','localtime')
+        WHERE keyword=?
+    ''', (status, result_count, keyword))
+    conn.commit()
+    conn.close()
+
+
+def add_auto_keywords(words: list):
+    """自动扩展：新词入库（幂等，已有词跳过）"""
+    conn = get_conn()
+    added = 0
+    for w in words:
+        cur = conn.execute('INSERT OR IGNORE INTO crawl_tasks (keyword, source) VALUES (?,?)',
+                           (w, 'auto'))
+        added += cur.rowcount
+    conn.commit()
+    conn.close()
+    return added
+
+
+def list_crawl_tasks(limit: int = 200) -> list:
+    """任务表全量（采集中心页用）"""
+    conn = get_conn()
+    rows = conn.execute('''
+        SELECT * FROM crawl_tasks ORDER BY id ASC LIMIT ?
+    ''', (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def crawl_stats() -> dict:
+    """采集任务统计"""
+    conn = get_conn()
+    rows = conn.execute('SELECT status, COUNT(*) n FROM crawl_tasks GROUP BY status').fetchall()
+    total = conn.execute('SELECT COUNT(*) FROM crawl_tasks').fetchone()[0]
+    conn.close()
+    s = {'total': total, 'by_status': {r['status']: r['n'] for r in rows}}
+    return s

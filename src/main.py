@@ -28,7 +28,8 @@ def show_sku_comparison(groups: dict, max_groups: int = 5):
         print(f'\n📦 SKU: {key}（{len(items)} 个候选）')
         for p, best in sorted(by_platform.items(), key=lambda x: x[1]['actualPrice']):
             mark = '⭐' if best is min(by_platform.values(), key=lambda x: x['actualPrice']) else '  '
-            print(f'  {mark} [{p}] ¥{best["actualPrice"]:>8} | 券¥{best["couponPrice"]:<5} | {best["title"][:32]}')
+            coupon = best.get('coupon_amount') or best.get('couponPrice') or 0
+            print(f'  {mark} [{p}] ¥{best["actualPrice"]:>8} | 券¥{coupon:<5} | {best["title"][:32]}')
     if shown == 0:
         print('\n⚠️ 品类未适配（暂无适配器），显示原始列表')
 

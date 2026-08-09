@@ -27,6 +27,7 @@ CHROME_PATHS = [
 ]
 PROFILE_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'tb_profile')
 _last_call_time = 0  # 低频约束
+# 端口 9300：淘宝专属（京东用 9301，CDP 用 9222），互不冲突
 
 # 多 API 监听模式（来源：xiuyegege multi-API + CSDN 文章 + ShilongLee search.py 交叉验证）
 # 淘宝搜索页可能触发以下任意一个 API，全部监听增加命中率
@@ -81,7 +82,7 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
     from DrissionPage import Chromium, ChromiumOptions
     co = ChromiumOptions()
     co.set_browser_path(browser_path)
-    co.set_local_port(9300)  # 独立端口，避免与 CDP 9222 冲突
+    co.set_local_port(9300)  # 9300：淘宝专属，与京东 9301 / CDP 9222 分开
     co.set_user_data_path(PROFILE_DIR)
     co.set_argument('--start-maximized')
     browser = Chromium(co)
@@ -136,8 +137,9 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
         if not logged:
             print('[tb] 登录超时')
             return []
-        # 登录后重新访问搜索页
+        # 登录后重新访问搜索页（先停旧监听再重启，避免重复 start）
         tab.get(url)
+        tab.listen.stop()
         tab.listen.start(MTOP_API_PATTERNS[0])
 
     # 验证码检测

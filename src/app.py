@@ -16,64 +16,7 @@ import json as _json
 
 from api_client import search_goods, search_pdd, value_score
 from llm_parse import parse_intent, generate_options
-
-def read_content_items(keyword: str) -> dict:
-    """读内容联动数据（jsonl 缓存，秒回）——B站/贴吧/小红书均衡 10 条 + 评分 + 套路检测"""
-    import glob
-    import json as _j
-    mc_dir = os.path.expanduser('~/mc_ref')
-
-    def read_jsonl(plat):
-        out = []
-        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', 'search_contents_*.jsonl')))
-        if files:
-            with open(files[-1], encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        d = _j.loads(line)
-                        t = d.get('title', '') or d.get('content', '') or d.get('desc', '') or ''
-                        tl = t.lower()
-                        if keyword in t or (keyword in ('石头岛', 'stone island') and ('石头岛' in t or 'stone island' in tl or 'stoneisland' in tl)):
-                            out.append((d, plat))
-                    except Exception:
-                        continue
-        return out
-
-    cached = read_jsonl('bili') + read_jsonl('tieba') + read_jsonl('xhs')
-    by_type = {'bili': [], 'tieba': [], 'xhs': []}
-    for d, plat in cached:
-        if plat in by_type and len(by_type[plat]) < 10:
-            by_type[plat].append((d, plat))
-    items = []
-    for d, plat in (by_type['bili'] + by_type['tieba'] + by_type['xhs']):
-        if plat == 'bili':
-            items.append({'type': 'bili', 'title': (d.get('title', '') or '')[:60],
-                          'author': d.get('nickname', ''), 'play': d.get('video_play_count', 0),
-                          'like': d.get('liked_count', 0), 'comment': d.get('video_comment', 0),
-                          'url': d.get('video_url', ''), 'desc': (d.get('desc', '') or '')[:80],
-                          'content_id': str(d.get('video_id', '')), 'pub_ts': d.get('create_time', '')})
-        elif plat == 'tieba':
-            items.append({'type': 'tieba', 'title': (d.get('title', '') or d.get('content', ''))[:60],
-                          'author': d.get('author', ''), 'play': 0, 'like': 0,
-                          'comment': d.get('comment_count', 0), 'url': d.get('url', ''),
-                          'desc': d.get('tieba_name', ''),
-                          'content_id': str(d.get('note_id', '')), 'pub_ts': d.get('publish_time', '')})
-        else:
-            items.append({'type': 'xhs', 'title': (d.get('title', '') or '')[:60],
-                          'author': d.get('nickname', ''), 'play': 0,
-                          'like': d.get('liked_count', 0), 'comment': d.get('comment_count', 0),
-                          'url': d.get('note_url', ''), 'desc': (d.get('desc', '') or '')[:60],
-                          'content_id': str(d.get('note_id', '')), 'pub_ts': d.get('time', '')})
-    for it in items:
-        sc = score_content(it, keyword)
-        it['score'] = sc['score']
-        it['flags'] = sc['flags']
-        it['sent'] = sc['sentiment']
-    trap = detect_trap(keyword)
-    result = {'items': items[:30]}
-    if trap.get('has_trap') or trap.get('has_fake_original'):
-        result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
-    return result
+from content_reader import read_content_items
 
 def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
@@ -86,7 +29,7 @@ def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
             it['monthSales'] = it.get('sales') or it.get('real_sales') or 0
             it['shopName'] = it.get('shop_name') or it.get('shop') or ''
             it['title'] = it.get('title', '')
-            it['platform'] = 'tb'
+            # platform 已由 tb_search 统一返回 'tb'（WorkBuddy P2-1：删除死代码覆写）
             it['_source'] = 'browser'
         return items
     except Exception as e:
@@ -309,12 +252,39 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
     return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} = {total} 条，入库 {added} 条'}
 
 @app.get('/search_sse')
-async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0):
+async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live'):
+    """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）"""
     async def gen():
         nonlocal keyword, category
         def sse(data):
             return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
         try:
+            # ===== 📚 历史模式：只读商品库，零 API 零爬虫 =====
+            if mode == 'history':
+                yield sse({'type': 'progress', 'msg': '📚 历史模式：正在查询商品库...'})
+                from db import query_items, find_subsidies
+                init_db()
+                data = await asyncio.to_thread(query_items, keyword.strip(), category, '', 0, 0, 'price_asc', 1, 30)
+                items = data.get('items', [])
+                groups = []
+                for it in items:
+                    groups.append({'key': (it.get('title') or '')[:30], 'count': 1,
+                                   'platforms': [{'platform': it.get('platform'), 'title': it.get('title'),
+                                                  'actualPrice': it.get('price'), 'shopName': it.get('shop_name'),
+                                                  'url': it.get('url'), 'goodsId': it.get('item_id'),
+                                                  'monthSales': it.get('sales')}],
+                                   'best': {'actualPrice': it.get('price')}})
+                content = await asyncio.to_thread(read_content_items, keyword)
+                subsidies = await asyncio.to_thread(find_subsidies, keyword, category)
+                yield sse({'type': 'done', 'keyword': keyword, 'category': category,
+                           'groups': groups, 'total': len(items),
+                           'tb_count': 0, 'pdd_count': 0, 'manual_count': 0,
+                           'content': content, 'slow_count': 0, 'options': [],
+                           'subsidies': subsidies, 'mode': 'history'})
+                return
+
+            # ===== ⚡ 实时模式：现场抓取 =====
+            yield sse({'type': 'progress', 'msg': '⚡ 实时模式：绕过缓存现场抓取...'})
             # 意图解析（对话式输入支持）
             intent = await asyncio.to_thread(parse_intent, keyword)
             search_kw = intent.get('keyword') or keyword
@@ -323,10 +293,10 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                 yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
             keyword, category = search_kw, search_cat
             # 快通道：API 并行（教材：无依赖子任务并行执行）
-            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多...'})
+            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多（实时抓取）...'})
             tb_items, pdd_items = await asyncio.gather(
-                asyncio.to_thread(search_goods, keyword, category or None),
-                asyncio.to_thread(search_pdd, keyword),
+                asyncio.to_thread(search_goods, keyword, category or None, 1, 20, False),
+                asyncio.to_thread(search_pdd, keyword, 1, 20, False),
             )
             all_items = tb_items + pdd_items
 
@@ -401,12 +371,14 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
                        'manual_count': len(manual_items), 'content': content,
                        'slow_count': len(slow_items), 'options': options,
-                       'subsidies': subsidies})
+                       'subsidies': subsidies, 'mode': 'live'})
         except Exception as e:
             yield sse({'type': 'error', 'msg': str(e)[:200]})
 
     return StreamingResponse(gen(), media_type='text/event-stream')
 
+# ===== 遗留入口：前端已全部改走 /search_sse（SSE 版含慢通道补搜/导购/内容联动）=====
+# 此 POST /search 保留供直接调用/测试，逻辑与 SSE 版存在分叉，改动优先改 SSE 版
 @app.post('/search', response_class=HTMLResponse)
 def search(request: Request, keyword: str = Form(...), category: str = Form('')):
     keyword = keyword.strip()
@@ -474,6 +446,49 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
         'subsidies': subsidies,
     })
 
+# ========== v5 采集引擎接口 ==========
+
+@app.post('/api/crawl')
+async def api_crawl(pages: int = Form(3)):
+    """启动一轮采集（后台任务，进度查 /api/crawl_status）"""
+    from crawl import run_crawl_round, get_progress
+    if get_progress().get('running'):
+        return {'ok': False, 'msg': '采集已在运行中，请稍候'}
+    pages = min(max(pages, 1), 5)
+    asyncio.create_task(run_crawl_round(pages))
+    return {'ok': True, 'msg': f'采集已启动（每词翻 {pages} 页，后台运行）'}
+
+@app.get('/api/crawl_status')
+def api_crawl_status():
+    """采集进度（前端轮询）"""
+    from crawl import get_progress
+    return get_progress()
+
+@app.get('/api/crawl_tasks')
+def api_crawl_tasks():
+    """任务表（采集中心页）"""
+    from db import list_crawl_tasks, crawl_stats
+    init_db()
+    return {'tasks': list_crawl_tasks(), 'stats': crawl_stats()}
+
+@app.post('/api/crawl_add')
+async def api_crawl_add(keyword: str = Form(''), category: str = Form('')):
+    """手动加采集词（小白友好：只填词）"""
+    from db import get_conn
+    kw = keyword.strip()
+    if not kw:
+        return {'ok': False, 'msg': '请输入关键词'}
+    conn = get_conn()
+    cur = conn.execute('INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?,?)',
+                       (kw[:30], category or '', 'manual'))
+    conn.commit(); conn.close()
+    return {'ok': True, 'msg': '已加入采集计划' if cur.rowcount else '这个词已在计划里了'}
+
+@app.get('/crawl', response_class=HTMLResponse)
+def crawl_page(request: Request):
+    """采集中心页"""
+    return templates.TemplateResponse(request, 'crawl.html', {})
+
 # ========== v3.5 对比页（Mode 2「帮我比」）==========
 
 @app.get('/compare', response_class=HTMLResponse)
@@ -508,9 +523,13 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
 
 @app.post('/api/advice')
 async def api_advice(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
-    """AI 建议面板（R1，异步加载）"""
+    """AI 建议面板（V4-Pro，异步加载 + 6h 缓存，WorkBuddy P1-3）"""
     from compare import search_compare, gen_advice
-    from db import get_conn
+    from db import get_conn, get_advice_cache, save_advice_cache
+    cache_key = f'{keyword.strip()}|{group_key.strip()}'
+    cached = get_advice_cache(cache_key)
+    if cached:
+        return {'ok': True, 'advice': cached, 'cached': True}
     data = await asyncio.to_thread(search_compare, keyword, category)
     group = next((g for g in data['groups'] if g['key'] == group_key), None)
     if not group:
@@ -529,7 +548,9 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
             break
     conn.close()
     advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history)
-    return {'ok': True, 'advice': advice}
+    if not advice.startswith('【当前位】AI 建议暂时不可用'):
+        save_advice_cache(cache_key, advice)
+    return {'ok': True, 'advice': advice, 'cached': False}
 
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8001)

@@ -29,9 +29,9 @@ def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cach
     except Exception:
         pass
 
-def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V3（简单任务），R1 留给 AI 建议面板
+def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V4-Flash（简单任务），R1 留给 AI 建议面板
     body = json.dumps({
-        'model': 'deepseek-reasoner' if use_reasoner else 'deepseek-chat',
+        'model': 'deepseek-v4-pro' if use_reasoner else 'deepseek-v4-flash',
         'messages': [
             {'role': 'system', 'content': SYSTEM_PROMPT},
             {'role': 'user', 'content': text},   # 只放可变内容
@@ -87,7 +87,7 @@ OPTIONS_SYSTEM = """你是Go购的导购助手。根据搜索结果标题，将�
 只输出JSON数组，不要其他文字。"""
 
 def generate_options(keyword: str, groups: list) -> list:
-    """从搜索结果生成导购选项（deepseek-chat，聚类/摘要任务不需要 reasoner）"""
+    """从搜索结果生成导购选项（V4-Flash，聚类/摘要任务不需要 Pro）"""
     lines = []
     for i, g in enumerate(groups[:15], 1):
         best = g.get('best') or g['platforms'][0]
@@ -97,7 +97,7 @@ def generate_options(keyword: str, groups: list) -> list:
 
     user_msg = "关键词：" + keyword + chr(10) + "结果标题：" + chr(10) + chr(10).join(lines)
     body = json.dumps({
-        'model': 'deepseek-chat',
+        'model': 'deepseek-v4-flash',
         'messages': [
             {'role': 'system', 'content': OPTIONS_SYSTEM},
             {'role': 'user', 'content': user_msg},

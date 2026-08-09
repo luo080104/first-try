@@ -18,6 +18,9 @@ CHROME_PATHS = [
 PROFILE_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'jd_profile')
 _last_call_time = 0  # 低频约束
 
+# 端口 9301：与淘宝（9300）分开，避免 SSE 并行补搜时抢同一个调试端口
+LOCAL_PORT = 9301
+
 def _find_browser():
     for p in EDGE_PATHS + CHROME_PATHS:
         if os.path.exists(p):
@@ -45,7 +48,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
     from DrissionPage import Chromium, ChromiumOptions
     co = ChromiumOptions()
     co.set_browser_path(browser_path)
-    co.set_local_port(9300)  # 独立端口，避免与 CDP 9222 冲突
+    co.set_local_port(LOCAL_PORT)  # 9301：避免与 CDP 9222 / 淘宝 9300 冲突
     co.set_user_data_path(PROFILE_DIR)
     co.set_argument('--start-maximized')
     browser = Chromium(co)
@@ -93,6 +96,20 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
                 txt = c.text.replace('\n', '|').strip()
             except Exception:
                 continue
+            # 提取 skuId：优先 li 的 data-sku 属性，兜底从卡片内链接 item.jd.com/XXX.html 提取
+            sku_id = ''
+            try:
+                sku_id = str(c.attr('data-sku') or '').strip()
+            except Exception:
+                pass
+            if not sku_id:
+                try:
+                    href = c.link or ''
+                    m = re.search(r'item\.jd\.com/(\d{6,15})', href)
+                    if m:
+                        sku_id = m.group(1)
+                except Exception:
+                    pass
             is_ad = '广告' in txt
             # 价格：取 ¥ 后面的数字（第二个通常是原价）
             prices = re.findall(r'¥(\d+(?:\.\d+)?)', txt)
@@ -120,6 +137,9 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
                 'sales': sales,
                 'shop': shop,
                 'is_ad': is_ad,
+                'item_id': sku_id,  # 京东 skuId（入库/盯价/历史价的关键）
+                'goodsId': sku_id,
+                'url': f'https://item.jd.com/{sku_id}.html' if sku_id else '',
             })
         return items[:max_items]
     finally:
