@@ -84,7 +84,7 @@
         document.getElementById('kw').addEventListener('keydown', e => { if (e.key === 'Enter') doCompare(); });
 
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-        function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', dy:'抖音'}[p] || p; }
+        function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会', dy:'抖音'}[p] || p; }
 
         function doCompare() {
             var kw = document.getElementById('kw').value.trim();
@@ -94,7 +94,7 @@
             currentKw = kw; currentCat = cat;
             var prog = document.getElementById('progress');
             var box = document.getElementById('results');
-            prog.style.display = 'block'; prog.innerText = '⏳ 正在搜索三平台…';
+            prog.style.display = 'block'; prog.innerText = '⏳ 正在搜索四平台（京东/唯品会约 30 秒）…';
             box.innerHTML = '';
             var fd = new FormData();
             fd.append('keyword', kw); fd.append('category', cat);
@@ -109,7 +109,10 @@
         }
 
         function renderGroups(d, box) {
-            var html = '<div class="stat">淘宝 ' + d.tb_count + ' + 拼多多 ' + d.pdd_count + ' 条候选，' + d.groups.length + ' 个同款组</div>';
+            var html = '<div class="stat">淘宝 ' + d.tb_count + ' + 拼多多 ' + d.pdd_count + ' 条' +
+                (d.jd_count ? ' + 京东 ' + d.jd_count + ' 条' : '') +
+                (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
+                ' 候选，' + d.groups.length + ' 个同款组</div>';
             if (d.subsidies && d.subsidies.length) {
                 html += '<div class="subsidy-bar">' + d.subsidies.map(function(s) {
                     return '🎯 <b>[' + esc(s.category) + ']</b> ' + esc(s.requirements) +
@@ -132,6 +135,9 @@
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
                 });
                 html += '</div>';
+                if (g.low_price_warning) {
+                    html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
+                }
                 if (d.content && d.content.count) {
                     html += '<div class="content-bar">📺 博主评测：' + esc(d.content.platforms) +
                         ' ・ 平均可信度 ⭐' + d.content.avg_score + '/100</div>';

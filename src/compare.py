@@ -42,15 +42,35 @@ def parse_link(url: str) -> dict:
 
 # ========== 三平台搜索 + 合并 ==========
 
-def search_compare(keyword: str, category: str = '') -> dict:
-    """三平台搜索 + SKU 合并 → 对比数据"""
+# 慢通道结果缓存（6h，避免每次对比都等浏览器）
+_slow_cache = {}  # keyword -> (timestamp, items)
+SLOW_CACHE_HOURS = 6
+
+
+def _slow_cache_get(keyword: str):
+    import time as _t
+    hit = _slow_cache.get(keyword)
+    if hit and _t.time() - hit[0] < SLOW_CACHE_HOURS * 3600:
+        return hit[1]
+    return None
+
+
+def _slow_cache_set(keyword: str, items: list):
+    import time as _t
+    _slow_cache[keyword] = (_t.time(), items)
+
+
+def _search_fast(keyword: str, category: str = '') -> tuple:
+    """快通道：API 三平台（淘宝+拼多多+唯品会API）"""
     from api_client import search_vip
     tb_items = search_goods(keyword, category or None)
     pdd_items = search_pdd(keyword)
     vip_items = search_vip(keyword)
-    all_items = tb_items + pdd_items + vip_items
+    return tb_items + pdd_items + vip_items, tb_items, pdd_items, vip_items
 
-    # SKU 合并（有品类适配器则用，否则按品牌粗分组）
+
+def _group_items(all_items: list, category: str) -> list:
+    """SKU 合并分组（有品类适配器用适配器，否则按品牌粗分组）"""
     groups = []
     if category and category in ADAPTERS and ADAPTERS[category]:
         parsed = parse_items(all_items, category)
@@ -81,10 +101,59 @@ def search_compare(keyword: str, category: str = '') -> dict:
         for g in groups:
             g['best'] = min(g['platforms'].values(), key=lambda x: x['actualPrice'])
         groups.sort(key=lambda g: g['best']['actualPrice'])
+    return groups
 
+
+def search_compare(keyword: str, category: str = '') -> dict:
+    """对比页搜索：快通道 API（同步，供 advice 等秒回场景）"""
+    all_items, tb_items, pdd_items, vip_items = _search_fast(keyword, category)
+    groups = _group_items(all_items, category)
     subsidies = find_subsidies(keyword, category)
     return {'keyword': keyword, 'category': category, 'groups': groups,
             'tb_count': len(tb_items), 'pdd_count': len(pdd_items), 'subsidies': subsidies}
+
+
+async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) -> dict:
+    """对比页搜索：快通道 + 京东/唯品会浏览器慢通道（异步调用方负责 to_thread）
+    慢通道结果 6h 内存缓存。"""
+    import asyncio
+    from app import search_jd_full, search_vip_full, search_taobao_full as search_tb_full
+
+    all_items, tb_items, pdd_items, vip_api_items = _search_fast(keyword, category)
+
+    # 慢通道：淘宝 + 京东 + 唯品会浏览器（并行，端口 9300/9301/9302 不冲突）
+    slow_key = f'{keyword}|{category}'
+    cached = _slow_cache_get(slow_key)
+    if cached is not None:
+        tb_full, jd_items, vip_items = cached
+    else:
+        tb_full, jd_items, vip_items = [], [], []
+        try:
+            tb_full2, jd_full, vip_full = await asyncio.gather(
+                asyncio.to_thread(search_tb_full, keyword, pages),
+                asyncio.to_thread(search_jd_full, keyword, pages),
+                asyncio.to_thread(search_vip_full, keyword, pages),
+            )
+            tb_full, jd_items, vip_items = tb_full2, jd_full, vip_full
+            _slow_cache_set(slow_key, (tb_full, jd_items, vip_items))
+        except Exception as e:
+            print(f'[compare_slow] 慢通道失败: {str(e)[:80]}')
+
+    all_items += tb_full + jd_items + vip_items
+    groups = _group_items(all_items, category)
+
+    # 低价警示（与搜索页同规则）
+    for g in groups:
+        plats = g.get('platforms') or {}
+        ps = [p['actualPrice'] for p in plats.values() if p.get('actualPrice')]
+        if len(ps) >= 2 and min(ps) < (sum(ps) / len(ps)) * 0.7:
+            g['low_price_warning'] = True
+
+    subsidies = find_subsidies(keyword, category)
+    return {'keyword': keyword, 'category': category, 'groups': groups,
+            'tb_count': len(tb_items) + len(tb_full), 'pdd_count': len(pdd_items),
+            'jd_count': len(jd_items), 'vip_count': len(vip_items),
+            'subsidies': subsidies}
 
 # ========== AI 建议面板（R1，WorkBuddy 4 段模板）==========
 

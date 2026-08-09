@@ -579,8 +579,8 @@ def compare_page(request: Request):
 
 @app.post('/api/compare')
 async def api_compare(keyword: str = Form(''), category: str = Form('')):
-    """三平台搜索 + SKU 合并 + 内容摘要（快路径，不调 R1）"""
-    from compare import search_compare, parse_link, content_summary
+    """四平台搜索（快通道 + 京东/唯品会慢通道）+ SKU 合并 + 内容摘要"""
+    from compare import search_compare_slow, parse_link, content_summary
     kw = keyword.strip()
     link_info = parse_link(kw)
     # 链接输入：提取平台+ID，用 ID 查不到详情就回退为关键词搜索
@@ -588,7 +588,7 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
         kw = re.sub(r'https?://\S+', '', kw).strip() or kw
     if not kw:
         return {'ok': False, 'msg': '请输入商品关键词或链接'}
-    data = await asyncio.to_thread(search_compare, kw, category)
+    data = await search_compare_slow(kw, category)
     content = await asyncio.to_thread(content_summary, kw)
     return {'ok': True, 'keyword': kw, 'groups': [
         {'key': g['key'],
@@ -597,21 +597,23 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
                         'shop': it.get('shopName') or '', 'url': it.get('url') or '',
                         'goodsId': it.get('goodsId') or '', 'sales': it.get('monthSales') or 0}
                        for p, it in g['platforms'].items()],
-         'best_price': g['best']['actualPrice']}
+         'best_price': g['best']['actualPrice'],
+         'low_price_warning': g.get('low_price_warning', False)}
         for g in data['groups'][:6]],
         'subsidies': data['subsidies'], 'content': content,
-        'tb_count': data['tb_count'], 'pdd_count': data['pdd_count']}
+        'tb_count': data['tb_count'], 'pdd_count': data['pdd_count'],
+        'jd_count': data.get('jd_count', 0), 'vip_count': data.get('vip_count', 0)}
 
 @app.post('/api/advice')
 async def api_advice(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
     """AI 建议面板（V4-Pro，异步加载 + 6h 缓存，WorkBuddy P1-3）"""
-    from compare import search_compare, gen_advice
+    from compare import search_compare_slow, gen_advice
     from db import get_conn, get_advice_cache, save_advice_cache
     cache_key = f'{keyword.strip()}|{group_key.strip()}'
     cached = get_advice_cache(cache_key)
     if cached:
         return {'ok': True, 'advice': cached, 'cached': True}
-    data = await asyncio.to_thread(search_compare, keyword, category)
+    data = await search_compare_slow(keyword, category)
     group = next((g for g in data['groups'] if g['key'] == group_key), None)
     if not group:
         return {'ok': False, 'msg': '未找到该商品组'}
