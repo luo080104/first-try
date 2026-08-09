@@ -70,6 +70,7 @@
             <a class="q1" href="/items">🛍️ 商品库</a>
             <a class="q1" href="/crawl">📥 采集中心</a>
             <a class="q2" href="/watches">🎯 盯价清单</a>
+            <a class="q2" href="javascript:openPrefs()">⚙️ 偏好</a>
             <a class="q2" href="/submit">📝 录入好价</a>
         </div>
         {% if error %}<div class="error">{{ error }}</div>{% endif %}
@@ -222,6 +223,48 @@
             doSearch();
         }
 
+        function renderNeed(q, options) {
+            var html = '<div class="group" style="border:2px solid #0984e3"><div class="group-head"><span class="sku">' + q + '</span></div>';
+            options.forEach(function(opt) {
+                html += '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
+                    'onclick="needSelect(this)" data-val="' + opt.value + '">' +
+                    '<div class="info"><div class="title">' + opt.label + '</div></div>' +
+                    '<div style="color:#0984e3;font-size:20px">›</div></div>';
+            });
+            html += '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
+            var div = document.createElement('div');
+            div.id = 'need-box';
+            div.innerHTML = html;
+            document.getElementById('sse-result').insertAdjacentElement('afterbegin', div);
+        }
+        function needSelect(el) {
+            var val = el.getAttribute('data-val');
+            if (val !== 'skip') { sessionStorage.setItem('gobuy_budget', val); }
+            else { sessionStorage.removeItem('gobuy_budget'); }
+            if (!document.getElementById('guide-round')) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden'; inp.id = 'guide-round'; inp.value = '0';
+                document.body.appendChild(inp);
+            }
+            document.getElementById('guide-round').value = '1';
+            document.getElementById('sse-result').innerHTML = '';
+            var nb = document.getElementById('need-box');
+            if (nb) nb.remove();
+            doSearch();
+        }
+        function clearBudget() {
+            sessionStorage.removeItem('gobuy_budget');
+            var gb = document.getElementById('guide-box');
+            if (gb) gb.remove();
+            doSearch();
+        }
+        function openPrefs() {
+            var p = prompt('排除平台（逗号分隔，如：拼多多,京东；留空清除）：', '');
+            if (p === null) return;
+            var fd = new FormData();
+            fd.append('prefs', p);
+            fetch('/api/prefs', {method: 'POST', body: fd}).then(r => r.json()).then(d => alert(d.msg));
+        }
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function pickMode(mode, el) {
             document.querySelectorAll('#mode-pick label').forEach(function(l) { l.classList.remove('sel'); });
@@ -257,6 +300,7 @@
                                 if (!evt.startsWith('data: ')) return;
                                 var data = JSON.parse(evt.slice(6));
                                 if (data.type === 'guide') { renderGuide(data.options, kw, prog, box); }
+                                else if (data.type === 'need') { renderNeed(data.q, data.options); }
                                 else if (data.type === 'progress') { prog.innerText = data.msg; }
                                 else if (data.type === 'error') { prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
@@ -330,12 +374,27 @@
         }
         function renderResult(d, box) {
             var html = '';
+            // v5.2 预算过滤（需求追问后按预算显示）
+            var budget = sessionStorage.getItem('gobuy_budget');
+            var budgetLabel = {3000:'≤3000', 8000:'3000-8000', 99999:'8000+'}[budget] || '';
+            if (budget) {
+                var before = d.groups.length;
+                d.groups = d.groups.filter(function(g) {
+                    return !(g.best && g.best.actualPrice && g.best.actualPrice > Number(budget));
+                });
+                if (d.groups.length !== before) {
+                    html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">💸 已按预算 <b>' + budgetLabel + '</b> 过滤，显示 ' + d.groups.length + '/' + before + ' 组 <a href="javascript:clearBudget()" style="color:#0984e3">取消过滤</a></div>';
+                }
+            }
             if (d.mode === 'history') {
                 html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' + d.total + ' 件），如需最新价格请切「⚡ 实时报告」</div>';
             }
             html += '<div class="stat">' + (d.mode === 'history' ? '📚 商品库查询结果' : '⚡ 实时抓取') + '：' +
-                (d.mode === 'history' ? '' : '淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' +
+                (d.mode === 'history' ? '' : '淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' + (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
                 (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ') + d.total + ' 条候选</div>';
+            if (d.content_limited) {
+                html += '<div style="background:#fdf3e3;color:#e67e22;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">⚠️ 博主内容数据有限（<5 条），可切「⚡ 实时报告」触发抓取后重试</div>';
+            }
             if (d.subsidies && d.subsidies.length) {
                 html += '<div class="subsidy-bar">';
                 d.subsidies.forEach(function(s) {
@@ -360,11 +419,15 @@
             }
             d.groups.forEach(function(g) {
                 html += '<div class="group"><div class="group-head"><span class="sku">📦 ' + g.key + '</span><span class="count">' + g.count + ' 个候选</span></div>';
+                if (g.low_price_warning) {
+                    html += '<div class="alert-bar">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只/翻新</div>';
+                }
                 g.platforms.forEach(function(it) {
                     var isBest = g.best && it === g.best;
                     var gid = it.goodsId || it.item_id || '';
+                    var platName = {tb:'淘宝', pdd:'拼多多', jd:'京东', vip:'唯品会'}[it.platform] || it.platform;
                     html += '<div class="item' + (isBest ? ' best' : '') + '">' +
-                        '<span class="plat">' + (it.platform === 'tb' ? '淘宝' : '拼多多') + '</span>' +
+                        '<span class="plat">' + platName + '</span>' +
                         '<div class="info"><div class="title">' + it.title + '</div>' +
                         '<div class="shop">' + (it.shopName || '') + (isBest ? '<span class="badge">最低价</span>' : '') +
                         (gid ? '<a class="link" href="javascript:void(0)" data-plat="' + it.platform + '" data-gid="' + encodeURIComponent(gid) + '" onclick="loadHistory(this)">📈 历史价</a>' : '') +

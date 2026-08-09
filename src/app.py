@@ -292,13 +292,26 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             if search_kw != keyword or search_cat != category:
                 yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
             keyword, category = search_kw, search_cat
-            # 快通道：API 并行（教材：无依赖子任务并行执行）
-            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多（实时抓取）...'})
-            tb_items, pdd_items = await asyncio.gather(
+            # 快通道：API 并行（v5.2 加唯品会）
+            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多 + 唯品会（实时抓取）...'})
+            from api_client import search_vip
+            tb_items, pdd_items, vip_items = await asyncio.gather(
                 asyncio.to_thread(search_goods, keyword, category or None, 1, 20, False),
                 asyncio.to_thread(search_pdd, keyword, 1, 20, False),
+                asyncio.to_thread(search_vip, keyword, 1, 20, False),
             )
-            all_items = tb_items + pdd_items
+            # v5.2 偏好：排除平台过滤（"不要拼多多"自动记住）
+            from db import get_excluded_platforms
+            excluded = get_excluded_platforms()
+            if excluded:
+                before = len(tb_items) + len(pdd_items) + len(vip_items)
+                tb_items = [i for i in tb_items if i.get('platform') not in excluded]
+                pdd_items = [i for i in pdd_items if i.get('platform') not in excluded]
+                vip_items = [i for i in vip_items if i.get('platform') not in excluded]
+                after = len(tb_items) + len(pdd_items) + len(vip_items)
+                if after != before:
+                    yield sse({'type': 'progress', 'msg': f'🔕 已按你的偏好排除：{"、".join(excluded)}'})
+            all_items = tb_items + pdd_items + vip_items
 
             # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东（用户要求：默认所有，不分平台）
             slow_items = []
@@ -309,10 +322,10 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     asyncio.to_thread(search_jd_full, keyword),
                 )
                 slow_items = tb_full + jd_full
-                all_items = tb_items + pdd_items + slow_items
+                all_items = tb_items + pdd_items + vip_items + slow_items
                 yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             else:
-                yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条，正在 SKU 分组...'})
+                yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条 + 唯品会 {len(vip_items)} 条，正在 SKU 分组...'})
 
             init_db()
             groups = []
@@ -337,6 +350,14 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                 for it in all_items[:20]:
                     groups.append({'key': it['title'][:30], 'count': 1, 'platforms': [it], 'best': it})
 
+            # v5.2 低价警示（WorkBuddy 提级 P0）：组内最低价 < 均价 70% → 防二手/仿品/单只
+            for g in groups:
+                plats = g.get('platforms') or []
+                if isinstance(plats, list) and len(plats) >= 2:
+                    ps = [p['actualPrice'] for p in plats if p.get('actualPrice')]
+                    if len(ps) >= 2 and min(ps) < (sum(ps) / len(ps)) * 0.7:
+                        g['low_price_warning'] = True
+
             manual_items = find_manual_prices(keyword)
             for m in manual_items:
                 groups.append({'key': f'人工录入: {m["title"][:20]}', 'count': 1,
@@ -356,6 +377,15 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             options = []
             prices = [g['best']['actualPrice'] for g in groups if g.get('best') and g['best'].get('actualPrice')]
             has_model_num = bool(re.search(r'\d{2,}', keyword))
+            # v5.2 需求三要素追问（WorkBuddy P1）：宽泛品类词才问，带"直接搜→"跳过
+            if (guide_round == 0 and search_cat and not has_model_num and len(groups) >= 3):
+                yield sse({'type': 'need', 'q': '💸 大概什么预算？（可跳过）',
+                           'options': [
+                               {'label': '💸 ≤3000', 'value': '3000'},
+                               {'label': '💸 3000-8000', 'value': '8000'},
+                               {'label': '💸 8000+', 'value': '99999'},
+                               {'label': '⚡ 直接搜→', 'value': 'skip'},
+                           ]})
             if (guide_round < 1 and len(groups) > 3 and len(all_items) >= 8
                     and prices and max(prices) / max(min(prices), 1) > 2.0
                     and not has_model_num):
@@ -365,11 +395,15 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     yield sse({'type': 'guide', 'options': options})
 
             content = await asyncio.to_thread(read_content_items, keyword)
+            # v5.2 来源受限标注（购物研究助手案例）：内容数据 <5 条时诚实标注
+            content_limited = len(content.get('items', [])) < 5
             subsidies = await asyncio.to_thread(find_subsidies, keyword, search_cat)
             yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                        'groups': groups, 'total': len(all_items),
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),
+                       'vip_count': len(vip_items),
                        'manual_count': len(manual_items), 'content': content,
+                       'content_limited': content_limited,
                        'slow_count': len(slow_items), 'options': options,
                        'subsidies': subsidies, 'mode': 'live'})
         except Exception as e:
@@ -483,6 +517,25 @@ async def api_crawl_add(keyword: str = Form(''), category: str = Form('')):
                        (kw[:30], category or '', 'manual'))
     conn.commit(); conn.close()
     return {'ok': True, 'msg': '已加入采集计划' if cur.rowcount else '这个词已在计划里了'}
+
+@app.post('/api/prefs')
+async def api_prefs(prefs: str = Form('')):
+    """偏好设置（v5.2）：逗号分隔排除平台，空=清除"""
+    from db import set_user_pref, PREF_EXCLUDE_PLATFORMS
+    PLAT_MAP = {'拼多多': 'pdd', '京东': 'jd', '淘宝': 'tb', '唯品会': 'vip',
+                'pdd': 'pdd', 'jd': 'jd', 'tb': 'tb', 'vip': 'vip'}
+    if not prefs.strip():
+        set_user_pref(PREF_EXCLUDE_PLATFORMS, [])
+        return {'ok': True, 'msg': '已清除排除平台'}
+    plats = []
+    for w in prefs.replace('，', ',').split(','):
+        w = w.strip()
+        if w in PLAT_MAP and PLAT_MAP[w] not in plats:
+            plats.append(PLAT_MAP[w])
+    if not plats:
+        return {'ok': False, 'msg': '没认出来平台名，试试：拼多多/京东/淘宝/唯品会'}
+    set_user_pref(PREF_EXCLUDE_PLATFORMS, plats)
+    return {'ok': True, 'msg': '已记住：排除 ' + '、'.join(plats) + '（对话里说"不要拼多多"也能自动记住）'}
 
 @app.get('/crawl', response_class=HTMLResponse)
 def crawl_page(request: Request):

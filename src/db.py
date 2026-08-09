@@ -478,3 +478,74 @@ def crawl_stats() -> dict:
     conn.close()
     s = {'total': total, 'by_status': {r['status']: r['n'] for r in rows}}
     return s
+
+# ========== v5.2 偏好记忆（user_preferences 表落地，省柴柴案例）==========
+
+PREF_EXCLUDE_PLATFORMS = 'exclude_platforms'   # 排除平台，JSON 数组如 ["pdd"]
+PREF_CATEGORY_PREFS = 'category_prefs'          # 品类偏好，JSON dict 如 {"服饰": ["纯棉"]}
+PREF_GLOBAL = 'global_prefs'                    # 全局偏好，JSON 数组
+
+
+def get_user_pref(key: str, default=None):
+    """读偏好（JSON 解码；无/异常返回 default）"""
+    conn = get_conn()
+    row = conn.execute('SELECT value FROM user_preferences WHERE key=?', (key,)).fetchone()
+    conn.close()
+    if not row:
+        return default
+    try:
+        return json.loads(row['value'])
+    except Exception:
+        return row['value']
+
+
+def set_user_pref(key: str, value):
+    """写偏好（JSON 编码 upsert）"""
+    conn = get_conn()
+    conn.execute('''
+        INSERT INTO user_preferences (key, value) VALUES (?,?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now','localtime')
+    ''', (key, json.dumps(value, ensure_ascii=False)))
+    conn.commit()
+    conn.close()
+
+
+def get_excluded_platforms() -> list:
+    """被排除的平台列表（如 ['pdd']）"""
+    v = get_user_pref(PREF_EXCLUDE_PLATFORMS, [])
+    return v if isinstance(v, list) else []
+
+
+def add_excluded_platform(plat: str) -> bool:
+    """排除一个平台，返回是否新增"""
+    cur = get_excluded_platforms()
+    if plat in cur:
+        return False
+    cur.append(plat)
+    set_user_pref(PREF_EXCLUDE_PLATFORMS, cur)
+    return True
+
+
+def add_category_pref(category: str, word: str) -> bool:
+    """记一条品类偏好（如 服饰→纯棉）"""
+    prefs = get_user_pref(PREF_CATEGORY_PREFS, {})
+    if not isinstance(prefs, dict):
+        prefs = {}
+    lst = prefs.setdefault(category, [])
+    if word in lst:
+        return False
+    lst.append(word)
+    set_user_pref(PREF_CATEGORY_PREFS, prefs)
+    return True
+
+
+def add_global_pref(word: str) -> bool:
+    """记一条全局偏好（如 看重销量）"""
+    lst = get_user_pref(PREF_GLOBAL, [])
+    if not isinstance(lst, list):
+        lst = []
+    if word in lst:
+        return False
+    lst.append(word)
+    set_user_pref(PREF_GLOBAL, lst)
+    return True

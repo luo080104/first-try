@@ -95,7 +95,7 @@ def find_new_words(items: list) -> list:
 
 async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回入库件数"""
-    from api_client import search_goods, search_pdd
+    from api_client import search_goods, search_pdd, search_vip
     from db import get_conn, upsert_product_item
     from app import search_taobao_full, search_jd_full
 
@@ -103,7 +103,8 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
     tb_items = await asyncio.to_thread(search_goods, keyword, category or None)
     pdd_items = await asyncio.to_thread(search_pdd, keyword)
-    all_items += tb_items + pdd_items
+    vip_items = await asyncio.to_thread(search_vip, keyword)
+    all_items += tb_items + pdd_items + vip_items
 
     # 慢通道：浏览器翻页（串行，频率受限）
     tb_full, jd_full = [], []

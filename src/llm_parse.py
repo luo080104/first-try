@@ -14,7 +14,10 @@ TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.l
 SYSTEM_PROMPT = """你是Go购的意图解析器。提取规则：
 1. keyword：搜索关键词（品牌+品类，如"石头岛 外套"）
 2. category：品类，只能从 服饰/食品/日用百货/数码家电 选，无法判断则为空
-只输出 JSON 格式：{"keyword": "...", "category": "..."}"""
+3. exclude_platform：用户明确排除某平台时填平台代码（拼多多=pdd/京东=jd/淘宝=tb/唯品会=vip），没有则空
+4. pref_word：用户表达的偏好词（如"纯棉""白色""看重销量""旗舰店"），没有则空
+5. pref_category：偏好词适用的品类（服饰/食品/日用百货/数码家电），无法判断则空
+只输出 JSON 格式：{"keyword": "...", "category": "...", "exclude_platform": "", "pref_word": "", "pref_category": ""}"""
 
 def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cache_miss: int = 0):
     try:
@@ -56,7 +59,22 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
         result = {
             'keyword': result.get('keyword', text.strip())[:50],
             'category': result.get('category', ''),
+            'exclude_platform': result.get('exclude_platform', ''),
+            'pref_word': result.get('pref_word', ''),
+            'pref_category': result.get('pref_category', ''),
         }
+        # v5.2：偏好自动记忆（"不要拼多多"→排除平台；"要纯棉"→品类偏好）
+        try:
+            from db import add_excluded_platform, add_category_pref, add_global_pref
+            if result['exclude_platform']:
+                add_excluded_platform(result['exclude_platform'])
+            if result['pref_word']:
+                if result['pref_category']:
+                    add_category_pref(result['pref_category'], result['pref_word'])
+                else:
+                    add_global_pref(result['pref_word'])
+        except Exception:
+            pass
         # P1：缓存命中指标
         usage = data.get('usage', {})
         hit = usage.get('prompt_cache_hit_tokens', 0)

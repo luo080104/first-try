@@ -27,6 +27,10 @@ APP_KEY = ENV.get('DTK_APP_KEY', '')
 APP_SECRET = ENV.get('DTK_APP_SECRET', '')
 VERSION = 'v1.3.1'
 BASE_URL = 'https://openapi.dataoke.com/api/'
+
+# v5.2：折淘客（唯品会通道；未配置 key 时 search_vip 返回空，不报错）
+ZTK_APPKEY = os.environ.get('ZTK_APPKEY', '') or ENV.get('ZTK_APPKEY', '')
+ZTK_VIP_SID = os.environ.get('ZTK_VIP_SID', '') or ENV.get('ZTK_VIP_SID', '')
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/68.0.3440.84 Safari/537.36',
     'Client-Sdk-Type': 'python',
@@ -135,6 +139,57 @@ def search_pdd(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
     items = sort_by_relevance(items, keywords)
     _cache_set(keywords, 'pdd', None, items)
     return items
+
+# ===== v5.2 唯品会搜索（折淘客 API，省柴柴案例同源）=====
+
+def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
+    """唯品会搜索（折淘客 open_vip_queryWithOauth）。未配置 ZTK key 返回 []。
+    字段映射参考 shopping-price-compare 的 normalizeVip。"""
+    if not ZTK_APPKEY or not ZTK_VIP_SID:
+        print('⚠️ 未配置 ZTK_APPKEY/ZTK_VIP_SID，唯品会通道跳过')
+        return []
+    if use_cache:
+        cached = _cache_get(keywords, 'vip', None)
+        if cached is not None:
+            print(f'💾 唯品会「{keywords}」命中缓存（24h 内）')
+            return cached
+    params = {'appkey': ZTK_APPKEY, 'sid': ZTK_VIP_SID,
+              'keyword': keywords, 'page': str(page), 'pageSize': str(size)}
+    url = 'https://api.zhetaoke.com:10001/api/open_vip_queryWithOauth.ashx?' + urllib.parse.urlencode(params)
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
+            res = json.loads(r.read().decode('utf-8'))
+    except Exception as e:
+        print(f'⚠️ 唯品会 API 错误: {str(e)[:80]}')
+        return []
+    if str(res.get('returnCode', '0')) != '0':
+        print(f"⚠️ 唯品会 API 错误: {res.get('returnMessage', res.get('returnCode'))}")
+        return []
+    rows = ((res.get('result') or {}).get('goodsInfoList')) or []
+    items = []
+    for g in rows:
+        gid = str(g.get('goodsId') or '')
+        title = str(g.get('goodsName') or '').strip()
+        if not gid or not title:
+            continue
+        carousel = g.get('goodsCarouselPictures') or []
+        items.append({
+            'goodsId': gid,
+            'title': title[:100],
+            'actualPrice': float(g.get('vipPrice') or g.get('estimatePrice') or 0),
+            'originalPrice': float(g.get('marketPrice') or 0) or None,
+            'coupon_amount': 0,
+            'monthSales': g.get('productSales') or 0,
+            'shopName': g.get('brandName') or '',
+            'brand': g.get('brandName') or '',
+            'platform': 'vip',
+            'url': g.get('destUrl') or '',
+            'img': (g.get('goodsThumbUrl') or g.get('goodsMainPicture') or (carousel[0] if carousel else '')) or '',
+        })
+    items = sort_by_relevance(items, keywords)
+    _cache_set(keywords, 'vip', None, items)
+    return items
+
 
 def sort_by_relevance(items: list, keyword: str) -> list:
     """按标题相关性排序：含完整关键词的排前，含部分词的次之（解决 PDD 匹配松散问题）"""

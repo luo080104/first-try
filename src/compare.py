@@ -44,9 +44,11 @@ def parse_link(url: str) -> dict:
 
 def search_compare(keyword: str, category: str = '') -> dict:
     """三平台搜索 + SKU 合并 → 对比数据"""
+    from api_client import search_vip
     tb_items = search_goods(keyword, category or None)
     pdd_items = search_pdd(keyword)
-    all_items = tb_items + pdd_items
+    vip_items = search_vip(keyword)
+    all_items = tb_items + pdd_items + vip_items
 
     # SKU 合并（有品类适配器则用，否则按品牌粗分组）
     groups = []
