@@ -1,15 +1,8 @@
-# Python
+.env
 __pycache__/
 *.pyc
-venv/
-
-# 敏感信息
-.env
-
-# IDE
-.vscode/
-.idea/
-reference/
+data/*.db
+data/agent_trace.log
 
 # 浏览器登录态（含 cookies，禁止提交）
 data/*_profile/
