@@ -5091,3 +5091,25 @@ except Exception:              # 其他 → 正常计数
 | 成功 | done + 清零 | ✅ |
 
 实现：src/errors.py（CaptchaError）+ tb/jd_search 验证码处抛异常 + full 包装 propagate_captcha + crawl 异常分类 + db.mark_crawl_task count_fail 参数
+
+---
+
+# 📤 审阅包更新 ⑤（pi，2026-08-10 凌晨 1:00，睡前）
+
+## 刚才的补充学习（Paul-633/price-compare-tool 深挖）
+
+| 借鉴点 | 说明 | 计划 |
+|---|---|---|
+| 评分算法加店铺信誉维度 | 销量0.4+店铺0.3+价格0.3（我们缺店铺维度） | 明天（v6 批次） |
+| 盯价定时检查+推送 | dsdb PriceMonitor+TaskScheduler 模式；我们 watched_items 只在页面访问时检查 | 明天（WorkBuddy 计划② 企业微信推送） |
+
+## 拼多多官方 API 备忘
+
+- 用户 08-06 注册的是**多多进宝**（PID 44659895_317369709，已绑大淘客在用）
+- **拼多多开放平台 client_id/secret 未注册**——入口：jinbao.pinduoduo.com 开发者中心创建应用（JINBAO 角色）
+- 待用户创建后写 pdd_api.py 官方直连
+
+## 今晚状态
+
+- 失败分类 ✅ / 8小时上限 ✅ / 京东API通道 ✅ / 经验学习 ✅ / 用户记忆 ✅ / v6角色 ✅ / UA轮换 ✅
+- **第二轮采集（310 词）待启动**——用户睡前点 /crawl 或 pi 代启动
