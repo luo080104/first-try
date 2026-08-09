@@ -379,7 +379,9 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     groups.append({'key': it['title'][:30], 'count': 1, 'platforms': [it], 'best': it})
 
             # v5.2 低价警示（WorkBuddy 提级 P0）：组内最低价 < 均价 70% → 防二手/仿品/单只
+            from matcher import annotate_group
             for g in groups:
+                annotate_group(g, category or '')
                 plats = g.get('platforms') or []
                 if isinstance(plats, list) and len(plats) >= 2:
                     ps = [p['actualPrice'] for p in plats if p.get('actualPrice')]
@@ -595,10 +597,12 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
          'platforms': [{'platform': p, 'title': it.get('title', ''), 'price': it.get('actualPrice'),
                         'original': it.get('originalPrice'), 'coupon': it.get('couponPrice') or it.get('coupon_amount') or 0,
                         'shop': it.get('shopName') or '', 'url': it.get('url') or '',
-                        'goodsId': it.get('goodsId') or '', 'sales': it.get('monthSales') or 0}
+                        'goodsId': it.get('goodsId') or '', 'sales': it.get('monthSales') or 0,
+                        'shop_type': it.get('shop_type') or '', 'unit_price': it.get('unit_price')}
                        for p, it in g['platforms'].items()],
          'best_price': g['best']['actualPrice'],
-         'low_price_warning': g.get('low_price_warning', False)}
+         'low_price_warning': g.get('low_price_warning', False),
+         'genuine': g.get('genuine')}
         for g in data['groups'][:6]],
         'subsidies': data['subsidies'], 'content': content,
         'tb_count': data['tb_count'], 'pdd_count': data['pdd_count'],

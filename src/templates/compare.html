@@ -123,13 +123,19 @@
                 var best = g.platforms.slice().sort(function(a, b) { return a.price - b.price; })[0];
                 html += '<div class="cmp-card"><div class="card-head">' +
                     '<span class="card-title">📦 ' + esc(g.key) + '</span>' +
-                    '<span style="font-size:12px;color:#b2bec3">' + g.platforms.length + ' 平台</span></div>';
+                    '<span style="font-size:12px;color:#b2bec3">' + g.platforms.length + ' 平台</span>';
+                if (g.genuine) {
+                    html += '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' + platName(g.genuine.platform) + ' ¥' + g.genuine.price + '</span>';
+                }
+                html += '</div>';
                 html += '<div class="price-row">';
+                var stMap = {自营:'background:#eaf2fb;color:#0984e3', 天猫:'background:#fdeeee;color:#d63031', 旗舰店:'background:#fdf3e3;color:#e67e22', 百亿补贴:'background:#e8f7ee;color:#27ae60'};
                 g.platforms.forEach(function(it) {
                     var isBest = it === best;
                     html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
-                        '<div class="pname">' + platName(it.platform) + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
+                        '<div class="pname">' + platName(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
                         '<div class="pprice">¥' + it.price + '</div>' +
+                        (it.unit_price ? '<div class="pmeta" style="color:#27ae60">≈¥' + it.unit_price + '/百毫升</div>' : '') +
                         '<div class="pmeta">' + esc(it.shop || '') +
                         (it.coupon > 0 ? '<br>券¥' + it.coupon : '') +
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';

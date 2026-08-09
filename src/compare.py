@@ -142,8 +142,10 @@ async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) 
     all_items += tb_full + jd_items + vip_items
     groups = _group_items(all_items, category)
 
-    # 低价警示（与搜索页同规则）
+    # 低价警示（与搜索页同规则）+ 店铺类型/正品保障/单斤价标注
+    from matcher import annotate_group
     for g in groups:
+        annotate_group(g, category or '')
         plats = g.get('platforms') or {}
         ps = [p['actualPrice'] for p in plats.values() if p.get('actualPrice')]
         if len(ps) >= 2 and min(ps) < (sum(ps) / len(ps)) * 0.7:

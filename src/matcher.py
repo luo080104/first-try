@@ -158,6 +158,84 @@ ADAPTERS = {
     '数码家电': DigitalMatcher,
 }
 
+# ========== v5.2 P2：店铺类型 + 正品保障 + 单斤价（比价购物助手/购物研究助手案例）==========
+
+def shop_type_of(item: dict) -> str:
+    """店铺类型标注：自营/天猫/旗舰店/百亿补贴/官方（空=普通店铺）"""
+    plat = item.get('platform', '')
+    title = str(item.get('title') or '')
+    shop = str(item.get('shopName') or '')
+    if plat == 'jd':
+        if '自营' in title or '自营' in shop:
+            return '自营'
+        return ''
+    if plat == 'tb':
+        if item.get('is_tmall'):
+            return '天猫'
+        if '旗舰店' in shop:
+            return '旗舰店'
+        return ''
+    if plat == 'pdd':
+        if '百亿补贴' in title or '百亿补贴' in shop:
+            return '百亿补贴'
+        return ''
+    if plat == 'vip':
+        return item.get('shop_type') or ('自营' if '自营' in shop else '')
+    return ''
+
+
+def genuine_pick(items: list) -> dict:
+    """正品保障推荐：组内优先 京东自营 > 天猫/旗舰店 > 唯品自营；无则 None"""
+    if not items:
+        return None
+    order = {'京东自营': 0, '天猫': 1, '旗舰店': 1, '唯品自营': 2}
+    best_it, best_rank = None, 99
+    for it in items:
+        st = shop_type_of(it)
+        if not st:
+            continue
+        key = (it.get('platform') or '') + st
+        rank = order.get(key, 5)
+        if rank < best_rank:
+            best_rank, best_it = rank, it
+    return best_it
+
+
+def unit_price_of(item: dict, category: str = '') -> float:
+    """食品单斤价：每百毫升价格（元）。非食品/无规格返回 None"""
+    if category != '食品':
+        return None
+    p = FoodMatcher.parse(str(item.get('title') or ''))
+    spec = p.get('spec') or {}
+    ml, count = spec.get('ml'), spec.get('count')
+    price = item.get('actualPrice') or 0
+    if ml and count and price:
+        return round(price / (ml * count) * 100, 2)  # 每 100ml
+    if ml and price:
+        return round(price / ml * 100, 2)
+    return None
+
+
+def annotate_item(it: dict, category: str):
+    """给单条商品补店铺类型 + 单价（就地修改）"""
+    it['shop_type'] = shop_type_of(it)
+    up = unit_price_of(it, category)
+    if up:
+        it['unit_price'] = up
+    return it
+
+def annotate_group(g: dict, category: str):
+    """给分组补正品保障推荐（就地修改）"""
+    plats = g.get('platforms')
+    items = list(plats.values()) if isinstance(plats, dict) else (plats or [])
+    for it in items:
+        annotate_item(it, category)
+    gen = genuine_pick(items)
+    if gen:
+        g['genuine'] = {'platform': gen.get('platform'), 'price': gen.get('actualPrice'),
+                        'title': (gen.get('title') or '')[:30], 'shop_type': gen.get('shop_type')}
+    return g
+
 def parse_items(items: list, category: str) -> list:
     """给搜索结果批量打解析标签"""
     adapter = ADAPTERS.get(category)
