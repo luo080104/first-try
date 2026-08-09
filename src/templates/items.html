@@ -104,6 +104,7 @@
 
     <script>
         var page = 1, totalPages = 1;
+        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function platName(p) { return {tb:'淘宝',jd:'京东',pdd:'拼多多',dy:'抖音'}[p] || p; }
         function platClass(p) { return {tb:'p-tb',jd:'p-jd',pdd:'p-pdd',dy:'p-dy'}[p] || 'p-tb'; }
         function loadItems(p) {
@@ -134,11 +135,11 @@
                     var actions = '';
                     if (it.url) actions += '<a class="act-link" href="' + it.url + '" target="_blank" rel="noopener">去购买 ↗</a>';
                     actions += '<button class="act-chart" onclick="loadHistory(this,\'' + it.platform + '\',\'' + encodeURIComponent(it.item_id) + '\')">📈 历史价</button>';
-                    actions += '<button class="act-watch" onclick="watchIt(\'' + it.title.replace(/'/g,'') + '\',\'' + it.platform + '\',\'' + it.item_id + '\',' + it.price + ')">🔔 盯价</button>';
+                    actions += '<button class="act-watch" onclick="watchIt(\'' + esc(it.title).replace(/'/g,'') + '\',\'' + it.platform + '\',\'' + it.item_id + '\',' + it.price + ')">🔔 盯价</button>';
                     return '<div class="item-card">' +
                         '<div class="ic-top"><span class="plat-tag ' + platStyle + '">' + platName + '</span>' +
-                        '<div class="ic-title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div></div>' +
-                        '<div class="ic-meta">' + (it.shop_name || '') + (it.brand ? ' ・ ' + it.brand : '') +
+                        '<div class="ic-title">' + (it.is_ad ? '【广告】' : '') + esc(it.title) + '</div></div>' +
+                        '<div class="ic-meta">' + esc(it.shop_name || '') + (it.brand ? ' ・ ' + esc(it.brand) : '') +
                         (it.sales ? ' ・ 销量 ' + it.sales : '') + (it.category ? ' ・ ' + it.category : '') + '</div>' +
                         '<div class="ic-bottom"><div class="ic-price">¥' + it.price +
                         (it.original_price && it.original_price > it.price ? ' <span class="old">¥' + it.original_price + '</span>' : '') +
@@ -246,7 +247,7 @@
                 var html = '<div class="group" style="background:#f0f7ff;border:1px solid #b3d4f5">' +
                     '<div class="group-head"><span class="sku">📺 博主推荐（' + d.items.length + ' 个商品被提及）</span></div>' +
                     d.items.map(function(r) {
-                        return '<div class="item"><div class="info"><div class="title">🛒 ' + r.product_name + '</div>' +
+                        return '<div class="item"><div class="info"><div class="title">🛒 ' + esc(r.product_name) + '</div>' +
                             '<div class="shop">被提及 ' + r.n + ' 次 ・ ' + (r.plats || '').replace('bili','B站').replace('tieba','贴吧').replace('xhs','小红书') + '</div></div>' +
                             (r.url ? '<a class="link" href="' + r.url + '" target="_blank" rel="noopener">看内容 ↗</a>' : '') + '</div>';
                     }).join('') + '</div>';

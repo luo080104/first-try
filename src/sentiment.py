@@ -5,7 +5,8 @@ import os
 import sqlite3
 import urllib.request
 
-API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'sk-edf4d1c70edf43708a8904bee4935297')
+# API Key 只从环境变量读取（禁止硬编码）
+API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
 # 静态指令（前缀缓存友好，P0-1）
 SENTIMENT_SYSTEM = """分析电商/内容平台评论的情感倾向。每条输出一个标签：

@@ -138,9 +138,9 @@
                             var isXhs = it.type === 'xhs';
                             var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
                             var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                            var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                              : (isXhs ? ('作者: ' + it.author + ' ・ 赞 ' + it.like)
-                                                       : ('作者: ' + it.author + ' ・ 吧: ' + it.desc));
+                            var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
+                                              : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
+                                                       : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
                             if (it.score) {
                                 var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
                                 meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
@@ -204,6 +204,7 @@
             doSearch();
         }
 
+        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();
             if (!kw) { alert('请输入商品名称'); return; }
@@ -355,9 +356,9 @@
                     var isXhs = it.type === 'xhs';
                     var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
                     var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                    var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                      : (isXhs ? ('作者: ' + it.author + ' ・ 赞 ' + it.like)
-                                               : ('作者: ' + it.author + ' ・ 吧: ' + it.desc));
+                    var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
+                                      : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
+                                               : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
                     if (it.score) {
                         var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
                         meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';

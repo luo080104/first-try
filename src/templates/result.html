@@ -93,6 +93,7 @@
         <a href="/" class="back-home">← 再查一个</a>
     </div>
     <script>
+        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function watchIt(title, platform, itemId, price) {
             var target = prompt('当前价 ¥' + price + '，目标价（低于此价提醒）：', price * 0.9);
             if (!target) return;
@@ -183,9 +184,9 @@
                             var isXhs = it.type === 'xhs';
                             var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
                             var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                            var meta = isBili ? ('UP主: ' + it.author + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                              : (isXhs ? ('作者: ' + it.author + ' ・ 赞 ' + it.like)
-                                                       : ('作者: ' + it.author + ' ・ 吧: ' + it.desc));
+                            var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
+                                              : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
+                                                       : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
                             if (it.score) {
                                 var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
                                 meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
@@ -226,7 +227,7 @@
                         data.items.forEach(function(it) {
                             html += '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
                                 '<div class="info"><div class="title">' + (it.is_p4p ? '【广告】' : '') + (it.is_tmall ? '【天猫】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + (it.shop_name || '') + ' ・ ' + (it.province || '') + ' ・ ' + (it.real_sales || '') + '</div></div>' +
+                                '<div class="shop">' + esc(it.shop_name || '') + ' ・ ' + esc(it.province || '') + ' ・ ' + esc(it.real_sales || '') + '</div></div>' +
                                 '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
                         });
                         box.innerHTML = html + '</div>';
@@ -255,7 +256,7 @@
                         data.items.forEach(function(it) {
                             html += '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
                                 '<div class="info"><div class="title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + (it.shop || '') + ' ・ ' + (it.sales || '') + '</div></div>' +
+                                '<div class="shop">' + esc(it.shop || '') + ' ・ ' + esc(it.sales || '') + '</div></div>' +
                                 '<div class="price"><div class="now">¥' + (it.price || '?') + '</div>' +
                                 (it.original_price ? '<div class="old">¥' + it.original_price + '</div>' : '') + '</div></div>';
                         });

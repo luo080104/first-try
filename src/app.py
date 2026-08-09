@@ -20,7 +20,9 @@ from llm_parse import parse_intent, generate_options
 def read_content_items(keyword: str) -> dict:
     """读内容联动数据（jsonl 缓存，秒回）——B站/贴吧/小红书均衡 10 条 + 评分 + 套路检测"""
     import glob
+    import json as _j
     mc_dir = os.path.expanduser('~/mc_ref')
+
     def read_jsonl(plat):
         out = []
         files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', 'search_contents_*.jsonl')))
@@ -28,7 +30,7 @@ def read_content_items(keyword: str) -> dict:
             with open(files[-1], encoding='utf-8') as f:
                 for line in f:
                     try:
-                        d = json.loads(line)
+                        d = _j.loads(line)
                         t = d.get('title', '') or d.get('content', '') or d.get('desc', '') or ''
                         tl = t.lower()
                         if keyword in t or (keyword in ('石头岛', 'stone island') and ('石头岛' in t or 'stone island' in tl or 'stoneisland' in tl)):
@@ -36,6 +38,7 @@ def read_content_items(keyword: str) -> dict:
                     except Exception:
                         continue
         return out
+
     cached = read_jsonl('bili') + read_jsonl('tieba') + read_jsonl('xhs')
     by_type = {'bili': [], 'tieba': [], 'xhs': []}
     for d, plat in cached:
@@ -44,23 +47,23 @@ def read_content_items(keyword: str) -> dict:
     items = []
     for d, plat in (by_type['bili'] + by_type['tieba'] + by_type['xhs']):
         if plat == 'bili':
-            items.append({'type': 'bili', 'title': (d.get('title','') or '')[:60],
-                          'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
-                          'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
-                          'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80],
-                          'content_id': str(d.get('video_id','')), 'pub_ts': d.get('create_time','')})
+            items.append({'type': 'bili', 'title': (d.get('title', '') or '')[:60],
+                          'author': d.get('nickname', ''), 'play': d.get('video_play_count', 0),
+                          'like': d.get('liked_count', 0), 'comment': d.get('video_comment', 0),
+                          'url': d.get('video_url', ''), 'desc': (d.get('desc', '') or '')[:80],
+                          'content_id': str(d.get('video_id', '')), 'pub_ts': d.get('create_time', '')})
         elif plat == 'tieba':
-            items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
-                          'author': d.get('author',''), 'play': 0, 'like': 0,
-                          'comment': d.get('comment_count',0), 'url': d.get('url',''),
-                          'desc': d.get('tieba_name',''),
-                          'content_id': str(d.get('note_id','')), 'pub_ts': d.get('publish_time','')})
+            items.append({'type': 'tieba', 'title': (d.get('title', '') or d.get('content', ''))[:60],
+                          'author': d.get('author', ''), 'play': 0, 'like': 0,
+                          'comment': d.get('comment_count', 0), 'url': d.get('url', ''),
+                          'desc': d.get('tieba_name', ''),
+                          'content_id': str(d.get('note_id', '')), 'pub_ts': d.get('publish_time', '')})
         else:
-            items.append({'type': 'xhs', 'title': (d.get('title','') or '')[:60],
-                          'author': d.get('nickname',''), 'play': 0,
-                          'like': d.get('liked_count',0), 'comment': d.get('comment_count',0),
-                          'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60],
-                          'content_id': str(d.get('note_id','')), 'pub_ts': d.get('time','')})
+            items.append({'type': 'xhs', 'title': (d.get('title', '') or '')[:60],
+                          'author': d.get('nickname', ''), 'play': 0,
+                          'like': d.get('liked_count', 0), 'comment': d.get('comment_count', 0),
+                          'url': d.get('note_url', ''), 'desc': (d.get('desc', '') or '')[:60],
+                          'content_id': str(d.get('note_id', '')), 'pub_ts': d.get('time', '')})
     for it in items:
         sc = score_content(it, keyword)
         it['score'] = sc['score']
@@ -152,63 +155,11 @@ def search_bili_api(keyword: str = ''):
                           'about:blank'], creationflags=0x08000000)
         time.sleep(5)
 
-    # 2. 先读已有 jsonl（有匹配数据就不重爬）
+    # 2. 先读已有 jsonl（复用 read_content_items：过滤+均衡+可信度打分+套路检测）
     mc_dir = os.path.expanduser('~/mc_ref')
-    def read_jsonl(plat):
-        out = []
-        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', 'search_contents_*.jsonl')))
-        if files:
-            with open(files[-1], encoding='utf-8') as f:
-                for line in f:
-                    try:
-                        d = json.loads(line)
-                        t = d.get('title', '') or d.get('content', '') or d.get('desc', '') or ''
-                        tl = t.lower()
-                        if keyword in t or (keyword in ('石头岛', 'stone island') and ('石头岛' in t or 'stone island' in tl or 'stoneisland' in tl)):
-                            out.append((d, plat))
-                    except Exception:
-                        continue
-        return out
-    cached = read_jsonl('bili') + read_jsonl('tieba') + read_jsonl('xhs')
-    if len(cached) >= 5:
-        # 按类型均衡：每类最多 10 条，避免单一平台占满
-        by_type = {'bili': [], 'tieba': [], 'xhs': []}
-        for d, plat in cached:
-            if plat in by_type and len(by_type[plat]) < 10:
-                by_type[plat].append((d, plat))
-        cached = by_type['bili'] + by_type['tieba'] + by_type['xhs']
-        items = []
-        for d, plat in cached:
-            if plat == 'bili':
-                items.append({'type': 'bili', 'title': (d.get('title','') or '')[:60],
-                              'author': d.get('nickname',''), 'play': d.get('video_play_count',0),
-                              'like': d.get('liked_count',0), 'comment': d.get('video_comment',0),
-                              'url': d.get('video_url',''), 'desc': (d.get('desc','') or '')[:80],
-                              'content_id': str(d.get('video_id','')), 'pub_ts': d.get('create_time','')})
-            elif plat == 'tieba':
-                items.append({'type': 'tieba', 'title': (d.get('title','') or d.get('content',''))[:60],
-                              'author': d.get('author',''), 'play': 0, 'like': 0,
-                              'comment': d.get('comment_count',0), 'url': d.get('url',''),
-                              'desc': d.get('tieba_name',''),
-                              'content_id': str(d.get('note_id','')), 'pub_ts': d.get('publish_time','')})
-            else:
-                items.append({'type': 'xhs', 'title': (d.get('title','') or '')[:60],
-                              'author': d.get('nickname',''), 'play': 0,
-                              'like': d.get('liked_count',0), 'comment': d.get('comment_count',0),
-                              'url': d.get('note_url',''), 'desc': (d.get('desc','') or '')[:60],
-                              'content_id': str(d.get('note_id','')), 'pub_ts': d.get('time','')})
-        # 给每条内容打分（可信度引擎）
-        for it in items:
-            it['content_id'] = it.get('content_id', '')
-            sc = score_content(it, keyword)
-            it['score'] = sc['score']
-            it['flags'] = sc['flags']
-            it['sent'] = sc['sentiment']
-        trap = detect_trap(keyword)
-        result = {'items': items[:30]}
-        if trap.get('has_trap') or trap.get('has_fake_original'):
-            result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
-        return result
+    cached = read_content_items(keyword)
+    if len(cached.get('items', [])) >= 5:
+        return cached
 
     # 3. 缓存不足才调 MediaCrawler（uv 路径）
     uv = os.path.expanduser(r'~/AppData/Local/Programs/Python/Python314/Scripts/uv.exe')
@@ -221,40 +172,8 @@ def search_bili_api(keyword: str = ''):
     except subprocess.TimeoutExpired:
         pass
 
-    # 3. 读最新 jsonl（B站 + 贴吧）
-    items = []
-    for plat, path in [('bili', 'search_contents'), ('tieba', 'search_contents')]:
-        files = sorted(glob.glob(os.path.join(mc_dir, 'data', plat, 'jsonl', path + '_*.jsonl')))
-        if not files:
-            continue
-        with open(files[-1], encoding='utf-8') as f:
-            for line in f:
-                try:
-                    d = json.loads(line)
-                    title = d.get('title', '') or d.get('content', '') or ''
-                    if keyword in title:
-                        if plat == 'bili':
-                            items.append({
-                                'type': 'bili', 'title': title[:60],
-                                'author': d.get('nickname', ''),
-                                'play': d.get('video_play_count', 0),
-                                'like': d.get('liked_count', 0),
-                                'comment': d.get('video_comment', 0),
-                                'url': d.get('video_url', ''),
-                                'desc': (d.get('desc', '') or '')[:80],
-                            })
-                        else:
-                            items.append({
-                                'type': 'tieba', 'title': title[:60],
-                                'author': d.get('author', ''),
-                                'play': 0, 'like': 0,
-                                'comment': d.get('comment_count', 0),
-                                'url': d.get('url', ''),
-                                'desc': d.get('tieba_name', ''),
-                            })
-                except Exception:
-                    continue
-    return {'items': items[:15]}
+    # 4. 抓取后重读（含三平台 + 打分）
+    return read_content_items(keyword)
 
 @app.get('/search_tb')
 def search_tb_api(keyword: str = ''):
