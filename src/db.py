@@ -23,6 +23,10 @@ def init_db():
     cols = [r[1] for r in conn.execute('PRAGMA table_info(subsidy_policies)')]
     if 'max_price' not in cols:
         conn.execute('ALTER TABLE subsidy_policies ADD COLUMN max_price REAL')
+    # 迁移：crawl_tasks 补 fail_count（经验学习，教材8章）
+    tcols = [r[1] for r in conn.execute('PRAGMA table_info(crawl_tasks)')]
+    if 'fail_count' not in tcols:
+        conn.execute('ALTER TABLE crawl_tasks ADD COLUMN fail_count INTEGER DEFAULT 0')
     # 迁移：recommendations 补内容抽取字段（幂等）
     rcols = [r[1] for r in conn.execute('PRAGMA table_info(recommendations)')]
     for col, ddl in (('product_name', 'TEXT'), ('platform', 'TEXT'), ('content_id', 'TEXT')):
@@ -457,7 +461,7 @@ def ensure_crawl_tasks():
 
 
 def get_pending_tasks(limit: int = 100) -> list:
-    """取待采集词（pending + failed），按失败优先 + 创建顺序"""
+    """取待采集词（pending + failed，排除 paused——经验：连续失败已暂停）"""
     conn = get_conn()
     rows = conn.execute('''
         SELECT * FROM crawl_tasks
@@ -469,15 +473,46 @@ def get_pending_tasks(limit: int = 100) -> list:
 
 
 def mark_crawl_task(keyword: str, status: str, result_count: int = 0):
-    """更新任务状态（done/failed/doing）"""
+    """更新任务状态（done/failed/doing）+ 经验学习：连续失败 >=3 自动暂停（教材8章）
+    done → 失败次数清零；failed → +1；达阈值 → paused（不再尝试，可手动恢复）"""
     conn = get_conn()
-    conn.execute('''
-        UPDATE crawl_tasks SET status=?, run_count=run_count+1,
-               last_result=?, last_run_at=datetime('now','localtime')
-        WHERE keyword=?
-    ''', (status, result_count, keyword))
+    if status == 'done':
+        conn.execute('''
+            UPDATE crawl_tasks SET status='done', run_count=run_count+1,
+                   last_result=?, last_run_at=datetime('now','localtime'), fail_count=0
+            WHERE keyword=?
+        ''', (result_count, keyword))
+    elif status == 'failed':
+        conn.execute('''
+            UPDATE crawl_tasks SET status='failed', run_count=run_count+1,
+                   last_result=?, last_run_at=datetime('now','localtime'),
+                   fail_count=fail_count+1
+            WHERE keyword=?
+        ''', (result_count, keyword))
+        # 经验：连续失败 3 次 → 自动暂停（这条路不通，不再浪费无人值守时间）
+        conn.execute('''
+            UPDATE crawl_tasks SET status='paused'
+            WHERE keyword=? AND fail_count >= 3 AND status='failed'
+        ''', (keyword,))
+    else:
+        conn.execute('''
+            UPDATE crawl_tasks SET status=?, run_count=run_count+1,
+                   last_result=?, last_run_at=datetime('now','localtime')
+            WHERE keyword=?
+        ''', (status, result_count, keyword))
     conn.commit()
     conn.close()
+
+
+def resume_crawl_tasks(limit: int = 100):
+    """手动恢复暂停的任务（fail_count 清零；SQLite 不支持 UPDATE LIMIT，用子查询）"""
+    conn = get_conn()
+    cur = conn.execute('''
+        UPDATE crawl_tasks SET status='pending', fail_count=0
+        WHERE id IN (SELECT id FROM crawl_tasks WHERE status='paused' LIMIT ?)
+    ''', (limit,))
+    conn.commit(); conn.close()
+    return cur.rowcount
 
 
 def add_auto_keywords(words: list):
@@ -511,6 +546,32 @@ def crawl_stats() -> dict:
     conn.close()
     s = {'total': total, 'by_status': {r['status']: r['n'] for r in rows}}
     return s
+
+# ========== v6 用户记忆（教材第3章，搜索历史 → 用户画像）==========
+
+def log_search(user_name: str, keyword: str, category: str = ''):
+    """记录一次搜索（幂等去重：同一用户同一词只记最近一条）"""
+    conn = get_conn()
+    conn.execute('DELETE FROM search_history WHERE user_name=? AND keyword=?', (user_name or '', keyword))
+    conn.execute('INSERT INTO search_history (user_name, keyword, category) VALUES (?,?,?)',
+                 (user_name or '', keyword, category or ''))
+    conn.commit()
+    conn.close()
+
+
+def user_profile(user_name: str, limit: int = 12) -> dict:
+    """用户画像：最近搜索词 + 品类分布 + 高频词"""
+    conn = get_conn()
+    rows = conn.execute('''
+        SELECT keyword, category, searched_at FROM search_history
+        WHERE user_name=? ORDER BY searched_at DESC LIMIT ?
+    ''', (user_name or '', limit)).fetchall()
+    cats = conn.execute('''
+        SELECT category, COUNT(*) n FROM search_history
+        WHERE user_name=? AND category != '' GROUP BY category ORDER BY n DESC LIMIT 5
+    ''', (user_name or '',)).fetchall()
+    conn.close()
+    return {'user': user_name, 'recent': [dict(r) for r in rows], 'categories': [dict(r) for r in cats]}
 
 # ========== v5.2 偏好记忆（user_preferences 表落地，省柴柴案例）==========
 

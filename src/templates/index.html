@@ -63,6 +63,7 @@
         <h1>🛒 Go购 <span style="font-size:14px;cursor:pointer;color:#0984e3" onclick="toggleRoleMenu()" id="role-bar">👤 <span id="role-name">嘉铭</span> ▼</span></h1>
         <div id="role-menu" style="display:none;background:#fff;border:1px solid #dfe6e9;border-radius:12px;padding:10px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08)"></div>
         <div id="member-cats"></div>
+        <div id="recent-searches"></div>
         <div class="subtitle" style="font-size:17px;color:#ff6b35;font-weight:600">购物就是一场旅行，让我们Go购 ✈️</div>
         <div class="subtitle" style="margin-top:2px">淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网</div>
         <div class="search-box">
@@ -332,13 +333,32 @@
             var me = members.find(m => m.name === cur) || {name: cur, categories: []};
             var cats = document.getElementById('member-cats');
             if (me.categories && me.categories.length) {
-                cats.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">' +
+                cats.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
                     me.categories.map(function(c) {
                         return '<a href="/items?cat=' + encodeURIComponent(c) + '" style="background:#fff;border:2px solid #dfe6e9;border-radius:12px;padding:8px 16px;font-size:14px;color:#2d3436;text-decoration:none">' + esc(c) + ' →</a>';
                     }).join('') + '</div>';
             } else {
-                cats.innerHTML = '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:14px">还没选品类，点「➕ 添加成员」或右上角 👤 设置你的品类（如：女士服装、护肤品）</div>';
+                cats.innerHTML = '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:10px">还没选品类，点「➕ 添加成员」或右上角 👤 设置你的品类（如：女士服装、护肤品）</div>';
             }
+            loadProfile(cur);  // v6 用户记忆：最近关注
+        }
+        function loadProfile(user) {
+            fetch('/api/profile?user=' + encodeURIComponent(user)).then(r => r.json()).then(d => {
+                var box = document.getElementById('recent-searches');
+                if (!box) return;
+                if (d.recent && d.recent.length) {
+                    box.innerHTML = '<div style="background:#f8f9fa;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#636e72">🕐 ' + esc(d.user) + ' 最近关注：' +
+                        d.recent.slice(0, 8).map(function(r) {
+                            return '<a href="javascript:quickSearch(\'' + esc(r.keyword).replace(/'/g, "\\'") + '\')" style="color:#0984e3;text-decoration:none;margin:0 6px">' + esc(r.keyword) + '</a>';
+                        }).join('・') + '</div>';
+                } else {
+                    box.innerHTML = '';
+                }
+            });
+        }
+        function quickSearch(kw) {
+            document.getElementById('kw').value = kw;
+            doSearch();
         }
         function toggleRoleMenu() {
             var m = document.getElementById('role-menu');
@@ -412,7 +432,8 @@
             showLoading();
             box.innerHTML = '';
             var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
-            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode)
+            var uname = encodeURIComponent(getCurrent());
+            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname)
                 .then(resp => {
                     var reader = resp.body.getReader();
                     var decoder = new TextDecoder();

@@ -23,6 +23,7 @@
         .st-doing { background: #eaf2fb; color: #0984e3; }
         .st-done { background: #e8f7ee; color: #27ae60; }
         .st-failed { background: #fdeeee; color: #d63031; }
+        .st-paused { background: #f1f2f6; color: #636e72; }
         .add-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
         .add-row input, .add-row select { padding: 10px 12px; border: 2px solid #dfe6e9;
                                           border-radius: 10px; font-size: 15px; }
@@ -40,6 +41,7 @@
             <div class="stat-row" id="stats">加载中...</div>
             <div class="add-row">
                 <button class="btn btn-tb" onclick="startCrawl()">▶️ 开始一轮采集</button>
+                <button class="btn" onclick="resumePaused()">↩️ 恢复暂停任务</button>
                 <select id="pages" style="padding:10px">
                     <option value="1">每词翻 1 页（快）</option>
                     <option value="2" selected>每词翻 2 页（推荐，WorkBuddy）</option>
@@ -91,7 +93,7 @@
     <script>
         var POLLING = false;
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-        var ST = {pending:['待采集','st-pending'], doing:['采集中','st-doing'], done:['已完成','st-done'], failed:['失败','st-failed']};
+        var ST = {pending:['待采集','st-pending'], doing:['采集中','st-doing'], done:['已完成','st-done'], failed:['失败','st-failed'], paused:['已暂停(经验)','st-paused']};
         var SR = {seed:'种子', auto:'自动', manual:'手动'};
 
         function loadTasks() {
@@ -172,6 +174,12 @@
             alert('✅ 已定时 ' + hh + ' 开始采集（电脑保持开机）');
         }
 
+        function resumePaused() {
+            fetch('/api/resume_tasks', {method: 'POST'}).then(r => r.json()).then(d => {
+                alert(d.msg);
+                loadTasks();
+            });
+        }
         function addWord() {
             var kw = document.getElementById('new-kw').value.trim();
             if (!kw) { alert('请输入关键词'); return; }

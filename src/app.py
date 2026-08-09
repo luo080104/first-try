@@ -279,13 +279,19 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
     return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} + 唯品会 {len(results["vip"])} = {total} 条，入库 {added} 条'}
 
 @app.get('/search_sse')
-async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live'):
+async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live', user_name: str = ''):
     """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）"""
     async def gen():
         nonlocal keyword, category
         def sse(data):
             return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
         try:
+            # v6 用户记忆：记录本次搜索（教材3章）
+            try:
+                from db import log_search
+                log_search(user_name.strip(), keyword.strip(), category)
+            except Exception:
+                pass
             # ===== 📚 历史模式：只读商品库，零 API 零爬虫 =====
             if mode == 'history':
                 yield sse({'type': 'progress', 'msg': '📚 历史模式：正在查询商品库...'})
@@ -537,6 +543,27 @@ async def api_family_tasks(categories: str = Form('')):
             added += cur.rowcount
     conn.commit(); conn.close()
     return {'ok': True, 'msg': f'已把 {len(pick) if pick else 15} 个品类的采集词加入计划（+{added} 个新词）'}
+
+@app.post('/api/search_log')
+async def api_search_log(user_name: str = Form(''), keyword: str = Form(''), category: str = Form('')):
+    """v6 用户记忆：记录一次搜索（教材3章）"""
+    from db import log_search
+    if keyword.strip():
+        log_search(user_name.strip(), keyword.strip(), category)
+    return {'ok': True}
+
+@app.get('/api/profile')
+def api_profile(user: str = ''):
+    """v6 用户画像：最近搜索词 + 品类分布"""
+    from db import user_profile
+    return user_profile(user.strip())
+
+@app.post('/api/resume_tasks')
+async def api_resume_tasks():
+    """经验学习：手动恢复暂停的采集任务"""
+    from db import resume_crawl_tasks
+    n = resume_crawl_tasks()
+    return {'ok': True, 'msg': f'已恢复 {n} 个暂停任务'}
 
 # ========== v5 采集引擎接口 ==========
 

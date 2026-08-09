@@ -204,3 +204,17 @@ CREATE TABLE IF NOT EXISTS crawl_tasks (
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_crawl_status ON crawl_tasks(status);
+
+-- ========== v6 经验学习（教材第8章 gaia-experience 落地版）==========
+-- crawl_tasks 增加 fail_count：连续失败次数，>=3 自动暂停（经验：该词此通道不通）
+-- （ALTER TABLE 迁移见 db.py init_db，此处仅记录设计）
+
+-- 用户搜索历史（教材第3章 用户记忆）：记录谁搜过什么，形成画像
+CREATE TABLE IF NOT EXISTS search_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_name TEXT DEFAULT '',         -- 成员名（嘉铭/妈妈/爸爸）
+    keyword TEXT NOT NULL,             -- 搜索词
+    category TEXT DEFAULT '',          -- 品类
+    searched_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_search_hist ON search_history(user_name, searched_at);
