@@ -110,7 +110,7 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> int:
     # 注：京东不走浏览器（搜索页验证码多，案例启发）→ 改为采集轮次的全局榜单通道 crawl_jd_by_elite
     tb_full, jd_full, vip_full = [], [], []
     for p in range(1, pages + 1):
-        batch = await asyncio.to_thread(search_taobao_full, keyword, p)
+        batch = await asyncio.to_thread(search_taobao_full, keyword, p, 8, True)
         tb_full += batch
         if len(batch) < 8:
             break
@@ -192,12 +192,26 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
                 word_times.append(time.time() - w0)
                 print(f'[crawl] ✅ {kw}: +{added} 件（累计 {len(items)} 条，耗时 {time.time()-w0:.0f}s）')
             except Exception as e:
-                mark_crawl_task(kw, 'failed', 0)
-                fail_count += 1
+                # WorkBuddy 失败分类：验证码立即停 / 网络超时不计数 / 其他正常计数
+                msg = str(e)
+                if '验证码' in msg or 'captcha' in msg.lower():
+                    mark_crawl_task(kw, 'paused', 0)
+                    with _lock:
+                        _progress['errors'].append(f'{kw}: 验证码拦截，已暂停')
+                    print(f'[crawl] 🛑 {kw}: 验证码，立即暂停（不计数）')
+                elif any(k in msg for k in ('超时', 'timeout', 'timed out', '连接', '网络', 'Name or service', 'timed')):
+                    mark_crawl_task(kw, 'failed', 0, count_fail=False)
+                    fail_count += 1
+                    with _lock:
+                        _progress['errors'].append(f'{kw}: 网络超时（不计数）')
+                    print(f'[crawl] ⚠️ {kw}: 网络超时（不计数）: {msg[:60]}')
+                else:
+                    mark_crawl_task(kw, 'failed', 0)
+                    fail_count += 1
+                    with _lock:
+                        _progress['errors'].append(f'{kw}: {msg[:60]}')
+                    print(f'[crawl] ❌ {kw}: {msg[:80]}')
                 word_times.append(time.time() - w0)
-                with _lock:
-                    _progress['errors'].append(f'{kw}: {str(e)[:60]}')
-                print(f'[crawl] ❌ {kw}: {str(e)[:80]}')
             # 进度 + ETA（实测均值 × 剩余量，越跑越准）
             done_now = ok_count + fail_count
             avg = sum(word_times) / len(word_times) if word_times else 0

@@ -18,8 +18,9 @@ from api_client import search_goods, search_pdd, value_score
 from llm_parse import parse_intent, generate_options
 from content_reader import read_content_items
 
-def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
-    """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
+def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8, propagate_captcha: bool = False) -> list:
+    """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice
+    propagate_captcha=True：验证码异常向上抛（采集层用于暂停该词）"""
     try:
         import tb_search
         items = tb_search.search_taobao(keyword, max_items=max_items, page=page)
@@ -33,11 +34,18 @@ def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
             it['_source'] = 'browser'
         return items
     except Exception as e:
+        from errors import CaptchaError
+        if isinstance(e, CaptchaError):
+            if propagate_captcha:
+                raise
+            print(f'[tb_full] 验证码，跳过（{str(e)[:40]}）')
+            return []
         print(f'[tb_full] 失败: {str(e)[:80]}')
         return []
 
-def search_jd_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
-    """京东全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
+def search_jd_full(keyword: str, page: int = 1, max_items: int = 8, propagate_captcha: bool = False) -> list:
+    """京东全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice
+    propagate_captcha=True：验证码异常向上抛（采集层用于暂停该词）"""
     try:
         import jd_search
         items = jd_search.search_jd(keyword, max_items=max_items, page=page)
@@ -51,6 +59,12 @@ def search_jd_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
             it['_source'] = 'browser'
         return items
     except Exception as e:
+        from errors import CaptchaError
+        if isinstance(e, CaptchaError):
+            if propagate_captcha:
+                raise
+            print(f'[jd_full] 验证码，跳过（{str(e)[:40]}）')
+            return []
         print(f'[jd_full] 失败: {str(e)[:80]}')
         return []
 

@@ -472,9 +472,10 @@ def get_pending_tasks(limit: int = 100) -> list:
     return [dict(r) for r in rows]
 
 
-def mark_crawl_task(keyword: str, status: str, result_count: int = 0):
-    """更新任务状态（done/failed/doing）+ 经验学习：连续失败 >=3 自动暂停（教材8章）
-    done → 失败次数清零；failed → +1；达阈值 → paused（不再尝试，可手动恢复）"""
+def mark_crawl_task(keyword: str, status: str, result_count: int = 0, count_fail: bool = True):
+    """更新任务状态（done/failed/doing/paused）+ 经验学习（WorkBuddy：失败分类）
+    done → 失败次数清零；failed → +1（网络超时类 count_fail=False 不计数）；
+    连续失败 >=3 自动 paused；验证码直接 paused（立即停）"""
     conn = get_conn()
     if status == 'done':
         conn.execute('''
@@ -483,18 +484,27 @@ def mark_crawl_task(keyword: str, status: str, result_count: int = 0):
             WHERE keyword=?
         ''', (result_count, keyword))
     elif status == 'failed':
-        conn.execute('''
-            UPDATE crawl_tasks SET status='failed', run_count=run_count+1,
-                   last_result=?, last_run_at=datetime('now','localtime'),
-                   fail_count=fail_count+1
-            WHERE keyword=?
-        ''', (result_count, keyword))
+        if count_fail:
+            conn.execute('''
+                UPDATE crawl_tasks SET status='failed', run_count=run_count+1,
+                       last_result=?, last_run_at=datetime('now','localtime'),
+                       fail_count=fail_count+1
+                WHERE keyword=?
+            ''', (result_count, keyword))
+        else:
+            # 网络超时类：不累计失败次数（WorkBuddy：网络超时不计数）
+            conn.execute('''
+                UPDATE crawl_tasks SET status='failed', run_count=run_count+1,
+                       last_result=?, last_run_at=datetime('now','localtime')
+                WHERE keyword=?
+            ''', (result_count, keyword))
         # 经验：连续失败 3 次 → 自动暂停（这条路不通，不再浪费无人值守时间）
         conn.execute('''
             UPDATE crawl_tasks SET status='paused'
             WHERE keyword=? AND fail_count >= 3 AND status='failed'
         ''', (keyword,))
     else:
+        # paused：验证码立即停 / doing 等
         conn.execute('''
             UPDATE crawl_tasks SET status=?, run_count=run_count+1,
                    last_result=?, last_run_at=datetime('now','localtime')

@@ -84,10 +84,10 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         tab.run_js('window.scrollTo(0, document.body.scrollHeight / 2)')
         time.sleep(1)
 
-        # 验证码检测（按约束不绕过）
+        # 验证码检测（按约束不绕过；抛异常让采集层识别并暂停该词）
         if '安全验证' in tab.html or '拖动' in tab.html[:5000]:
-            print('⚠️ 遇到京东验证码，本次跳过（按约束不尝试绕过）')
-            return []
+            from errors import CaptchaError
+            raise CaptchaError('京东验证码拦截')
 
         cards = tab.eles('xpath://*[contains(@class,"goodsCardWrapper")]', timeout=5)
         items = []

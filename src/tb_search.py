@@ -142,10 +142,10 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
         tab.listen.stop()
         tab.listen.start(MTOP_API_PATTERNS[0])
 
-    # 验证码检测
+    # 验证码检测（按约束不绕过；抛异常让采集层识别并暂停该词）
     if _has_captcha(tab):
-        print('[tb] 遇到淘宝验证码，本次跳过（按约束不尝试绕过）')
-        return []
+        from errors import CaptchaError
+        raise CaptchaError('淘宝验证码拦截')
 
     # 等待 MTOP API 响应 —— 多包模式
     # CSDN 实测：淘宝发两次相同请求，第一次假数据，第二次真数据
@@ -403,8 +403,8 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
 
     # 验证码检测
     if _has_captcha(tab):
-        print('[tb] 遇到淘宝验证码，本次跳过')
-        return []
+        from errors import CaptchaError
+        raise CaptchaError('淘宝验证码拦截')
 
     # 淘宝商品卡片选择器（2025 版，带 hash 后缀，用 contains 匹配）
     cards = tab.eles('xpath://a[contains(@class,"doubleCardWrapper")]', timeout=5)
