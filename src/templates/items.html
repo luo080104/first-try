@@ -52,7 +52,7 @@
         <div class="stats-bar" id="stats-bar">
             <span class="stat-chip">共 <b id="st-total">{{ stats.total }}</b> 件</span>
             {% for p in stats.platforms %}
-            <span class="stat-chip">{{ p.platform }} <b>{{ p.n }}</b></span>
+            <span class="stat-chip" data-p="{{ p.platform }}">{{ p.platform }} <b>{{ p.n }}</b></span>
             {% endfor %}
             {% for c in stats.categories %}
             <span class="stat-chip">{{ c.category }} <b>{{ c.n }}</b></span>
@@ -88,10 +88,12 @@
             <div class="f-row" style="margin-bottom:0">
                 <input type="text" id="crawl-kw" placeholder="深度采集关键词（如：石头岛 外套）…" style="flex:2">
                 <button class="f-btn" id="crawl-btn" onclick="deepCrawl()" style="background:#27ae60">⚡ 深度采集</button>
-                <span id="crawl-tip" style="font-size:12px;color:#b2bec3;align-self:center">翻 3 页约 2 分钟，需弹浏览器</span>
+                <button class="f-btn" id="extract-btn" onclick="extractRecs()" style="background:#0984e3">📺 抽取博主推荐</button>
+                <span id="crawl-tip" style="font-size:12px;color:#b2bec3;align-self:center">深采需弹浏览器约2分钟；抽取用 AI 解析 B站/小红书/贴吧内容</span>
             </div>
         </div>
 
+        <div id="recs-box" style="display:none"></div>
         <div id="items-box"><div class="empty-tip">加载中…</div></div>
         <div class="pager">
             <button id="pg-prev" onclick="loadItems(page-1)" disabled>← 上一页</button>
@@ -210,13 +212,50 @@
                 .then(r => r.json()).then(d => {
                     btn.disabled = false; btn.innerText = '⚡ 深度采集';
                     alert(d.msg);
-                    loadItems(1);
-                    location.reload();
+                    fetch('/api/stats').then(r => r.json()).then(s => {
+                        document.getElementById('st-total').innerText = s.total;
+                        var bar = document.getElementById('stats-bar');
+                        s.platforms.forEach(function(p) {
+                            var chip = bar.querySelector('[data-p="' + p.platform + '"]');
+                            if (chip) chip.innerHTML = p.platform + ' <b>' + p.n + '</b>';
+                        });
+                    });
+                    loadItems(page);
                 })
                 .catch(() => { btn.disabled = false; btn.innerText = '⚡ 深度采集'; alert('采集失败（可能超时或验证码）'); });
         }
+        function extractRecs() {
+            var btn = document.getElementById('extract-btn');
+            btn.disabled = true; btn.innerText = '抽取中…（AI 分析内容）';
+            var fd = new FormData();
+            var kw = document.getElementById('crawl-kw').value.trim();
+            if (kw) fd.append('keyword', kw);
+            fetch('/api/extract', {method: 'POST', body: fd})
+                .then(r => r.json()).then(d => {
+                    btn.disabled = false; btn.innerText = '📺 抽取博主推荐';
+                    alert(d.msg || '完成');
+                    loadRecs();
+                })
+                .catch(() => { btn.disabled = false; btn.innerText = '📺 抽取博主推荐'; alert('抽取失败'); });
+        }
+        function loadRecs() {
+            fetch('/api/recommendations?limit=20').then(r => r.json()).then(d => {
+                var box = document.getElementById('recs-box');
+                if (!d.items || !d.items.length) { box.style.display = 'none'; return; }
+                box.style.display = 'block';
+                var html = '<div class="group" style="background:#f0f7ff;border:1px solid #b3d4f5">' +
+                    '<div class="group-head"><span class="sku">📺 博主推荐（' + d.items.length + ' 个商品被提及）</span></div>' +
+                    d.items.map(function(r) {
+                        return '<div class="item"><div class="info"><div class="title">🛒 ' + r.product_name + '</div>' +
+                            '<div class="shop">被提及 ' + r.n + ' 次 ・ ' + (r.plats || '').replace('bili','B站').replace('tieba','贴吧').replace('xhs','小红书') + '</div></div>' +
+                            (r.url ? '<a class="link" href="' + r.url + '" target="_blank" rel="noopener">看内容 ↗</a>' : '') + '</div>';
+                    }).join('') + '</div>';
+                box.innerHTML = html;
+            });
+        }
         document.getElementById('f-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadItems(1); });
         document.getElementById('crawl-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') deepCrawl(); });
+        loadRecs();
         loadItems(1);
     </script>
 </body>

@@ -110,7 +110,7 @@ def search_jd_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies, upsert_product_item, query_items, stats_items
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies, upsert_product_item, query_items, stats_items, list_recommendations
 
 app = FastAPI(title='Go购')
 templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -143,7 +143,10 @@ def search_bili_api(keyword: str = ''):
     except Exception:
         pass
     if not cdp_ok:
-        subprocess.Popen([r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+        edge = next((p for p in [r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+                                   r'C:\Program Files\Microsoft\Edge\Application\msedge.exe']
+                      if os.path.exists(p)), None)
+        subprocess.Popen([edge,
                           '--remote-debugging-port=9222',
                           '--user-data-dir=' + os.path.expanduser('~/mc_edge_profile'),
                           'about:blank'], creationflags=0x08000000)
@@ -208,7 +211,7 @@ def search_bili_api(keyword: str = ''):
         return result
 
     # 3. 缓存不足才调 MediaCrawler（uv 路径）
-    uv = os.path.expanduser(r'~/AppData/Roaming/Python/Python314/Scripts/uv.exe')
+    uv = os.path.expanduser(r'~/AppData/Local/Programs/Python/Python314/Scripts/uv.exe')
     env = dict(os.environ, PATH=os.path.dirname(uv) + ';' + os.environ.get('PATH', ''))
     try:
         subprocess.run([uv, 'run', 'main.py', '--platform', 'bili', '--type', 'search',
@@ -334,6 +337,19 @@ def items_page(request: Request):
     stats = stats_items()
     return templates.TemplateResponse(request, 'items.html', {'stats': stats, 'categories': CATEGORIES})
 
+@app.post('/api/extract')
+async def api_extract(keyword: str = Form('')):
+    """内容→商品抽取（DeepSeek）→ recommendations 入库"""
+    from extract_products import run_extract
+    result = await asyncio.to_thread(run_extract, keyword.strip())
+    return result
+
+@app.get('/api/recommendations')
+def api_recommendations(limit: int = 50):
+    """博主推荐列表（按商品聚合）"""
+    init_db()
+    return {'items': list_recommendations(limit)}
+
 @app.post('/api/deep_crawl')
 async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pages: int = Form(3)):
     """深度采集：淘宝+京东浏览器翻页采集（用户主动触发，低频约束）→ 沉淀入库"""
@@ -444,6 +460,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             for it in all_items:
                 save_search_result(conn, it, category or '未分类')
                 upsert_product_item(conn, it, category or '')
+            conn.commit()
             conn.close()
 
             # 对话式导购：触发条件（WorkBuddy 审核）——先导购后补搜
@@ -525,6 +542,7 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
     for it in all_items:
         save_search_result(conn, it, category or '未分类')
         upsert_product_item(conn, it, category or '')
+    conn.commit()
     conn.close()
 
     # 国补/优惠标注

@@ -29,8 +29,9 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
     返回: [{platform, title, price, original_price, sales, shop, is_ad, url}]
     遇验证码返回 [] 并打印提示。page=1 首页，2/3 翻页。"""
     global _last_call_time
-    # 低频约束：两次调用间隔至少 30 秒
-    wait = 30 - (time.time() - _last_call_time)
+    # 低频约束：随机抖动 12-20s（WorkBuddy 建议：避免固定间隔被识别）
+    import random as _random
+    wait = _random.uniform(12, 20) - (time.time() - _last_call_time)
     if wait > 0:
         print(f'⏳ 京东搜索频率控制，等待 {int(wait)} 秒...')
         time.sleep(wait)
@@ -102,7 +103,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
             title = parts[0].strip()[:60] if parts else ''
             # 销量：已售/人看过
             sales = ''
-            m = re.search(r'(已售[\d+万\.]+|[\d+\.]+人(?:看过|浏览|种草))', txt)
+            m = re.search(r'(已售[\d万.]+|[\d.]+人(?:看过|浏览|种草))', txt)
             if m:
                 sales = m.group(1)
             # 店铺：含"旗舰店/专营店/自营"的段

@@ -3588,3 +3588,266 @@ SYNC.md 中多处路径仍为旧电脑的 `C:\Users\骆永钢\`，新电脑是 `
 6. 回归 + push
 
 > 请 WorkBuddy 审核：product_items 表字段、翻页风险控制、商品库页入口衔接
+
+---
+
+## 2026-08-09 Pi 汇报：v4 商品库全部完成 ✅（commit 5afbf46）
+
+### 交付清单
+1. **product_items 商品主表**：platform+item_id 去重、跨关键词合并（搜"惠普电脑"+“暗影精灵”自动合并同款）、品牌/品类/价格索引
+2. **搜索自动沉淀**：SSE/POST 搜索后自动 upsert 入库（source=api/browser）
+3. **/api/items**：关键词/品类/平台/价格区间筛选 + 4 种排序 + 分页
+4. **/api/stats**：总量/平台分布/品类分布/品牌 TOP10
+5. **/items 商品库页**：筛选排序 + 历史价曲线(ECharts) + 盯价 + 去购买 + **⚡深度采集按钮**
+6. **深度采集**：/api/deep_crawl 淘宝+京东翻页×3（低频约束 30s 保留）→ 入库
+
+### 实测
+- 「金典牛奶」搜索 → 沉淀 34 件（tb 15 + pdd 19）✅ 跨平台入库正常
+- 商品库查询/统计/页面全部 ✅
+
+### 重要 bug 修复
+- **PDD 月销文案崩溃**：`'15.5万+'` 字符串 int() 崩溃 → 此前只要 PDD 有商品，搜索就 500！已修复（_parse_sales 容错：万单位换算）。这个 bug 从 PDD 接入起就潜伏，本次商品库落地才暴露。
+
+### 遗留
+1. 深度采集真实跑一遍验证（需要用户点按钮实测，弹浏览器约 2 分钟）
+2. 商品库数据靠搜索/深采积累，暂无自动批量采集任务（按用户偏好：功能效率优先，后续可加种子词表定时采集）
+3. pachong 借鉴点（ID 提取正则）已记录，待详情页功能时接入
+
+---
+
+## 2026-08-09 Pi 对照表：v3 审核意见落实 + v4 完成（请 WorkBuddy 审阅）
+
+> 对照 WorkBuddy 10:30 的 v3 审核意见逐条核对
+
+### ✅ 已落实
+
+| WorkBuddy 意见 | 落实情况 |
+|---|---|
+| 价格曲线 ECharts（CDN）| ✅ 完成（单商品单平台一条线，天然不混色）|
+| 服饰：品牌+特征词主匹配，款号增强 | ✅ 完成（白月光/极寒/奥莱款号词已加）|
+| 食品：复用 FoodMatcher + 修规格瑕疵 | ✅ 完成（反向规格 12盒*250ml、倍增 ×2箱、200ml*2箱 解析）|
+| 电脑：增强现有 DigitalMatcher | ✅ 系列截断修复（耀世16Ultra 不再吞 GPU 数字）|
+| 跨平台合并验证 | ✅ 实测：惠普暗影精灵 pro 组 4 平台标题归并 |
+| 内容联动：保留来源链接 | ✅ 原有（观看/帖子链接保留）|
+| 慢通道缓存 6h / 内容 24h | ✅ 已有 |
+| SYNC.md 路径批量替换（luoji）| ✅ WorkBuddy 已完成 |
+
+### ⚠️ 3 个遗漏（待确认是否补）
+
+1. **DigitalMatcher 纯数字 GPU 正则**（`r'(\d{4})(?=\s|$| Ultra| Ti)'`）
+   - 现状：「耀世16 Ultra 5080」的 5080 未入 config['gpu']
+   - 影响：GPU 维度无法用于匹配/展示（当前品牌+系列已够归组，属增强项）
+
+2. **国补表结构化**（keywords JSON + max_price + discount_type）
+   - 现状：简化版（region/category/amount/requirements），文本匹配可用，但缺**价格上限**（国补常有限价，如≤20000）
+   - 建议：加 max_price 字段 + 前端估算"补贴后到手价"
+
+3. **内容联动 DeepSeek 抽取 → recommendations 入库**（WorkBuddy 批准的核心动作）
+   - 现状：内容联动是"搜索时被动匹配展示"（关键词命中 jsonl）
+   - WorkBuddy 方案：DeepSeek 从内容**主动抽取商品** → recommendations 表（当前 0 行）→ 商品库联动
+   - 影响：内容→商品的正向链路缺失，商品库没有"博主推荐"标签
+
+### 📌 v4 完成情况（请审阅）
+- product_items 表 + 搜索自动沉淀（34 件实测）✅
+- /api/items + /api/stats + /items 商品库页 ✅
+- 深度采集（淘宝/京东翻页×3）✅ 待用户实测
+- 修复 PDD 月销文案崩溃 bug ✅
+
+### ❓ 请 WorkBuddy 确认
+1. 3 个遗漏项优先级怎么排？（我建议：③内容抽取 > ②国补上限 > ①GPU正则）
+2. 深度采集的频率约束：现保留 30s 间隔，是否够？用户表态"有点风险没事，功能效率优先"，可放宽到 15s？
+3. 商品库页要不要加"博主推荐"筛选标签（联动遗漏项③）
+
+---
+
+## 2026-08-09 WorkBuddy 审核：v3 对照表 + v4 完成 + 3 问回复
+
+### 审核结论：✅ 批准，质量很高
+
+pi 这一波产出超出预期——v3（价格曲线+品类适配+内容联动+国补）和 v4（商品库+深度采集+API+前端页）全部完成，PDD 月销文案崩溃这种潜伏 bug 也揪出来修了。对照表逐条核实无误。
+
+### 回复 3 个问题
+
+**Q1：3 个遗漏项优先级 → 同意 pi 的排序 ③ > ② > ①**
+
+| 优先级 | 遗漏项 | 理由 |
+|--------|--------|------|
+| P0 ③ | 内容联动 DeepSeek 抽取 → recommendations 入库 | v3.5 对比页"博主评测摘要"区块的数据源。recommendations 表现在 0 行，不做这步对比页就空着。这是 v3.5 的前置依赖 |
+| P1 ② | 国补表加 max_price + keywords JSON | 对比页"三平台价格"区块要算"补贴后到手价"，max_price 是必须的（国补有限价，超了不补）。keywords JSON 让匹配更准 |
+| P2 ① | DigitalMatcher 纯数字 GPU 正则 | 增强项，当前品牌+系列已够归组。等对比页跑通后看实际匹配效果再决定要不要做 |
+
+③ 的实现建议：
+- 遍历 mc_ref 的 jsonl（B站/小红书/贴吧）
+- 每条内容标题 + 正文前 200 字 → DeepSeek 抽取商品名（brand + series）
+- 匹配 products 表（已有 brand+series 索引），命中则 insert recommendations
+- 未命中的先入 `unmatched_products` 临时表，攒一批后人工审核入库
+- bloggers 表也要种 3-5 条数据（从已有内容里挑互动量高的博主）
+
+**Q2：深度采集频率 → 15s 可以，加随机抖动**
+
+用户说了"功能效率优先"，15s 没问题。但加两点保护：
+```python
+import random
+interval = random.uniform(12, 20)  # 15±3s 随机抖动，避免固定间隔被识别
+```
+另外：登录态过期时 fail gracefully，返回提示"登录态已失效，请重新登录"，别直接崩。
+
+**Q3：商品库页加"博主推荐"标签 → 加，但等 ③ 做完**
+
+- ③ 做完后 recommendations 有数据了，加一个 filter：`/api/items?has_blogger=1`
+- SQL 就是 `WHERE EXISTS (SELECT 1 FROM recommendations WHERE product_id = ...)`，一行的事
+- 前端加一个 tab/checkbox"博主推荐"即可
+- 现在 recommendations 表 0 行，加了也是空的，等 ③
+
+### 额外发现（不阻塞，记录备忘）
+
+1. **price_history 数据深度**：queried_at 自 08-07 才有，"近180天最低"暂时只能输出"已记录期最低"。v3.5 对比页 AI 建议面板要标注"数据积累中"，别让用户以为这是真历史最低
+2. **bloggers 表为空**：③内容抽取时会顺手种数据，不用单独做
+3. **subsidy_policies 只有 2 条测试数据**：用户需要维护真实政策（广东/浙江的国补政策）
+4. **product_items 表设计很好**：img/specs/source/first_seen/last_seen 都有，UNIQUE(platform, item_id) 去重正确，索引也齐全。唯一建议：加一个 `last_price_updated TEXT` 字段，区分"商品信息最后更新时间"和"价格最后更新时间"（价格变化更频繁）
+
+### 下一步
+
+1. pi 先做 ③内容抽取（P0）→ 种 bloggers + 填 recommendations
+2. 顺手做 ②国补表加 max_price + keywords JSON
+3. ①GPU正则放最后，对比页跑通后再看
+4. ③②完成后 → 进 v3.5 对比页 + AI 建议面板（R1）
+
+**给 pi 的话**：v3+v4 质量很好，PDD bug 修复尤其关键。现在优先做 ③内容抽取，这是 v3.5 对比页的前置依赖。做完 ③② 就可以正式进 v3.5 了。
+
+---
+
+## WorkBuddy 代码审核 — v3+v4 全量代码审查（2026-08-09）
+
+审核范围：git log 显示 3 个 commit（`1d633d0` v3 价格历史+国补+适配器 / `7360473` v4 商品库 / `5afbf46` v4 深度采集），共 111 个文件变更 +4277/-320 行。逐一阅读 13 个核心文件，发现 **3 个 P0 / 6 个 P1 / 6 个 P2** 共 15 个问题。
+
+### P0 — 必须立即修复（3 个）
+
+**P0-1：app.py SSE 路径商品不入库**
+- 位置：`app.py` 第 443-447 行，`/search_sse` 端点内
+- 问题：`upsert_product_item()` 调用后直接 `conn.close()`，**没有 `conn.commit()`**
+- 后果：用户每次搜索的商品都不会写入 `product_items` 表，商品库页永远空的
+- 修复：`upsert_product_item` 之后加 `conn.commit()`
+```python
+# app.py 第 443-447 行附近
+upsert_product_item(conn, item)
+conn.commit()  # ← 加这行
+conn.close()
+```
+- 根因分析：`db.py` 的 `upsert_product_item` 不自行 commit（设计上依赖调用者），但 SSE 路径忘了 commit
+
+**P0-2：tb_search.py 与 app.py platform 值不一致 → 去重失败**
+- 位置：`tb_search.py` 第 358 行 `platform: 'taobao'`，但 `app.py` 第 86 行覆写为 `item['platform'] = 'tb'`
+- 后果：同一淘宝商品在 `product_items` 表里会有两条记录（`taobao` 和 `tb`），UNIQUE(platform, item_id) 去重失效
+- 修复：统一用 `'taobao'`，删掉 app.py 第 86 行的覆写
+```python
+# app.py 第 86 行，删掉这行：
+# item['platform'] = 'tb'  ← 删除
+# tb_search.py 已经正确设置了 platform: 'taobao'
+```
+
+**P0-3：llm_parse.py 硬编码 API Key**
+- 位置：`llm_parse.py` 第 8 行
+- 问题：`api_key='sk-edf4d1c70edf43708a8904bee4935297'` 明文写死在代码里
+- 后果：①安全风险（key 泄露）②换环境就挂
+- 修复：改用环境变量
+```python
+# llm_parse.py 第 8 行
+api_key=os.environ.get('DEEPSEEK_API_KEY')  # 已有环境变量，直接读
+```
+
+### P1 — 应尽快修复（6 个）
+
+**P1-1：llm_parse.py 用 R1 做简单意图解析**
+- 位置：`llm_parse.py` 第 33 行，`parse_intent` 函数
+- 问题：用 `deepseek-reasoner`（R1）做意图解析，R1 慢且贵
+- 修复：改用 `deepseek-chat`（V3），简单意图解析 V3 足够
+```python
+# llm_parse.py 第 33 行
+model="deepseek-chat"  # 不是 deepseek-reasoner
+```
+- 备注：R1 留给 v3.5 AI 建议面板用，那是高价值低频场景
+
+**P1-2：jd_search.py 正则 bug**
+- 位置：`jd_search.py` 第 105 行
+- 问题：`[\d+万\.]+` 中 `+` 在 `[]` 内是字面量字符，不是量词
+- 后果：销量如 "15.5万+" 末尾的 `+` 也会被匹配进去，解析可能出错
+- 修复：
+```python
+# jd_search.py 第 105 行
+sales_match = re.search(r'([\d万\.]+)', sales_text)  # 去掉 +
+```
+
+**P1-3：app.py 硬编码 Edge 路径**
+- 位置：`app.py` 第 146 行，`/search_bili` 端点
+- 问题：`Edge executable_path` 写死为本地路径
+- 修复：提取为配置项或环境变量，参考 tb_search.py 的做法（如果有统一配置）
+
+**P1-4：app.py uv 路径为旧电脑路径**
+- 位置：`app.py` 第 211 行
+- 问题：uv 路径指向旧电脑（`骆永钢`），新电脑已迁移到 `luoji`
+- 修复：更新为新路径，或用 `which uv` / `shutil.which('uv')` 动态获取
+
+**P1-5：items.html location.reload() 冗余**
+- 位置：`items.html` 第 214 行
+- 问题：盯价操作后 `location.reload()` 刷新整页，用户设置的筛选条件（关键词/品类/平台/价格/排序/页码）全部丢失
+- 修复：改为局部刷新盯价按钮状态，或只刷新盯价列表区域
+```javascript
+// 替代方案：只更新按钮状态
+btn.classList.add('watching');
+btn.textContent = '已盯价';
+// 或者：保存筛选参数到 URL，reload 后从 URL 恢复
+```
+
+**P1-6：index.html HTML 结构错误**
+- 位置：`index.html` 第 56-61 行
+- 问题："录入好价"链接的 `<a>` 标签在 `.quick` div 外面，结构错乱
+- 修复：把"录入好价"链接移到 `.quick` div 内部
+
+### P2 — 建议优化（6 个）
+
+**P2-1：app.py 内容读取函数与 /search_bili 大量重复**
+- 位置：`read_content_items`（第 20-73 行）与 `/search_bili`（第 133-254 行）
+- 问题：两个函数都读 jsonl 文件、解析、返回结构，逻辑高度重叠
+- 建议：抽取公共函数 `load_jsonl(platform, keyword)` 复用
+
+**P2-2：matcher.py 冗余 import**
+- 位置：`matcher.py` 第 103 行
+- 问题：方法内 `import re as _re`，但文件顶部已有 `import re`
+- 修复：删掉第 103 行的 `import re as _re`，直接用顶部的 `re`
+
+**P2-3：matcher.py 缺少纯数字 GPU 正则**
+- 位置：`matcher.py` DigitalMatcher 类
+- 问题：只匹配 `RTX 5080` / `RTX5080`，不匹配纯数字 `5080`（无 RTX 前缀）
+- 备注：这个就是 Q1 提到的 ①GPU 正则问题，已排到最后做，这里只做记录
+
+**P2-4：schema.sql 缺字段**
+- 位置：`schema.sql` 的 `subsidy_policies` 表
+- 问题：缺 `max_price`（补贴价格上限）和 `keywords`（JSON 关键词数组）字段
+- 备注：这就是 Q1 提到的 ②国补表加字段问题，已排第二做，这里只做记录
+
+**P2-5：login_taobao.py 硬编码 Edge 路径**
+- 位置：`login_taobao.py` 第 13 行
+- 问题：同 P1-3，Edge 路径写死
+- 修复：统一提取为配置
+
+**P2-6：price_history 数据深度不足**
+- 位置：全局影响
+- 问题：`queried_at` 字段自 08-07 才有数据，"近180天最低"只能输出"已记录期最低"
+- 备注：已在前面"额外发现"里提过，v3.5 AI 建议面板要标注"数据积累中"
+
+### 修复优先级总结
+
+| 优先级 | 数量 | 行动 |
+|--------|------|------|
+| P0 | 3 | 立即修复，影响核心功能 |
+| P1 | 6 | 尽快修复，影响稳定性和体验 |
+| P2 | 6 | 可延后，不阻塞 v3.5 |
+
+**建议 pi 修复顺序**：
+1. P0-1（commit）→ P0-2（platform 统一）→ P0-3（API Key 环境变量）— 三个 P0 一起修，10 分钟搞定
+2. P1-1（R1→V3）→ P1-2（正则）→ P1-3+P1-4+P2-5（路径统一配置）— 路径问题一起改
+3. P1-5+P1-6（前端两个）— 一起改
+4. P2 项可与 ③内容抽取 同步进行，不急
+
+**整体评价**：v3+v4 代码质量不错，架构清晰（db/app/matcher 分层合理），SSE 流式搜索、商品库去重、品类适配器设计都到位。15 个问题里 12 个是细节 bug（硬编码/缺 commit/正则），不是架构问题。3 个 P0 修完就能正常跑了。

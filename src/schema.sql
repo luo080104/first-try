@@ -74,7 +74,10 @@ CREATE TABLE IF NOT EXISTS bloggers (
 CREATE TABLE IF NOT EXISTS recommendations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     blogger_id INTEGER REFERENCES bloggers(id),
-    product_id INTEGER REFERENCES products(id),  -- 推荐的商品
+    product_id INTEGER REFERENCES products(id),  -- 推荐的商品（可空，抽取阶段未关联）
+    product_name TEXT,                      -- 抽取的商品名（如：石头岛外套）
+    platform TEXT,                          -- 内容平台 bili/tieba/xhs
+    content_id TEXT,                        -- 内容 ID（video_id/note_id/post_id）
     title TEXT NOT NULL,                    -- 内容标题
     content_url TEXT,                       -- 视频/文章链接
     published_at TEXT,                      -- 发布时间（时效过滤用：超 6 个月降权）
@@ -106,6 +109,7 @@ CREATE TABLE IF NOT EXISTS subsidy_policies (
     region TEXT NOT NULL,                   -- 省份/城市
     category TEXT,                          -- 适用品类（笔记本/家电…）
     amount REAL,                            -- 补贴金额或比例
+    max_price REAL,                         -- 适用商品价格上限（空=不限，如国补≤20000）
     requirements TEXT,                      -- 申领条件
     valid_from TEXT, valid_to TEXT,         -- 有效期
     source_url TEXT,                        -- 政策来源
@@ -171,6 +175,7 @@ CREATE TABLE IF NOT EXISTS product_items (
     source TEXT DEFAULT 'api',           -- api/browser/manual
     first_seen TEXT DEFAULT (datetime('now','localtime')),
     last_seen TEXT DEFAULT (datetime('now','localtime')),
+    last_price_updated TEXT,             -- 价格最后更新时间（区别于商品信息 last_seen）
     UNIQUE(platform, item_id)
 );
 CREATE INDEX IF NOT EXISTS idx_items_cat ON product_items(category);

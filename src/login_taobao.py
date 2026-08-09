@@ -10,7 +10,14 @@ def main():
 
     profile = os.path.join(os.path.dirname(__file__), '..', 'data', 'tb_profile')
     co = ChromiumOptions()
-    co.set_browser_path(r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe')
+    import os as _os
+    edge = next((p for p in [r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+                              r'C:\Program Files\Microsoft\Edge\Application\msedge.exe']
+                 if _os.path.exists(p)), None)
+    if not edge:
+        print('[错误] 未找到 Edge 浏览器')
+        return
+    co.set_browser_path(edge)
     co.set_user_data_path(profile)
     browser = Chromium(co)
     tab = browser.latest_tab

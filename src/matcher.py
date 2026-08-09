@@ -100,7 +100,7 @@ class DigitalMatcher:
                 brand = b
                 break
         # 系列型号：系列词表匹配（耀世16Ultra / 暗影精灵Max16 / 战66）
-        import re as _re
+        _re = re
         SERIES_WORDS = ['耀世', '暗影精灵', '光影精灵', '拯救者', '天选', '灵越',
                         '星Book', '星book', '战66', '战99', '小新', 'ThinkPad',
                         'thinkpad', 'Yoga', 'yoga', 'OMEN', 'omen', '暗影', '蛟龙', '极光']
@@ -128,6 +128,12 @@ class DigitalMatcher:
             m2 = _re.search(pat, low)
             if m2:
                 config[key] = m2.group(0)
+        # 纯数字 GPU 兜底（WorkBuddy 建议）："耀世16 Ultra 5080" → gpu=5080
+        # 排除内存/硬盘数字（32G/1T 已匹配 ram/storage），只认 4 位 GPU 型号
+        if 'gpu' not in config:
+            m3 = _re.search(r'(?:^|[^\d])(50[5-9]0|50[5-9]0\s*ti)(?=$|[^\d])', title, _re.I)
+            if m3:
+                config['gpu'] = m3.group(1).replace(' ', '').lower()
         return {'brand': brand, 'series': series, 'config': config}
 
     @staticmethod

@@ -19,6 +19,15 @@ def init_db():
     conn = get_conn()
     with open(SCHEMA_PATH, encoding='utf-8') as f:
         conn.executescript(f.read())
+    # 迁移：旧库补 max_price 列（幂等）
+    cols = [r[1] for r in conn.execute('PRAGMA table_info(subsidy_policies)')]
+    if 'max_price' not in cols:
+        conn.execute('ALTER TABLE subsidy_policies ADD COLUMN max_price REAL')
+    # 迁移：recommendations 补内容抽取字段（幂等）
+    rcols = [r[1] for r in conn.execute('PRAGMA table_info(recommendations)')]
+    for col, ddl in (('product_name', 'TEXT'), ('platform', 'TEXT'), ('content_id', 'TEXT')):
+        if col not in rcols:
+            conn.execute('ALTER TABLE recommendations ADD COLUMN ' + col + ' ' + ddl)
     conn.commit()
     conn.close()
     print(f'✅ 数据库就绪: {DB_PATH}')
@@ -161,13 +170,13 @@ SUBSIDY_KEYWORDS = {
     '服饰': ['羽绒服', '外套', '鞋', '运动鞋', '卫衣', '裤'],
 }
 
-def add_subsidy(region, category, amount, requirements, valid_from='', valid_to='', source_url=''):
-    """人工维护国补/优惠政策"""
+def add_subsidy(region, category, amount, requirements, valid_from='', valid_to='', source_url='', max_price=None):
+    """人工维护国补/优惠政策（max_price=适用商品价格上限，空=不限）"""
     conn = get_conn()
     cur = conn.execute('''
-        INSERT INTO subsidy_policies (region, category, amount, requirements, valid_from, valid_to, source_url)
-        VALUES (?,?,?,?,?,?,?)
-    ''', (region, category, amount, requirements, valid_from, valid_to, source_url))
+        INSERT INTO subsidy_policies (region, category, amount, requirements, valid_from, valid_to, source_url, max_price)
+        VALUES (?,?,?,?,?,?,?,?)
+    ''', (region, category, amount, requirements, valid_from, valid_to, source_url, max_price))
     conn.commit()
     conn.close()
     return cur.lastrowid
@@ -305,3 +314,22 @@ def stats_items() -> dict:
             'platforms': [dict(r) for r in by_platform],
             'categories': [dict(r) for r in by_category],
             'brands': [dict(r) for r in by_brand]}
+
+def save_recommendation(conn, product_name, platform, content_id, title, content_url, published_at='', is_ad=0):
+    """博主推荐入库（按 platform+content_id+product_name 去重）"""
+    conn.execute('''
+        INSERT INTO recommendations (product_name, platform, content_id, title, content_url, published_at, is_ad)
+        VALUES (?,?,?,?,?,?,?)
+    ''', (product_name[:60], platform, str(content_id)[:60], title[:120], content_url, published_at, is_ad))
+
+def list_recommendations(limit=50):
+    """博主推荐列表（按商品聚合）"""
+    conn = get_conn()
+    rows = conn.execute('''
+        SELECT product_name, COUNT(*) n, GROUP_CONCAT(DISTINCT platform) plats,
+               MAX(title) title, MAX(content_url) url
+        FROM recommendations
+        GROUP BY product_name ORDER BY n DESC, id DESC LIMIT ?
+    ''', (limit,)).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

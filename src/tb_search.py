@@ -355,7 +355,7 @@ def _parse_mtop_response(data: dict, max_items: int) -> list:
 
             if title and price:
                 items.append({
-                    'platform': 'taobao',
+                    'platform': 'tb',
                     'title': title,
                     'price': price,
                     'original_price': original if original and original > price else None,
@@ -455,7 +455,7 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
             pass
 
         items.append({
-            'platform': 'taobao',
+            'platform': 'tb',
             'title': title,
             'price': price,
             'original_price': original if original and original > price else None,

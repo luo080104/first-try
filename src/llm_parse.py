@@ -5,7 +5,8 @@ import os
 import urllib.request
 from datetime import datetime
 
-API_KEY = os.environ.get('DEEPSEEK_API_KEY', 'sk-edf4d1c70edf43708a8904bee4935297')
+# API Key 只从环境变量读取（禁止硬编码；部署见 docs/上下文清单.md 一、凭证与环境）
+API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 API_URL = 'https://api.deepseek.com/chat/completions'
 TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.log')
 
@@ -28,7 +29,7 @@ def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cach
     except Exception:
         pass
 
-def parse_intent(text: str, use_reasoner: bool = True) -> dict:
+def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V3（简单任务），R1 留给 AI 建议面板
     body = json.dumps({
         'model': 'deepseek-reasoner' if use_reasoner else 'deepseek-chat',
         'messages': [
