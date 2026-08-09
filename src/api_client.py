@@ -31,6 +31,25 @@ BASE_URL = 'https://openapi.dataoke.com/api/'
 # v5.2：折淘客（唯品会通道；未配置 key 时 search_vip 返回空，不报错）
 ZTK_APPKEY = os.environ.get('ZTK_APPKEY', '') or ENV.get('ZTK_APPKEY', '')
 ZTK_VIP_SID = os.environ.get('ZTK_VIP_SID', '') or ENV.get('ZTK_VIP_SID', '')
+
+# v6 优化（CrawlerTutorial 启发）：UA 池随机轮换，降低 API 限流识别
+UA_POOL = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+]
+
+
+def _random_ua() -> str:
+    return random.choice(UA_POOL)
+
+
+def _headers() -> dict:
+    return {'User-Agent': _random_ua(), 'Client-Sdk-Type': 'python'}
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/68.0.3440.84 Safari/537.36',
     'Client-Sdk-Type': 'python',
@@ -94,7 +113,7 @@ def get(api_url: str, biz_params: dict) -> dict:
     params.update(biz_params)
     params['sign'] = make_sign(params)
     url = BASE_URL + api_url + '?' + urllib.parse.urlencode(params)
-    with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=_headers()), timeout=15) as r:
         return json.loads(r.read().decode('utf-8'))
 
 def search_goods(keywords: str, category: str = None, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
@@ -161,7 +180,7 @@ def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
         params['order'] = '1'  # 逆序：价格从低到高/销量从高到低
     url = 'https://api.zhetaoke.com:10001/api/open_vip_queryWithOauth.ashx?' + urllib.parse.urlencode(params)
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=_headers()), timeout=15) as r:
             res = json.loads(r.read().decode('utf-8'))
     except Exception as e:
         print(f'⚠️ 唯品会 API 错误: {str(e)[:80]}')
