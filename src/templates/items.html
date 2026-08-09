@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品库 - Go购</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        .stats-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+        .stat-chip { background: #fff; border-radius: 20px; padding: 8px 14px; font-size: 13px;
+                     color: #636e72; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .stat-chip b { color: #ff6b35; font-size: 16px; }
+        .filters { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 14px;
+                   box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .f-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .f-row input, .f-row select { flex: 1; min-width: 100px; padding: 10px 12px; font-size: 15px;
+                      border: 2px solid #dfe6e9; border-radius: 10px; outline: none; }
+        .f-row input:focus, .f-row select:focus { border-color: #ff6b35; }
+        .f-btn { flex: none !important; padding: 10px 22px !important; background: #ff6b35; color: #fff;
+                 border: none !important; border-radius: 10px !important; font-size: 15px !important; cursor: pointer; }
+        .item-card { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px;
+                     box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .ic-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .ic-title { font-size: 14px; color: #2d3436; line-height: 1.5; flex: 1; word-break: break-all; }
+        .ic-meta { font-size: 12px; color: #b2bec3; line-height: 1.7; }
+        .ic-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .ic-price { font-size: 20px; font-weight: 700; color: #d63031; }
+        .ic-price .old { font-size: 12px; color: #b2bec3; text-decoration: line-through; font-weight: 400; }
+        .ic-actions a, .ic-actions button { font-size: 13px; margin-left: 8px; text-decoration: none;
+                      border: none; background: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+        .act-link { color: #0984e3; } .act-watch { color: #27ae60; } .act-chart { color: #ff6b35; }
+        .plat-tag { font-size: 12px; font-weight: 600; color: #fff; border-radius: 6px; padding: 3px 8px; }
+        .p-tb { background: #ff5000; } .p-jd { background: #e4393c; } .p-pdd { background: #e02e24; } .p-dy { background: #111; }
+        .hist-box { margin-top: 8px; padding: 10px; background: #f8f9fa; border-radius: 10px;
+                    font-size: 12px; color: #636e72; line-height: 1.8; }
+        .hist-chart { height: 180px; margin: 8px 0; }
+        .pager { display: flex; justify-content: center; gap: 10px; margin: 18px 0; }
+        .pager button { padding: 10px 22px; font-size: 15px; border: 2px solid #dfe6e9; border-radius: 10px;
+                        background: #fff; color: #2d3436; cursor: pointer; }
+        .pager button:disabled { opacity: 0.4; cursor: default; }
+        .empty-tip { text-align: center; color: #b2bec3; padding: 40px 0; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top">
+            <a href="/" class="back">←</a>
+            <h1>🛍️ 商品库</h1>
+            <a href="/watches" class="back" style="font-size:15px;padding:4px 10px">盯价</a>
+        </div>
+
+        <div class="stats-bar" id="stats-bar">
+            <span class="stat-chip">共 <b id="st-total">{{ stats.total }}</b> 件</span>
+            {% for p in stats.platforms %}
+            <span class="stat-chip">{{ p.platform }} <b>{{ p.n }}</b></span>
+            {% endfor %}
+            {% for c in stats.categories %}
+            <span class="stat-chip">{{ c.category }} <b>{{ c.n }}</b></span>
+            {% endfor %}
+        </div>
+
+        <div class="filters">
+            <div class="f-row">
+                <input type="text" id="f-kw" placeholder="搜索商品 / 品牌 / 型号…">
+                <select id="f-cat">
+                    <option value="">全品类</option>
+                    {% for c in categories %}{% if c %}<option value="{{ c }}">{{ c }}</option>{% endif %}{% endfor %}
+                </select>
+                <select id="f-plat">
+                    <option value="">全平台</option>
+                    <option value="tb">淘宝</option>
+                    <option value="jd">京东</option>
+                    <option value="pdd">拼多多</option>
+                    <option value="dy">抖音</option>
+                </select>
+            </div>
+            <div class="f-row">
+                <input type="number" id="f-min" placeholder="最低价 ¥" style="flex:0.5">
+                <input type="number" id="f-max" placeholder="最高价 ¥" style="flex:0.5">
+                <select id="f-sort">
+                    <option value="price_asc">价格 ↑</option>
+                    <option value="price_desc">价格 ↓</option>
+                    <option value="sales">销量</option>
+                    <option value="newest">最新入库</option>
+                </select>
+                <button class="f-btn" onclick="loadItems(1)">查询</button>
+            </div>
+        </div>
+
+        <div id="items-box"><div class="empty-tip">加载中…</div></div>
+        <div class="pager">
+            <button id="pg-prev" onclick="loadItems(page-1)" disabled>← 上一页</button>
+            <button id="pg-next" onclick="loadItems(page+1)" disabled>下一页 →</button>
+        </div>
+        <a href="/" class="back-home">← 回首页比价</a>
+    </div>
+
+    <script>
+        var page = 1, totalPages = 1;
+        function platName(p) { return {tb:'淘宝',jd:'京东',pdd:'拼多多',dy:'抖音'}[p] || p; }
+        function platClass(p) { return {tb:'p-tb',jd:'p-jd',pdd:'p-pdd',dy:'p-dy'}[p] || 'p-tb'; }
+        function loadItems(p) {
+            page = p;
+            var kw = document.getElementById('f-kw').value.trim();
+            var cat = document.getElementById('f-cat').value;
+            var plat = document.getElementById('f-plat').value;
+            var min = document.getElementById('f-min').value;
+            var max = document.getElementById('f-max').value;
+            var sort = document.getElementById('f-sort').value;
+            var q = new URLSearchParams({keyword: kw, category: cat, platform: plat,
+                                         min_price: min, max_price: max, sort: sort,
+                                         page: page, size: 20});
+            fetch('/api/items?' + q).then(r => r.json()).then(d => {
+                totalPages = Math.max(1, Math.ceil(d.total / d.size));
+                document.getElementById('pg-prev').disabled = page <= 1;
+                document.getElementById('pg-next').disabled = page >= totalPages;
+                var box = document.getElementById('items-box');
+                if (!d.items.length) { box.innerHTML = '<div class="empty-tip">库里还没有商品，去首页搜索一下吧！<br>（搜过的商品会自动沉淀到这里）</div>'; return; }
+                box.innerHTML = '<div class="stat" style="margin-bottom:10px">找到 ' + d.total + ' 件 · 第 ' + page + '/' + totalPages + ' 页</div>' +
+                d.items.map(function(it) {
+                    var platStyle = 'p-tb';
+                    var platName = it.platform;
+                    if (it.platform === 'tb') { platStyle = 'p-tb'; platName = '淘宝'; }
+                    else if (it.platform === 'jd') { platStyle = 'p-jd'; platName = '京东'; }
+                    else if (it.platform === 'pdd') { platStyle = 'p-pdd'; platName = '拼多多'; }
+                    else if (it.platform === 'dy') { platStyle = 'p-dy'; platName = '抖音'; }
+                    var actions = '';
+                    if (it.url) actions += '<a class="act-link" href="' + it.url + '" target="_blank" rel="noopener">去购买 ↗</a>';
+                    actions += '<button class="act-chart" onclick="loadHistory(this,\'' + it.platform + '\',\'' + encodeURIComponent(it.item_id) + '\')">📈 历史价</button>';
+                    actions += '<button class="act-watch" onclick="watchIt(\'' + it.title.replace(/'/g,'') + '\',\'' + it.platform + '\',\'' + it.item_id + '\',' + it.price + ')">🔔 盯价</button>';
+                    return '<div class="item-card">' +
+                        '<div class="ic-top"><span class="plat-tag ' + platStyle + '">' + platName + '</span>' +
+                        '<div class="ic-title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div></div>' +
+                        '<div class="ic-meta">' + (it.shop_name || '') + (it.brand ? ' ・ ' + it.brand : '') +
+                        (it.sales ? ' ・ 销量 ' + it.sales : '') + (it.category ? ' ・ ' + it.category : '') + '</div>' +
+                        '<div class="ic-bottom"><div class="ic-price">¥' + it.price +
+                        (it.original_price && it.original_price > it.price ? ' <span class="old">¥' + it.original_price + '</span>' : '') +
+                        (it.coupon_amount > 0 ? '<span style="font-size:11px;color:#ff5000;font-weight:600"> 券¥' + it.coupon_amount + '</span>' : '') +
+                        '</div><div class="ic-actions">' + actions + '</div></div>' +
+                        '<div class="hist-box" style="display:none"></div></div>';
+                }).join('');
+            });
+        }
+        function loadHistory(el, platform, itemId) {
+            var box = el.closest('.item-card').querySelector('.hist-box');
+            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+            box.innerHTML = '加载中…'; box.style.display = 'block';
+            fetch('/history?platform=' + platform + '&item_id=' + decodeURIComponent(itemId))
+                .then(r => r.json()).then(data => {
+                    if (!data.length) { box.innerHTML = '暂无历史记录（会随每次查询自动积累）'; return; }
+                    var summary = data[data.length - 1].summary;
+                    var diff = summary.current - summary.lowest;
+                    box.innerHTML = '<div style="font-weight:600">历史最低 ¥' + summary.lowest.toFixed(2) +
+                        '（共 ' + summary.count + ' 次）</div>' +
+                        '<div style="color:' + (diff <= 0 ? '#27ae60' : '#e67e22') + ';font-weight:600">' +
+                        (diff <= 0 ? '✅ 当前 = 历史最低' : '⚠️ 比最低贵 ¥' + diff.toFixed(2)) + '</div>' +
+                        '<div class="hist-chart" id="hc-' + platform + '-' + encodeURIComponent(itemId) + '"></div>' +
+                        data.slice(0, 6).map(d => '<div>' + d.queried_at.slice(0,16) + ' → ¥' + d.price + '</div>').join('');
+                    drawChart('hc-' + platform + '-' + encodeURIComponent(itemId), data);
+                }).catch(() => box.innerHTML = '加载失败');
+        }
+        function drawChart(cid, data) {
+            function paint() {
+                var el = document.getElementById(cid);
+                if (!el || !window.echarts) return;
+                var pts = data.slice(0, -1).reverse().map(function(d) { return [d.queried_at.slice(5,16), d.price]; });
+                var chart = echarts.init(el);
+                chart.setOption({
+                    grid: { left: 44, right: 12, top: 14, bottom: 24 },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: pts.map(p => p[0]), axisLabel: { fontSize: 10 } },
+                    yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10 } },
+                    series: [{ name: '价格', type: 'line', data: pts.map(p => p[1]), smooth: true, symbolSize: 6,
+                        lineStyle: { color: '#ff6b35', width: 2.5 }, itemStyle: { color: '#ff6b35' },
+                        areaStyle: { color: 'rgba(255,107,53,0.12)' },
+                        markPoint: { data: [{ type: 'min', name: '最低' }] } }]
+                });
+            }
+            if (window.echarts) { paint(); return; }
+            var s = document.createElement('script');
+            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
+            s.onload = paint; document.head.appendChild(s);
+        }
+        function watchIt(title, platform, itemId, price) {
+            var target = prompt('当前价 ¥' + price + '，目标价（低于此价提醒）：', (price * 0.9).toFixed(0));
+            if (!target) return;
+            var fd = new FormData();
+            fd.append('title', title); fd.append('platform', platform);
+            fd.append('item_id', itemId); fd.append('current_price', price);
+            fd.append('target_price', parseFloat(target));
+            fetch('/watch', {method: 'POST', body: fd})
+                .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
+                .catch(() => alert('盯价失败'));
+        }
+        document.getElementById('f-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadItems(1); });
+        loadItems(1);
+    </script>
+</body>
+</html>

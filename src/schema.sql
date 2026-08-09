@@ -149,3 +149,31 @@ CREATE TABLE IF NOT EXISTS comment_sentiment (
     analyzed_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_sentiment ON comment_sentiment(platform, content_id);
+
+-- ========== v4 商品库 ==========
+CREATE TABLE IF NOT EXISTS product_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    platform TEXT NOT NULL,              -- tb/jd/pdd/dy
+    item_id TEXT NOT NULL,               -- 平台商品 ID（去重键）
+    title TEXT NOT NULL,
+    brand TEXT DEFAULT '',               -- 提取品牌
+    series TEXT DEFAULT '',              -- 系列/型号
+    category TEXT DEFAULT '',            -- 品类
+    price REAL DEFAULT 0,                -- 当前价
+    original_price REAL,                 -- 原价/划线价
+    coupon_amount REAL DEFAULT 0,        -- 券金额
+    shop_name TEXT DEFAULT '',
+    sales INTEGER DEFAULT 0,             -- 销量
+    url TEXT DEFAULT '',
+    img TEXT DEFAULT '',                 -- 缩略图
+    specs TEXT DEFAULT '{}',             -- JSON 参数
+    is_ad INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'api',           -- api/browser/manual
+    first_seen TEXT DEFAULT (datetime('now','localtime')),
+    last_seen TEXT DEFAULT (datetime('now','localtime')),
+    UNIQUE(platform, item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_items_cat ON product_items(category);
+CREATE INDEX IF NOT EXISTS idx_items_price ON product_items(price);
+CREATE INDEX IF NOT EXISTS idx_items_brand ON product_items(brand);
+CREATE INDEX IF NOT EXISTS idx_items_title ON product_items(title);

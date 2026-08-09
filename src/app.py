@@ -108,7 +108,7 @@ def search_jd_full(keyword: str) -> list:
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies
+from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies, upsert_product_item, query_items, stats_items
 
 app = FastAPI(title='Go购')
 templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
@@ -308,6 +308,30 @@ def watches_page(request: Request):
     return templates.TemplateResponse(request, 'watches.html',
                                       {'watches': rows, 'hits': hits})
 
+# ========== v4 商品库 ==========
+
+@app.get('/api/items')
+def api_items(keyword: str = '', category: str = '', platform: str = '',
+             min_price: float = 0, max_price: float = 0,
+             sort: str = 'price_asc', page: int = 1, size: int = 30):
+    """商品库查询接口"""
+    init_db()
+    return query_items(keyword.strip(), category, platform, min_price, max_price,
+                       sort, max(1, page), min(max(1, size), 100))
+
+@app.get('/api/stats')
+def api_stats():
+    """商品库统计接口"""
+    init_db()
+    return stats_items()
+
+@app.get('/items', response_class=HTMLResponse)
+def items_page(request: Request):
+    """商品库浏览页"""
+    init_db()
+    stats = stats_items()
+    return templates.TemplateResponse(request, 'items.html', {'stats': stats, 'categories': CATEGORIES})
+
 @app.get('/search_sse')
 async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0):
     async def gen():
@@ -378,6 +402,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             conn = get_conn()
             for it in all_items:
                 save_search_result(conn, it, category or '未分类')
+                upsert_product_item(conn, it, category or '')
             conn.close()
 
             # 对话式导购：触发条件（WorkBuddy 审核）——先导购后补搜
@@ -458,6 +483,7 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(''))
     conn = get_conn()
     for it in all_items:
         save_search_result(conn, it, category or '未分类')
+        upsert_product_item(conn, it, category or '')
     conn.close()
 
     # 国补/优惠标注

@@ -2,6 +2,7 @@
 # 职责：建库建表 + 商品/SKU/价格历史保存
 import json
 import os
+import re
 import sqlite3
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
@@ -207,3 +208,100 @@ def find_subsidies(keyword: str, category: str = '') -> list:
                     hits.append(d)
                     break
     return hits
+
+# ========== v4 商品库 ==========
+
+def upsert_product_item(conn, item: dict, category: str = ''):
+    """搜索结果沉淀到商品库（platform+item_id 去重，更新最新价格/销量）"""
+    platform = item.get('platform', 'tb')
+    item_id = str(item.get('goodsId') or item.get('item_id') or '')
+    if not item_id:
+        return None
+    title = (item.get('title') or '')[:120]
+    brand = (item.get('brand') or '')[:30]
+    series = (item.get('series') or '')[:50]
+    price = item.get('actualPrice') or item.get('price') or 0
+    img = (item.get('img') or item.get('image') or '')[:300]
+    conn.execute('''
+        INSERT INTO product_items
+            (platform, item_id, title, brand, series, category, price, original_price,
+             coupon_amount, shop_name, sales, url, img, is_ad, source)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ON CONFLICT(platform, item_id) DO UPDATE SET
+            title=excluded.title, price=excluded.price,
+            original_price=COALESCE(excluded.original_price, product_items.original_price),
+            coupon_amount=excluded.coupon_amount, sales=excluded.sales,
+            last_seen=datetime('now','localtime')
+    ''', (
+        platform, item_id, title, brand, series, category,
+        float(price or 0), item.get('originalPrice'),
+        item.get('couponPrice') or item.get('coupon_amount') or 0,
+        (item.get('shopName') or item.get('shop_name') or item.get('shop') or '')[:60],
+        _parse_sales(item.get('monthSales') or item.get('sales') or 0),
+        (item.get('url') or '')[:300], img,
+        1 if item.get('is_ad') or item.get('is_p4p') else 0,
+        item.get('_source', 'api'),
+    ))
+    return item_id
+
+def _parse_sales(v) -> int:
+    """销量解析容错：'15.5万+' → 155000，'50000' → 50000，其他 → 0"""
+    if isinstance(v, (int, float)):
+        return int(v)
+    s = str(v).strip()
+    if not s:
+        return 0
+    m = re.match(r'([\d.]+)\s*万', s)
+    if m:
+        return int(float(m.group(1)) * 10000)
+    m = re.match(r'(\d+)', s)
+    return int(m.group(1)) if m else 0
+
+def query_items(keyword: str = '', category: str = '', platform: str = '',
+                min_price: float = 0, max_price: float = 0,
+                sort: str = 'price_asc', page: int = 1, size: int = 30) -> dict:
+    """商品库查询：关键词模糊 + 品类/平台/价格筛选 + 排序 + 分页"""
+    where, args = [], []
+    if keyword:
+        where.append('(title LIKE ? OR brand LIKE ? OR series LIKE ?)')
+        k = f'%{keyword}%'
+        args += [k, k, k]
+    if category:
+        where.append('category = ?'); args.append(category)
+    if platform:
+        where.append('platform = ?'); args.append(platform)
+    if min_price > 0:
+        where.append('price >= ?'); args.append(min_price)
+    if max_price > 0:
+        where.append('price <= ?'); args.append(max_price)
+    wsql = ('WHERE ' + ' AND '.join(where)) if where else ''
+    order = {'price_asc': 'price ASC', 'price_desc': 'price DESC',
+             'sales': 'sales DESC', 'newest': 'first_seen DESC'}.get(sort, 'price ASC')
+    conn = get_conn()
+    total = conn.execute(f'SELECT COUNT(*) FROM product_items {wsql}', args).fetchone()[0]
+    rows = conn.execute(f'''
+        SELECT * FROM product_items {wsql}
+        ORDER BY {order} LIMIT ? OFFSET ?
+    ''', args + [size, (page - 1) * size]).fetchall()
+    conn.close()
+    return {'total': total, 'page': page, 'size': size,
+            'items': [dict(r) for r in rows]}
+
+def stats_items() -> dict:
+    """商品库统计：总量/平台分布/品类分布/品牌 TOP10"""
+    conn = get_conn()
+    total = conn.execute('SELECT COUNT(*) FROM product_items').fetchone()[0]
+    by_platform = conn.execute('''
+        SELECT platform, COUNT(*) n FROM product_items GROUP BY platform ORDER BY n DESC
+    ''').fetchall()
+    by_category = conn.execute('''
+        SELECT category, COUNT(*) n FROM product_items WHERE category != '' GROUP BY category ORDER BY n DESC
+    ''').fetchall()
+    by_brand = conn.execute('''
+        SELECT brand, COUNT(*) n FROM product_items WHERE brand != '' GROUP BY brand ORDER BY n DESC LIMIT 10
+    ''').fetchall()
+    conn.close()
+    return {'total': total,
+            'platforms': [dict(r) for r in by_platform],
+            'categories': [dict(r) for r in by_category],
+            'brands': [dict(r) for r in by_brand]}
