@@ -85,6 +85,11 @@
                 </select>
                 <button class="f-btn" onclick="loadItems(1)">查询</button>
             </div>
+            <div class="f-row" style="margin-bottom:0">
+                <input type="text" id="crawl-kw" placeholder="深度采集关键词（如：石头岛 外套）…" style="flex:2">
+                <button class="f-btn" id="crawl-btn" onclick="deepCrawl()" style="background:#27ae60">⚡ 深度采集</button>
+                <span id="crawl-tip" style="font-size:12px;color:#b2bec3;align-self:center">翻 3 页约 2 分钟，需弹浏览器</span>
+            </div>
         </div>
 
         <div id="items-box"><div class="empty-tip">加载中…</div></div>
@@ -192,7 +197,26 @@
                 .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
                 .catch(() => alert('盯价失败'));
         }
+        function deepCrawl() {
+            var kw = document.getElementById('crawl-kw').value.trim();
+            if (!kw) { alert('请输入要采集的关键词'); return; }
+            var btn = document.getElementById('crawl-btn');
+            btn.disabled = true; btn.innerText = '采集进行中…（弹浏览器，勿动）';
+            var fd = new FormData();
+            fd.append('keyword', kw);
+            fd.append('category', document.getElementById('f-cat').value);
+            fd.append('pages', 3);
+            fetch('/api/deep_crawl', {method: 'POST', body: fd})
+                .then(r => r.json()).then(d => {
+                    btn.disabled = false; btn.innerText = '⚡ 深度采集';
+                    alert(d.msg);
+                    loadItems(1);
+                    location.reload();
+                })
+                .catch(() => { btn.disabled = false; btn.innerText = '⚡ 深度采集'; alert('采集失败（可能超时或验证码）'); });
+        }
         document.getElementById('f-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadItems(1); });
+        document.getElementById('crawl-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') deepCrawl(); });
         loadItems(1);
     </script>
 </body>

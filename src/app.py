@@ -72,11 +72,11 @@ def read_content_items(keyword: str) -> dict:
         result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
     return result
 
-def search_taobao_full(keyword: str) -> list:
+def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import tb_search
-        items = tb_search.search_taobao(keyword, max_items=8)
+        items = tb_search.search_taobao(keyword, max_items=max_items, page=page)
         for it in items:
             if 'actualPrice' not in it and it.get('price') is not None:
                 it['actualPrice'] = it['price']
@@ -84,16 +84,17 @@ def search_taobao_full(keyword: str) -> list:
             it['shopName'] = it.get('shop_name') or it.get('shop') or ''
             it['title'] = it.get('title', '')
             it['platform'] = 'tb'
+            it['_source'] = 'browser'
         return items
     except Exception as e:
         print(f'[tb_full] 失败: {str(e)[:80]}')
         return []
 
-def search_jd_full(keyword: str) -> list:
+def search_jd_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     """京东全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
         import jd_search
-        items = jd_search.search_jd(keyword, max_items=8)
+        items = jd_search.search_jd(keyword, max_items=max_items, page=page)
         for it in items:
             if 'actualPrice' not in it and it.get('price') is not None:
                 it['actualPrice'] = it['price']
@@ -101,6 +102,7 @@ def search_jd_full(keyword: str) -> list:
             it['shopName'] = it.get('shop') or ''
             it['title'] = it.get('title', '')
             it['platform'] = 'jd'
+            it['_source'] = 'browser'
         return items
     except Exception as e:
         print(f'[jd_full] 失败: {str(e)[:80]}')
@@ -331,6 +333,45 @@ def items_page(request: Request):
     init_db()
     stats = stats_items()
     return templates.TemplateResponse(request, 'items.html', {'stats': stats, 'categories': CATEGORIES})
+
+@app.post('/api/deep_crawl')
+async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pages: int = Form(3)):
+    """深度采集：淘宝+京东浏览器翻页采集（用户主动触发，低频约束）→ 沉淀入库"""
+    keyword = keyword.strip()
+    if not keyword:
+        return {'ok': False, 'msg': '请输入关键词'}
+    pages = min(max(pages, 1), 5)
+    results = {'tb': [], 'jd': []}
+    # 淘宝翻页（tb_search 已支持 page）
+    try:
+        for p in range(1, pages + 1):
+            items = await asyncio.to_thread(search_taobao_full, keyword, p)
+            results['tb'] += items
+            if len(items) < 8:
+                break
+    except Exception as e:
+        print(f'[deep_crawl tb] {str(e)[:80]}')
+    # 京东翻页（含 30s 低频约束，3 页约 1.5 分钟）
+    try:
+        for p in range(1, pages + 1):
+            items = await asyncio.to_thread(search_jd_full, keyword, p)
+            results['jd'] += items
+            if len(items) < 8:
+                break
+    except Exception as e:
+        print(f'[deep_crawl jd] {str(e)[:80]}')
+    # 入库
+    conn = get_conn()
+    added = 0
+    for plat, items in results.items():
+        for it in items:
+            it['_source'] = 'browser'
+            if upsert_product_item(conn, it, category or ''):
+                added += 1
+    conn.commit()
+    conn.close()
+    total = sum(len(v) for v in results.values())
+    return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} = {total} 条，入库 {added} 条'}
 
 @app.get('/search_sse')
 async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0):

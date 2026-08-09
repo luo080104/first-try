@@ -24,10 +24,10 @@ def _find_browser():
             return p
     return None
 
-def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150) -> list:
+def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int = 1) -> list:
     """京东关键词搜索（浏览器自动化）。
-    返回: [{title, price, original_price, sales, shop, is_ad, url}]
-    遇验证码返回 [] 并打印提示。"""
+    返回: [{platform, title, price, original_price, sales, shop, is_ad, url}]
+    遇验证码返回 [] 并打印提示。page=1 首页，2/3 翻页。"""
     global _last_call_time
     # 低频约束：两次调用间隔至少 30 秒
     wait = 30 - (time.time() - _last_call_time)
@@ -52,6 +52,8 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150) -> list:
 
     try:
         url = f'https://search.jd.com/Search?keyword={keyword}&enc=utf-8'
+        if page > 1:
+            url += f'&page={page}'
         tab.get(url)
         tab.wait.doc_loaded()
 
