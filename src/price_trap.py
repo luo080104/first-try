@@ -48,12 +48,10 @@ def detect_trap(keyword: str) -> dict:
         # 虚标原价检测：original_price / 中位数 > 1.5
         origs = [r['orig'] for r in recs if r.get('orig')]
         fake_orig = False
-        fake_msg = ''
         if origs:
             o_median = statistics.median(origs)
             if o_median and median and o_median / median > 1.5:
                 fake_orig = True
-                fake_msg = f'虚标原价：标价 ¥{o_median:.0f} 而实际中位价 ¥{median:.0f}（1.5 倍以上）'
 
         # 先涨后降检测：找高点（比前5条均值高≥10%且持续≥3条）
         trap = False
@@ -76,7 +74,7 @@ def detect_trap(keyword: str) -> dict:
                 'has_trap': trap,
                 'trap_msg': f'疑似先涨后降：近期涨到 ¥{peak:.0f} 后回落，当前 ¥{cur:.0f}，可能比涨价前贵',
                 'has_fake_original': fake_orig,
-                'fake_msg': fake_msg,
+                'fake_msg': f'虚标原价：标价 ¥{o_median:.0f} 而实际中位价 ¥{median:.0f}（1.5 倍以上）',
                 'data_count': len(rows),
             }
             break

@@ -60,7 +60,7 @@ def _find_browser():
             return p
     return None
 
-def search_taobao(keyword: str, max_items: int = 30, login_wait: int = 150, page: int = 1) -> list:
+def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page: int = 1) -> list:
     """淘宝关键词搜索（浏览器自动化 + API 拦截）。
     返回: [{platform, title, price, original_price, sales, shop, location, is_ad, is_tmall,
            brand, service_tags, url}]
@@ -149,7 +149,7 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
     # CSDN 实测：淘宝发两次相同请求，第一次假数据，第二次真数据
     items = []
     packets_received = 0
-    max_packets = 6  # 最多等 6 个包（加大力度：多包拦截，跳假数据后拿更多真包）
+    max_packets = 3  # 最多等 3 个包
 
     while packets_received < max_packets and len(items) < max_items:
         try:
@@ -204,12 +204,12 @@ def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_
         else:
             print(f'[tb] 第 {packets_received} 个包无有效商品数据（可能是假数据包）')
 
-    # 如果第一批数据不够，滚动加载更多（xiuyegege 模式：每次滚 500px + random 2-4s 间隔）
+    # 如果第一批数据不够，滚动加载更多（xiuyegege 模式）
     if len(items) < max_items and packets_received > 0:
-        print(f'[tb] 当前 {len(items)} 条，滚动加载更多（共 5 轮）...')
-        for _ in range(5):
+        print(f'[tb] 当前 {len(items)} 条，滚动加载更多...')
+        for _ in range(3):
             tab.run_js('window.scrollTo(0, document.body.scrollHeight)')
-            time.sleep(random.uniform(2, 4))
+            time.sleep(2)
             try:
                 packet = tab.listen.wait(timeout=10)
                 if packet and not isinstance(packet, bool):

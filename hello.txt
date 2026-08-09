@@ -1,4 +1,0 @@
-Hello, GitHub!
-
-This is my first file pushed from my local machine.
-Made on 2026-08-04.

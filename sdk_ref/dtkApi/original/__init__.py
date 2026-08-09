@@ -1,0 +1,72 @@
+# -*- coding:utf8 -*-
+"""
+TbTopicListReq:官方活动(1元购)
+DdqGoodsListReq:咚咚抢
+RankingListReq:各大榜单
+CatalogueReq:精选专题
+TopicGoodsListReq:专题商品
+OpGoodsListReq:9.9包邮精选
+BrandListReq:品牌库
+ListSimilerGoodsByOpenReq：猜你喜欢
+ActivityGoodsListReq:活动商品
+ActivityCatalogueReq:热门活动
+LiveMaterialGoodsListReq:直播好货
+ExplosiveGoodsListReq:每日爆品推荐
+ExclusiveGoodsListReq:大淘客独家券商品
+FriendsCircleListReq:朋友圈文案商品
+GoodspriceTrendReq:商品历史券后价
+AlbumListReq:专辑列表
+CarouselMapResponseReq:轮播图
+CzmfGoodsListReq:超值买返商品
+GetBrandColumnListReq:品牌栏目
+GetBrandGoodsListReq:单个品牌详情
+GetHalfPriceDayReq:每日半价
+HighCommissionSelectedReq:高佣精选
+HistoricalNewLowCommodityReq:历史新低商品合集
+JdBigBrandDiscountReq:京东大牌折扣
+JdGoodspriceTrendReq:京东商品历史券后价
+JdNewYearCommodityReq:京东年货节商品
+JdNineFreeShippingReq:京东9.9包邮
+JdRealTimeListReq:京东实时榜单
+MostPopularCommodityListReq:爆品预告商品合集
+PopularAnchorCommendReq:热门主播力荐商品
+SubdivisionCategoryListReq:细分类目合集
+SubdivisionCategoryRankReq:细分类目榜
+SuperDiscountGoodsReq:折上折
+XianBaoDetailReq:线报
+"""
+
+from dtkApi.original.TbTopicListReq import TbTopicListReq
+from dtkApi.original.DdqGoodsListReq import DdqGoodsListReq
+from dtkApi.original.RankingListReq import RankingListReq
+from dtkApi.original.CatalogueReq import CatalogueReq
+from dtkApi.original.TopicGoodsListReq import TopicGoodsListReq
+from dtkApi.original.OpGoodsListReq import OpGoodsListReq
+from dtkApi.original.BrandListReq import BrandListReq
+from dtkApi.original.ListSimilerGoodsByOpenReq import ListSimilerGoodsByOpenReq
+from dtkApi.original.ActivityGoodsListReq import ActivityGoodsListReq
+from dtkApi.original.ActivityCatalogueReq import ActivityCatalogueReq
+from dtkApi.original.LiveMaterialGoodsListReq import LiveMaterialGoodsListReq
+from dtkApi.original.ExplosiveGoodsListReq import ExplosiveGoodsListReq
+from dtkApi.original.ExclusiveGoodsListReq import ExclusiveGoodsListReq
+from dtkApi.original.FriendsCircleListReq import FriendsCircleListReq
+from dtkApi.original.GoodspriceTrendReq import GoodspriceTrendReq
+from dtkApi.original.AlbumListReq import AlbumListReq
+from dtkApi.original.CarouselMapResponseReq import CarouselMapResponseReq
+from dtkApi.original.CzmfGoodsListReq import CzmfGoodsListReq
+from dtkApi.original.GetBrandColumnListReq import GetBrandColumnListReq
+from dtkApi.original.GetBrandGoodsListReq import GetBrandGoodsListReq
+from dtkApi.original.GetHalfPriceDayReq import GetHalfPriceDayReq
+from dtkApi.original.HighCommissionSelectedReq import HighCommissionSelectedReq
+from dtkApi.original.HistoricalNewLowCommodityReq import HistoricalNewLowCommodityReq
+from dtkApi.original.JdBigBrandDiscountReq import JdBigBrandDiscountReq
+from dtkApi.original.JdGoodspriceTrendReq import JdGoodspriceTrendReq
+from dtkApi.original.JdNewYearCommodityReq import JdNewYearCommodityReq
+from dtkApi.original.JdNineFreeShippingReq import JdNineFreeShippingReq
+from dtkApi.original.JdRealTimeListReq import JdRealTimeListReq
+from dtkApi.original.MostPopularCommodityListReq import MostPopularCommodityListReq
+from dtkApi.original.PopularAnchorCommendReq import PopularAnchorCommendReq
+from dtkApi.original.SubdivisionCategoryListReq import SubdivisionCategoryListReq
+from dtkApi.original.SubdivisionCategoryRankReq import SubdivisionCategoryRankReq
+from dtkApi.original.SuperDiscountGoodsReq import SuperDiscountGoodsReq
+from dtkApi.original.XianBaoDetailReq import XianBaoDetailReq
