@@ -45,6 +45,7 @@ def search_pdd(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
     co.set_browser_path(browser_path)
     co.set_local_port(LOCAL_PORT)
     co.set_user_data_path(PROFILE_DIR)
+    co.headless()
     browser = Chromium(co)
     tab = browser.latest_tab
 

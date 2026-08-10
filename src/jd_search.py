@@ -50,6 +50,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
     co.set_browser_path(browser_path)
     co.set_local_port(LOCAL_PORT)  # 9301：避免与 CDP 9222 / 淘宝 9300 冲突
     co.set_user_data_path(PROFILE_DIR)
+    co.headless()
     co.set_argument('--start-maximized')
     browser = Chromium(co)
     tab = browser.latest_tab
