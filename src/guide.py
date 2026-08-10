@@ -225,6 +225,10 @@ def search_recommend(need_card: dict) -> list:
         if k not in seen:
             seen.add(k)
             uniq.append(it)
+    # 8. 匹配度标注（A2A 启发：多维加权，推荐卡片显示）
+    for it in uniq:
+        it['match'] = match_score(it, need_card)
+    uniq.sort(key=lambda x: x.get('match', 0), reverse=True)
     return uniq[:6]
 
 
@@ -284,6 +288,53 @@ def _extract_keyword(text: str) -> str:
         if w in text:
             return w
     return text.strip()[:12]
+
+
+# ========== 需求-商品匹配度（A2A Match 启发：多维加权）==========
+
+def match_score(it: dict, need_card: dict) -> float:
+    """计算商品与需求卡的匹配度（0-98）
+    预算吻合 40% + 用途匹配 30% + 品牌命中 20% + 性价比 10%"""
+    price = it.get('actualPrice') or 0
+    title = str(it.get('title') or '')
+    s = 0.0
+    # 预算吻合（40%）：价格落在预算 50%-105% 区间最理想
+    budget = need_card.get('budget')
+    if budget and budget != '99999':
+        b = float(budget)
+        if b * 0.5 <= price <= b * 1.05:
+            s += 40
+        elif price < b * 0.5:
+            s += 20
+        else:
+            s += 10
+    else:
+        s += 25
+    # 用途匹配（30%）
+    purpose = need_card.get('purpose')
+    PURPOSE_WORDS = {'游戏': ['游戏本', '电竞', '显卡', '拯救者', '天选', '暗影', 'rog', '机械革命'],
+                     '办公': ['轻薄', '商务', '办公'],
+                     '学习': ['学习', '学生'],
+                     '家用': ['家用', '家庭']}
+    if purpose:
+        words = PURPOSE_WORDS.get(purpose, [])
+        s += 30 if any(w in title.lower() for w in words) else 15
+    else:
+        s += 20
+    # 品牌命中（20%）
+    brand = need_card.get('brand')
+    if brand:
+        parts = [b for b in brand.replace('/', ' ').replace('、', ' ').split() if len(b) >= 2]
+        s += 20 if any(b in title for b in parts) else 5
+    else:
+        s += 12
+    # 性价比（10%）
+    try:
+        from api_client import value_score
+        s += min(value_score(it) / 10, 10)
+    except Exception:
+        s += 5
+    return round(min(98, s))
 
 
 if __name__ == '__main__':

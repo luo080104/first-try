@@ -80,11 +80,13 @@
             items.forEach(function(it) {
                 var div = document.createElement('div');
                 div.className = 'rec-card';
+                var mc = it.match >= 80 ? '#27ae60' : (it.match >= 60 ? '#e67e22' : '#b2bec3');
                 div.innerHTML = '<div class="r-title">' + esc(it.title || '') + '</div>' +
                     '<div class="r-meta">' + platName(it.platform) + ' ・ ' + esc(it.shopName || '') +
                     (it.monthSales ? ' ・ 销量 ' + it.monthSales : '') + '</div>' +
                     '<span class="r-price">¥' + it.actualPrice + '</span> ' +
                     (it.originalPrice && it.originalPrice > it.actualPrice ? '<span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + it.originalPrice + '</span>' : '') +
+                    ' <span style="color:' + mc + ';font-size:13px;font-weight:600">🎯 匹配度 ' + (it.match || '?') + '%</span>' +
                     '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '">⚖️ 去比价 →</a>';
                 box.insertBefore(div, document.getElementById('typing'));
             });
