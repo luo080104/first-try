@@ -42,11 +42,21 @@ def shop_rating_of(item: dict) -> dict:
         if gcr >= 98: rating += 0.3; signals.append(f'好评{gcr}%')
         elif gcr < 90: rating -= 0.5; signals.append(f'⚠️好评{gcr}%')
 
-    # 3) 店铺等级（淘宝 shopLevel / 京东 shopLevel）
+    # 3) 店铺等级/评分（注意：京东 shopLevel 是 4.x 分制评分，淘宝是数字等级）
     lv = _num(item.get('shop_level'))
     if lv:
-        if lv >= 15: rating += 0.2; signals.append(f'等级{lv}')
-        elif lv <= 5: rating -= 0.2
+        if plat == 'jd':
+            # 京东：5 分制店铺评分
+            if lv >= 4.8: rating += 0.3; signals.append(f'店铺分{lv}')
+            elif lv >= 4.5: rating += 0.1
+            elif lv < 4.0: rating -= 0.3; signals.append(f'⚠️店铺分低{lv}')
+        else:
+            # 淘宝：数字等级
+            if lv >= 15: rating += 0.2; signals.append(f'等级{lv}')
+            elif lv <= 5: rating -= 0.2
+    # 3b) 京东官方店铺标签（shopLabel=1 → 官方旗舰店认证）
+    if plat == 'jd' and str(item.get('shop_label')) == '1':
+        rating += 0.2; signals.append('官方认证')
 
     # 4) 金牌卖家
     if item.get('gold_seller') in (1, '1', True):
