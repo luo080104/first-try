@@ -105,6 +105,14 @@ def main(limit: int = 500):
 
 
 if __name__ == '__main__':
+    # 2026-08-11 单实例保护（之前 nohup+vbs 双启动 → 双进程循环弹窗事故）
+    import socket
+    try:
+        _s = socket.socket()
+        _s.bind(('127.0.0.1', 9330))  # 占端口防重复启动
+    except OSError:
+        print('[fill] 已有实例在运行，退出')
+        sys.exit(0)
     n = int(sys.argv[1]) if len(sys.argv) > 1 else 500
     print('=== 店铺成立时间回填（通宵任务，Ctrl+C 可停，断点续跑）===')
     while True:
