@@ -7018,3 +7018,43 @@ headless❌ → window-position❌ → dp hide⚠️ → ctypes ShowWindow✅(�
 - run_crawl.vbs（隐藏窗口后台 + data/crawl.log 日志）
 - 单实例保护已加（socket 9331，防双进程）
 - 明早看：crawl.log + 商品库增量
+
+
+## 小布代码检查（2026-08-11 凌晨）
+
+### 通过项 ✅
+- max_seconds 默认 72000（20h）✅
+- 自动扩展已关闭 ✅
+- traceback 调试代码已移除 ✅
+- 四平台并行采集逻辑正确 ✅
+
+### P1-1：API 上限只有 12h，不是 20h 🟡
+`app.py:932` max_minutes 上限写死 720（12h）。改 `min(max(max_minutes, 10), 1200)` 即可对齐20h。
+同时 `api_crawl` 默认 `max_minutes: int = Form(480)` 也建议改成 1200。
+
+### P1-2：单实例锁只保护了 __main__，没保护 API 🟡
+socket 9331 只在 `python src/crawl.py` 运行时生效。浏览器点"采集启动"走的是 `/api/crawl` → `asyncio.create_task(run_crawl_round(...))`，不经过 __main__。
+虽然 `get_progress().running` 有检查，但在 uvicorn reload 或快速双击时可能被绕过。
+**建议**：把 socket bind 逻辑提到 `run_crawl_round()` 函数开头，__main__ 和 API 两条路径都受保护。
+
+### 总结
+两个 P1 都不影响今晚通宵采集（只要走 __main__ 启动就行）。明早把 app.py 上限和单实例锁补一下。
+
+---
+
+# 📤 通宵采集已启动（2026-08-11 01:xx）+ 明早修复清单
+
+## 采集状态
+- ✅ 已启动（nohup 方式，data/crawl.log）
+- ✅ tb/vip/pdd 浏览器通道工作（PDD/唯品会 API 失败自动走浏览器）
+- ⚠️ 京东榜单通道失败：jd_api `name 'get_conn' is not defined`（明早修，不影响今晚）
+
+## 明早修复清单（小布 P1 + 新发现）
+1. **P1-1**：app.py L932 `max_minutes=720`（12h 写死）→ 1200 对齐 20h
+2. **P1-2**：单实例锁只在 `__main__`——`/api/crawl` API 路径补锁（防 uvicorn reload 竞态/浏览器双击双采集）
+3. **新发现**：jd_api.py get_conn 未定义（京东榜单 crawl_jd_by_elite 失败）——查 import
+4. 明早检查：crawl.log 增量 + 商品库平台分布（目标 pdd/vip 显著增长）
+
+## 采集配置（小布已确认）
+- 20h 兜底 + 关自动扩展（571 词采完自然停）+ 四平台（tb/vip/pdd 浏览器 + jd 榜单）
+- 单实例保护（socket 9331）+ 隐藏浏览器（browser_pool）+ 日志文件
