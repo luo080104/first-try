@@ -383,7 +383,8 @@ def _parse_sales(v) -> int:
 def query_items(keyword: str = '', category: str = '', platform: str = '',
                 min_price: float = 0, max_price: float = 0,
                 sort: str = 'price_asc', page: int = 1, size: int = 30) -> dict:
-    """商品库查询：关键词模糊 + 品类/平台/价格筛选 + 排序 + 分页"""
+    """商品库查询：关键词模糊 + 品类/平台/价格筛选 + 排序 + 分页
+    2026-08-11 小布方案3：整句搜 0 结果 → 分词降级（去停用词/提取型号token）自动重搜"""
     where, args = [], []
     if keyword:
         where.append('(title LIKE ? OR brand LIKE ? OR series LIKE ?)')
@@ -407,6 +408,33 @@ def query_items(keyword: str = '', category: str = '', platform: str = '',
         ORDER BY {order} LIMIT ? OFFSET ?
     ''', args + [size, (page - 1) * size]).fetchall()
     conn.close()
+    if total == 0 and keyword:
+        # 分词降级：提取型号token（5070ti/rtx5090）+ 去停用词后的中文词，逐个试
+        import re
+        _STOP = ('帮我', '我看', '的电脑', '电脑', '买', '一个', '想要', '大概', '什么',
+                 '价格', '推荐', '看看', '搜索', '给我', '找', '一下', '有没有',
+                 '便宜', '性价比', '好的', '这个', '那种', '多少钱', '怎么样', '推荐下')
+        tokens = re.findall(r'[a-zA-Z0-9]+', keyword)
+        kw2 = keyword
+        for w in _STOP:
+            kw2 = kw2.replace(w, ' ')
+        chinese = [p.strip() for p in kw2.split() if p.strip()]
+        cands = tokens + chinese
+        for c in cands:
+            if len(c) < 2:
+                continue
+            k2 = f'%{c}%'
+            conn = get_conn()
+            t2 = conn.execute('SELECT COUNT(*) FROM product_items WHERE title LIKE ? OR brand LIKE ? OR series LIKE ?',
+                              (k2, k2, k2)).fetchone()[0]
+            if t2 > 0:
+                rows2 = conn.execute(f'''SELECT * FROM product_items WHERE title LIKE ? OR brand LIKE ? OR series LIKE ?
+                    ORDER BY {order} LIMIT ? OFFSET ?''', (k2, k2, k2, size, (page - 1) * size)).fetchall()
+                conn.close()
+                return {'total': t2, 'page': page, 'size': size,
+                        'items': [dict(r) for r in rows2],
+                        'degraded': True, 'degraded_kw': c}
+            conn.close()
     return {'total': total, 'page': page, 'size': size,
             'items': [dict(r) for r in rows]}
 

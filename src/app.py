@@ -373,6 +373,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                            'groups': groups, 'total': len(items),
                            'tb_count': 0, 'pdd_count': 0, 'manual_count': 0,
                            'content': content, 'slow_count': 0, 'options': [],
+                           'degraded': data.get('degraded'), 'degraded_kw': data.get('degraded_kw'),
                            'subsidies': subsidies, 'mode': 'history'})
                 return
 

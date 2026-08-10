@@ -635,7 +635,12 @@
                 }
             }
             if (d.mode === 'history') {
-                html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' + d.total + ' 件），如需最新价格请切「⚡ 实时报告」</div>';
+                // 2026-08-11 小布方案2兜底：分词降级提示（整句搜不到 → 已自动匹配关键词）
+                if (d.degraded && d.degraded_kw) {
+                    html += '<div style="background:#fff3cd;color:#856404;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">🔍 没找到「' + esc(d.keyword) + '」，已自动匹配「<b>' + esc(d.degraded_kw) + '</b>」（共 ' + d.total + ' 件）</div>';
+                } else {
+                    html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' + d.total + ' 件），如需最新价格请切「⚡ 实时报告」</div>';
+                }
             }
             html += '<div class="stat">' + (d.mode === 'history' ? '📚 商品库查询结果' : '⚡ 实时抓取') + '：' +
                 (d.mode === 'history' ? '' : '淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' + (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
