@@ -269,6 +269,18 @@ def detect_intent(text: str) -> str:
     return 'shopping'
 
 
+def _sufficiency(items: list, need_card: dict) -> tuple:
+    """充分性判断（ShopAgent-X planner 思想）：结果够不够精准，不够就追问缩小范围"""
+    if not items:
+        return False, '没找到合适的结果，换个说法试试？比如加上品牌或型号'
+    if len(items) < 3:
+        return False, '结果有点少，能再具体点吗？比如品牌、规格或用途'
+    avg_match = sum(it.get('match', 0) for it in items) / len(items)
+    if avg_match < 50:
+        return False, '结果可能不太对味，能说说具体型号或品牌吗？这样我能找得更准'
+    return True, ''
+
+
 def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
     """一轮聊天：返回 {reply, need_card, action, items, profile_updated}"""
     sess = get_session(session_id)
@@ -311,14 +323,19 @@ def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
     save_session(session_id, history, new_card, user_name or sess['user_name'])
     merge_profile(user_name or sess['user_name'], new_card)
 
-    # 需求齐 → 推荐
+    # 需求齐 → 推荐（v1.0：先做充分性判断，不够精准就追问，不硬推）
     items = []
     if action == 'recommend':
         items = search_recommend(new_card)
         if not items and not new_card.get('keyword'):
-            # 没有关键词：把 reply 当作搜索意图，尝试提取
             new_card['keyword'] = _extract_keyword(reply + user_text)
             items = search_recommend(new_card)
+        ok_suf, ask_msg = _sufficiency(items, new_card)
+        if not ok_suf:
+            # 追问缩小范围（ShopAgent-X 进步式搜索精化）
+            items = []
+            action = 'ask'
+            reply = (reply + '\n' if reply else '') + ask_msg
         # 个性化推荐语（IntelliCommerce 分群文案借鉴，按画像风格）
         if items:
             p = get_profile(user_name or sess['user_name'])
