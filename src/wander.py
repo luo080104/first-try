@@ -41,10 +41,14 @@ def _recent_categories(user_name: str) -> list:
 
 
 def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: list = None) -> list:
-    """购物漫游：四路召回 + 六因子排序 + 品类多样性。返回推荐卡片列表。"""
+    """购物漫游：四路召回 + 六因子排序 + 品类多样性 + 价格带降权（不过滤）。返回推荐卡片列表。"""
     exclude_ids = exclude_ids or []
     cats = _profile_categories(user_name) + _recent_categories(user_name)
     cats = list(dict.fromkeys(cats))  # 去重保序
+    # 价格带适配（WorkBuddy：降权不过滤——漫游精髓是发现意外）：
+    # 用户预算档（低/中/高）→ 匹配的价格带商品加分，其他价格带不减分
+    from guide import get_profile
+    budget_tier = get_profile(user_name).get('budget_tier') or ''
     conn = _get_conn()
 
     def pick(category: str, limit: int):
@@ -109,6 +113,15 @@ def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: list = No
             s += 0.20
         elif price > 0:
             s += 0.10
+        # 价格带适配降权（WorkBuddy：加但不过滤——发现意外）
+        # 预算档低：低价商品 +0.10；预算档高：高价商品 +0.10；其他价格带不扣分
+        if budget_tier:
+            if budget_tier == '低' and 0 < price <= 300:
+                s += 0.10
+            elif budget_tier == '高' and price >= 3000:
+                s += 0.10
+            elif budget_tier == '中' and 300 <= price <= 3000:
+                s += 0.05
         # 性价比（销量归一 +0.15）
         s += min(it['sales'] or 0, 50000) / 50000 * 0.15
         # 新颖度（随机 +0.10）

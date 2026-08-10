@@ -636,6 +636,11 @@ def guide_page(request: Request):
     """陪你出发：聊天式购物向导"""
     return templates.TemplateResponse(request, 'guide.html', {'categories': CATEGORIES})
 
+@app.get('/wander', response_class=HTMLResponse)
+def wander_page(request: Request):
+    """购物漫游：无目标浏览（多路召回推荐流）"""
+    return templates.TemplateResponse(request, 'wander.html', {})
+
 @app.post('/api/chat')
 async def api_chat(session_id: str = Form(''), user_name: str = Form(''), message: str = Form('')):
     """陪你出发：一轮聊天"""
@@ -654,6 +659,66 @@ def api_usage():
     """本月 AI 费用统计"""
     from llm_usage import month_cost
     return month_cost()
+
+# ========== v7 购物漫游（推荐闭环）==========
+
+@app.get('/api/wander')
+def api_wander(user: str = '', size: int = 12):
+    """购物漫游：按画像推荐（返回卡片 + 推荐理由）"""
+    from wander import wander_recommend
+    from db import get_conn
+    # 已不喜欢/已收藏的排除
+    conn = get_conn()
+    rows = conn.execute("SELECT item_id FROM wander_feedback WHERE user_name=? AND action IN ('dislike','fav')", (user or '',)).fetchall()
+    conn.close()
+    exclude = [r['item_id'] for r in rows if r['item_id']]
+    items = wander_recommend(user or '', min(max(size, 6), 30), exclude)
+    cards = []
+    for it in items:
+        cards.append({
+            'item_id': it.get('item_id'), 'platform': it.get('platform'),
+            'title': (it.get('title') or '')[:80], 'price': it.get('price'),
+            'original_price': it.get('original_price'), 'shop': it.get('shop_name'),
+            'sales': it.get('sales'), 'category': it.get('category'), 'url': it.get('url'),
+            'img': it.get('img'),
+            'reason': _wander_reason(it, user or ''),
+        })
+    return {'ok': True, 'cards': cards}
+
+
+def _wander_reason(it: dict, user: str) -> str:
+    """漫游卡片推荐理由（可解释性）"""
+    from guide import get_profile
+    cats = get_profile(user).get('categories') or []
+    cat = it.get('category') or ''
+    if cat and cat in cats:
+        return f'因为你最近在看{cat}'
+    if it.get('sales') and it['sales'] > 10000:
+        return '🔥 大家都在买'
+    return '✨ 发现一个你可能没看过的'
+
+@app.post('/api/wander_feedback')
+async def api_wander_feedback(user: str = Form(''), item_id: str = Form(''), action: str = Form('dislike')):
+    """漫游反馈：dislike=不感兴趣 / fav=收藏"""
+    from db import get_conn
+    conn = get_conn()
+    conn.execute("DELETE FROM wander_feedback WHERE user_name=? AND item_id=? AND action=?",
+                 (user or '', item_id, action))
+    conn.execute('INSERT INTO wander_feedback (user_name, item_id, action) VALUES (?,?,?)',
+                 (user or '', item_id, action))
+    conn.commit(); conn.close()
+    return {'ok': True}
+
+@app.get('/api/wander_favs')
+def api_wander_favs(user: str = ''):
+    """我的收藏列表"""
+    from db import get_conn
+    conn = get_conn()
+    rows = conn.execute('''SELECT f.item_id, p.title, p.price, p.platform, p.shop_name, p.url
+        FROM wander_feedback f LEFT JOIN product_items p ON p.item_id = f.item_id
+        WHERE f.user_name=? AND f.action='fav' ORDER BY f.id DESC''', (user or '',)).fetchall()
+    conn.close()
+    return {'items': [dict(r) for r in rows]}
 
 # ========== v5 采集引擎接口 ==========
 
