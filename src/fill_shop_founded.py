@@ -38,6 +38,7 @@ def crawl_shop_founded(user_id: str, shop_name: str) -> int:
     co.set_browser_path(EDGE)
     co.set_local_port(9300)
     co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', 'data', 'tb_profile'))
+    co.set_argument('--window-position=-32000,-32000')
     browser = Chromium(co)
     tab = browser.latest_tab
     try:

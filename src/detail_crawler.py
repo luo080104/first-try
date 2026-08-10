@@ -37,6 +37,7 @@ def _browser(platform):
     co.set_browser_path(EDGE)
     co.set_local_port(port)
     co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
+    co.set_argument('--window-position=-32000,-32000')  # 移出屏幕：不打扰用户
     return Chromium(co)
 
 
