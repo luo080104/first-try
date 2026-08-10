@@ -929,7 +929,7 @@ async def api_crawl(pages: int = Form(2), max_minutes: int = Form(480)):
     if get_progress().get('running'):
         return {'ok': False, 'msg': '采集已在运行中，请稍候'}
     pages = min(max(pages, 1), 5)
-    max_minutes = min(max(max_minutes, 10), 720)  # 10 分钟 ~ 12 小时
+    max_minutes = min(max(max_minutes, 10), 1200)  # 10 分钟 ~ 20 小时（P1-1：对齐 crawl 20h 上限）
     asyncio.create_task(run_crawl_round(pages, max_seconds=max_minutes * 60))
     return {'ok': True, 'msg': f'采集已启动（每词翻 {pages} 页，最长跑 {max_minutes} 分钟，到点自动停）'}
 

@@ -145,12 +145,36 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     return added, all_items
 
 
+_instance_lock = threading.Lock()
+_instance_holder = False  # P1-2：实例锁覆盖 API/__main__ 双路径
+
+
+def _crawl_single(fn):
+    """采集单实例装饰器：任何入口同时只能跑一个"""
+    from functools import wraps
+
+    @wraps(fn)
+    async def wrapper(*a, **kw):
+        global _instance_holder
+        with _instance_lock:
+            if _instance_holder:
+                return {'ok': False, 'msg': '已有采集实例在运行'}
+            _instance_holder = True
+        try:
+            return await fn(*a, **kw)
+        finally:
+            with _instance_lock:
+                _instance_holder = False
+    return wrapper
+
+
+@_crawl_single
 async def run_crawl_round(pages: int = 2, max_seconds: int = 72000) -> dict:  # 20h兜底（小骆：不要设限，词跑完自然停）
     """跑一轮采集：pending+failed 词 → 报告。
     max_seconds: 硬性时长上限（默认 8 小时），到点自动停止，未完成词保持 pending 下轮继续。
     进度含 avg_per_word/eta 精准预估（实测均值 × 剩余量）。"""
     from db import (ensure_crawl_tasks, get_pending_tasks,
-                    mark_crawl_task, add_auto_keywords)
+                    mark_crawl_task, add_auto_keywords, get_conn)
 
     ensure_crawl_tasks()
     tasks = get_pending_tasks(500)  # 一轮取全部（310+ 词），避免 100 上限截断
