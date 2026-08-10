@@ -338,7 +338,8 @@
                     'onclick="switchRole(\'' + esc(m.name) + '\')">👤 ' + esc(m.name) +
                     (m.categories && m.categories.length ? ' <span style="color:#b2bec3;font-size:12px">' + m.categories.length + ' 个品类</span>' : '') + '</div>';
             }).join('') +
-            '<div style="padding:8px 12px;cursor:pointer;color:#27ae60;border-top:1px solid #eee" onclick="openAddMember()">➕ 添加成员</div>';
+            '<div style="padding:8px 12px;cursor:pointer;color:#27ae60;border-top:1px solid #eee" onclick="openAddMember()">➕ 添加成员</div>' +
+            '<div style="padding:8px 12px;cursor:pointer;color:#0984e3;border-top:1px solid #eee" onclick="openInvite()">🔑 邀请码（给亲戚用）</div>';
             // 品类卡片
             var me = members.find(m => m.name === cur) || {name: cur, categories: []};
             var cats = document.getElementById('member-cats');
@@ -365,6 +366,54 @@
                     box.innerHTML = '';
                 }
             });
+        }
+        // ===== v8 邀请码（WorkBuddy 设计：管理端生成 / 亲戚端输入）=====
+        function openInvite() {
+            var action = prompt('邀请码做什么？
+1. 生成新码（给亲戚）
+2. 输入码加入（我是亲戚）', '1');
+            if (action === null) return;
+            if (action === '1') {
+                var name = prompt('给谁用？（如：妈妈）');
+                if (!name) return;
+                var cats = prompt('她的品类（逗号分隔，如：女士服装,护肤品）：', '');
+                var picked = cats ? cats.replace(/，/g, ',').split(',').map(s => s.trim()).filter(Boolean) : [];
+                var fd = new FormData();
+                fd.append('user_name', name);
+                fd.append('categories', JSON.stringify(picked));
+                fetch('/api/invite_gen', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
+                    if (d.ok) {
+                        alert('✅ 邀请码生成：' + d.code + '
+
+把这个码发给' + name + '，让 TA 打开网页点「🔑 邀请码」输入即可
+（一个码只能用一次）');
+                    } else { alert(d.msg); }
+                });
+            } else {
+                var code = prompt('请输入邀请码（格式 Go-xxxx）：');
+                if (!code) return;
+                var devId = localStorage.getItem('gobuy_device') || ('dev-' + Math.random().toString(36).slice(2, 10));
+                localStorage.setItem('gobuy_device', devId);
+                var fd = new FormData();
+                fd.append('code', code.trim());
+                fd.append('device_id', devId);
+                fetch('/api/invite_use', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
+                    if (!d.ok) { alert(d.msg); return; }
+                    var cats = [];
+                    try { cats = JSON.parse(d.categories || '[]'); } catch (e) {}
+                    var members = getMembers();
+                    if (!members.some(m => m.name === d.user_name)) {
+                        members.push({name: d.user_name, categories: cats});
+                    } else {
+                        members.find(m => m.name === d.user_name).categories = cats;
+                    }
+                    saveMembers(members);
+                    setCurrent(d.user_name);
+                    renderRole();
+                    alert('🎉 欢迎 ' + d.user_name + '！你的角色已创建：' + (cats.length ? cats.join('、') : '全部品类') + '
+以后打开网页就是你的界面了');
+                });
+            }
         }
         function quickSearch(kw) {
             document.getElementById('kw').value = kw;

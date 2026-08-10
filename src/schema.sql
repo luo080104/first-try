@@ -285,3 +285,14 @@ CREATE TABLE IF NOT EXISTS advice_events (
     user_name TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== v8 邀请码（WorkBuddy 极简设计）==========
+CREATE TABLE IF NOT EXISTS invite_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,           -- Go-xxxx 6位
+    user_name TEXT DEFAULT '',           -- 绑定角色名
+    categories TEXT DEFAULT '[]',        -- 角色品类 JSON
+    used_by TEXT DEFAULT '',             -- 已使用者（localStorage 设备标记）
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    used_at TEXT
+);

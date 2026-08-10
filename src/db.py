@@ -40,6 +40,12 @@ def init_db():
         price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
         concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+    # 迁移：invite_codes 表（v8 邀请码，幂等）
+    conn.execute('''CREATE TABLE IF NOT EXISTS invite_codes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE,
+        user_name TEXT DEFAULT '', categories TEXT DEFAULT '[]',
+        used_by TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now','localtime')),
+        used_at TEXT)''')
     # 迁移：advice_events 表（v7 评估埋点，幂等）
     conn.execute('''CREATE TABLE IF NOT EXISTS advice_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT, scene TEXT DEFAULT '',

@@ -748,6 +748,52 @@ def api_advice_stats():
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
             'by_scene': [dict(r) for r in by_scene]}
 
+# ========== v8 邀请码（WorkBuddy 极简设计：一张表+两个页面）==========
+
+@app.post('/api/invite_gen')
+async def api_invite_gen(user_name: str = Form(''), categories: str = Form('')):
+    """生成邀请码（管理员）：Go-xxxx 6 位，绑定角色名+品类"""
+    import secrets
+    from db import get_conn, init_db
+    init_db()
+    if not user_name.strip():
+        return {'ok': False, 'msg': '请填角色名（如：妈妈）'}
+    code = 'Go-' + secrets.token_hex(2).lower()
+    conn = get_conn()
+    conn.execute('INSERT INTO invite_codes (code, user_name, categories) VALUES (?,?,?)',
+                 (code, user_name.strip()[:30], categories or '[]'))
+    conn.commit(); conn.close()
+    return {'ok': True, 'code': code, 'user_name': user_name.strip()}
+
+@app.post('/api/invite_use')
+async def api_invite_use(code: str = Form(''), device_id: str = Form('')):
+    """亲戚端：输入邀请码 → 校验未用 → 返回角色信息 + 标记已用"""
+    from db import get_conn, init_db
+    init_db()
+    code = code.strip()
+    conn = get_conn()
+    row = conn.execute('SELECT * FROM invite_codes WHERE code=?', (code,)).fetchone()
+    if not row:
+        conn.close()
+        return {'ok': False, 'msg': '邀请码不存在，检查一下？'}
+    if row['used_at']:
+        conn.close()
+        return {'ok': False, 'msg': '这个邀请码已被使用过了'}
+    conn.execute("UPDATE invite_codes SET used_at=datetime('now','localtime'), used_by=? WHERE id=?",
+                 (device_id[:50], row['id']))
+    conn.commit(); conn.close()
+    return {'ok': True, 'user_name': row['user_name'], 'categories': row['categories']}
+
+@app.get('/api/invite_list')
+def api_invite_list():
+    """邀请码列表（管理页）"""
+    from db import get_conn, init_db
+    init_db()
+    conn = get_conn()
+    rows = conn.execute('SELECT code, user_name, categories, used_at, created_at FROM invite_codes ORDER BY id DESC LIMIT 20').fetchall()
+    conn.close()
+    return {'items': [dict(r) for r in rows]}
+
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')
