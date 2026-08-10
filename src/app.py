@@ -748,6 +748,25 @@ def api_advice_stats():
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
             'by_scene': [dict(r) for r in by_scene]}
 
+@app.post('/api/spec_compare')
+async def api_spec_compare(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
+    """数码参数对比：同组商品用 DigitalMatcher 提取参数并排"""
+    from compare import search_compare_slow
+    from matcher import DigitalMatcher
+    data = await search_compare_slow(keyword, category)
+    group = next((g for g in data['groups'] if g['key'] == group_key), None)
+    if not group:
+        return {'ok': False, 'msg': '未找到该商品组'}
+    items = []
+    for p, it in group['platforms'].items():
+        spec = DigitalMatcher.parse(str(it.get('title') or ''))
+        cfg = spec.get('config') or {}
+        items.append({'platform': p, 'price': it.get('actualPrice'), 'title': (it.get('title') or '')[:40],
+                      'spec': {'型号': spec.get('series') or '-', 'GPU': cfg.get('gpu') or '-',
+                               'CPU': cfg.get('cpu') or '-', '内存': cfg.get('ram') or '-',
+                               '存储': cfg.get('storage') or '-'}})
+    return {'ok': True, 'keyword': keyword, 'items': items[:4]}
+
 @app.post('/api/debate')
 async def api_debate(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
     """多视角辩论：三派各自点评（分角色 prompt）"""

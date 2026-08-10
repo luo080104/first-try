@@ -191,7 +191,8 @@
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
                 });
                 html += '</div>';
-                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, '' + esc(g.key).replace(/'/g, '') + '')">🔍 相似款</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
+                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, '' + esc(g.key).replace(/'/g, '') + '')">🔍 相似款</button>' +
+                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare('' + esc(g.key).replace(/'/g, '') + '')">⚙️ 参数对比</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
                 if (g.low_price_warning) {
                     html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
                 }
@@ -344,6 +345,31 @@
             if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
             else { alert('复制失败，请手动选择复制'); }
         }
+        function openSpecCompare(groupKey) {
+            // 调后端解析同组商品参数 → 弹窗并排表
+            var fd = new FormData();
+            fd.append('keyword', currentKw);
+            fd.append('category', currentCat);
+            fd.append('group_key', groupKey);
+            fetch('/api/spec_compare', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
+                if (!d.ok || !d.items || !d.items.length) { alert('该组没有可对比的参数'); return; }
+                var items = d.items;
+                var cols = ['平台', '价格'];
+                items.forEach(function(it) { Object.keys(it.spec || {}).forEach(function(k) { if (cols.indexOf(k) < 0) cols.push(k); }); });
+                var html = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+                    '<tr>' + cols.map(function(c) { return '<th style="padding:6px;border:1px solid #eee;background:#f8f9fa">' + esc(c) + '</th>'; }).join('') + '</tr>';
+                items.forEach(function(it) {
+                    html += '<tr><td style="padding:6px;border:1px solid #eee">' + esc(it.platform) + '</td>' +
+                        '<td style="padding:6px;border:1px solid #eee;color:#ff6b35;font-weight:700">¥' + it.price + '</td>' +
+                        cols.slice(2).map(function(c) { return '<td style="padding:6px;border:1px solid #eee">' + esc(it.spec[c] || '-') + '</td>'; }).join('') + '</tr>';
+                });
+                html += '</table>';
+                var box = document.getElementById('spec-modal-body');
+                box.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:8px">⚙️ 参数对比：' + esc(d.keyword) + '</div>' + html;
+                document.getElementById('spec-modal').style.display = 'flex';
+            }).catch(() => alert('参数对比失败'));
+        }
+        function closeSpec() { document.getElementById('spec-modal').style.display = 'none'; }
         function loadSimilar(btn, groupKey) {
             var g = null;
             (LAST_RESULT.groups || []).forEach(function(x) { if (x.key === groupKey) g = x; });
@@ -389,6 +415,14 @@
                 <button class="btn" style="flex:1" onclick="copyCardText()">📋 复制文字</button>
                 <button class="btn" style="flex:0 0 auto" onclick="closeCard()">关闭</button>
             </div>
+        </div>
+    </div>
+
+    <!-- v9 参数对比模态框 -->
+    <div id="spec-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
+        <div style="width:min(520px, 94vw);background:#fff;border-radius:14px;padding:16px">
+            <div id="spec-modal-body"></div>
+            <div style="text-align:center;margin-top:12px"><button class="btn" onclick="closeSpec()">关闭</button></div>
         </div>
     </div>
 </body>
