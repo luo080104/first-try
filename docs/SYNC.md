@@ -5799,3 +5799,25 @@ ALTER TABLE wander_feedback ADD COLUMN saved INTEGER DEFAULT 0;
 ```
 
 **给 pi 的话**：购物漫游算法设计很好，加个价格带适配（降权不过滤）。Q3 的核心建议是：不延期购物项目，金融另开新 repo 直接起步。购物母版验证了 Harness 工程的通用性，金融项目不需要再验证一遍"辩论"——直接上。
+
+---
+
+# 🗂 agency-agents 角色库筛选记录（用户问装不装 → 结论：不装，筛选参考）
+
+## 决策
+- ❌ 不整套安装（268 角色 90% 无关 + 干扰 WorkBuddy 定位 + 维护成本）
+- ✅ 已克隆 ~/agency_agents_ref 存档，按需翻阅借鉴 prompt 设计
+
+## 筛选出的 8 个相关角色
+| 角色 | 文件 | 用途 |
+|---|---|---|
+| 投资研究员 | finance/finance-investment-researcher.md | ⭐ 金融Agent人设（看空论点/可证伪/论点破坏者/披露信心——质量极高） |
+| 中国电商运营专家 | marketing/marketing-china-ecommerce-operator.md | 购物比价逻辑参考 |
+| 财务预测/风控分析师 | finance/*.md | 金融Agent模块 |
+| 提示词工程师 | specialized/*.md | 优化LLM prompt |
+| 智能体编排者/工作流架构师 | specialized/*.md | Agent设计方法论 |
+| 产品经理/数据分析师 | product/support/*.md | 产品方向 |
+
+## 用法
+- 需要时读对应 md 借鉴"身份/关键规则/交付物"三段式设计
+- 金融 Agent 开 repo 时：投资研究员 prompt 作为第一个 Agent 人设蓝本
