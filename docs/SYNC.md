@@ -5944,3 +5944,37 @@ Day2 只剩半天了，v7 核心已经就位：
 ## v7 收尾待办（用户指示：先不做，继续看案例）
 - 企业微信 webhook 配置
 - 评估埋点（建议采纳率）
+
+---
+
+# 🗂 金融 Agent 第三蓝本：TradingAgents-Astock（A 股多 Agent 辩论框架）
+
+## 蓝本案例
+simonlin1212/TradingAgents-astock（TradingAgents 65K⭐ 的 A 股特化 fork，Apache 2.0）
+- **7 分析师**：市场/舆情/新闻/基本面 + A 股特化（政策分析师/游资追踪/解禁监控）
+- **决策链**：7 分析师研报 → Bull vs Bear 辩论 → Research Manager 研判 → Trader（A股约束 T+1/涨跌停）→ 三方风险辩论（激进/保守/中立）→ Portfolio Manager 最终决策
+- **双 LLM**：quick_think（分析师/辩手/交易员）+ deep_think（经理层决策）
+- **分角色模型**：多空辩手用不同厂商模型（同模型分饰多角易互相附和，换底座才真反驳）⭐
+- **A 股数据源全免费**：mootdx(TCP) + 腾讯 + 东财 + 新浪 + 同花顺 + 财联社 + 百度
+- **东财防封节流**：串行限流 ≥1s + 随机抖动 + Keep-Alive（和我们采集频率控制同思路）
+- **决策绩效统计**：direction_accuracy（方向正确率，alpha 口径）+ 评级区分度检验（评级是否真的单调）——金融版"评估框架"
+- 合规：不构成投资建议 + 代码里不产可执行价位（建仓/止损/仓位）——值得学习
+
+## 金融项目设计（三蓝本融合）
+```
+AI Berkshire（价值投资深度） × TradingAgents-Astock（多Agent辩论决策链） × 舆情情绪因子（我们技术）
+  ├─ 数据层：mootdx/东财/新浪（直接复用它的数据源方案）
+  ├─ 分析层：四大师（Berkshire）+ 7 分析师（TradingAgents）+ 情绪因子
+  ├─ 决策层：Bull/Bear 辩论 + 三方风险 + 分角色模型（不同厂商）
+  ├─ 评估层：direction_accuracy + 评级区分度（Berkshire 实盘验证 + TradingAgents 统计）
+  └─ 合规：免责声明 + 不产可执行价位
+```
+
+## 对购物项目的启发
+- 分角色模型（多视角不同模型）→ 购物"多视角辩论"（性价比党/品质党用不同 prompt 或模型）
+- direction_accuracy 思路 → 购物"建议采纳率"评估框架（WorkBuddy 已确认）
+
+## 三个蓝本关系
+- Berkshire = 分析深度（怎么判断一家公司值不值得买）
+- TradingAgents = 决策流程（怎么组织多角色产出决策）
+- 我们的技术栈 = 实现能力（DeepSeek 直连/爬虫/推送/评估）
