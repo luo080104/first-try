@@ -261,8 +261,11 @@
             g.platforms.forEach(function(it) {
                 var isBest = it === best;
                 var st = it.shop_type ? ' <span style="font-size:11px;color:#0984e3">' + esc(it.shop_type) + '</span>' : '';
+                // v1.0 阻断逻辑：店铺<3.0 → ❌ 不推荐（规则先行，不等 AI）
+                var blocked = it.shop_rating && it.shop_rating < 3.0;
                 html += '<div style="font-size:13px;margin:3px 0">' + platName(it.platform) + st + ' ' +
                     (isBest ? '▼ ' : '') + '<b>¥' + it.price + '</b>' +
+                    (blocked ? ' <span style="color:#d63031;font-weight:700">❌ 不推荐</span>' : '') +
                     (it.shop_rating ? ' <span style="font-size:11px;color:' + (it.shop_rating >= 4.5 ? '#27ae60' : (it.shop_rating >= 4 ? '#e67e22' : '#d63031')) + '">' + it.shop_rating + '分</span>' : '') + '</div>';
             });
 
@@ -293,6 +296,18 @@
             html += '<button class="btn" style="margin-top:8px;width:100%" onclick="loadDebate(this)">💬 听听大家怎么看</button>' +
                 '<div id="card-debate" style="margin-top:6px"></div>';
 
+            // v1.0 规则结论区：六关快速判定（不等 AI，AI Berkshire 阻断思想）
+            var ruleVerdict = [];
+            var allLow = g.platforms.every(function(it) { return it.shop_rating && it.shop_rating < 3.0; });
+            if (allLow) ruleVerdict.push('❌ 全平台店铺评分均低，建议放弃该商品');
+            else if (g.platforms.some(function(it) { return it.shop_rating && it.shop_rating < 3.0; })) ruleVerdict.push('⚠️ 有低分店铺，购买前确认渠道');
+            if (g.low_price_warning) ruleVerdict.push('❌ 低价警示触发：最低价低于其他平台 30% 以上');
+            var bestPrice = best.price;
+            if (bestPrice && bestPrice <= 20) ruleVerdict.push('💡 小件商品（<¥20），按需购买即可');
+            if (ruleVerdict.length) {
+                html += '<div style="background:#fdf3e3;border:1px solid #ffd3c2;border-radius:8px;padding:8px;margin-top:10px;font-size:13px">' +
+                    ruleVerdict.map(function(v) { return '<div style="margin:2px 0">' + v + '</div>'; }).join('') + '</div>';
+            }
             html += '</div>';
             document.getElementById('card-body').innerHTML = html;
             document.getElementById('card-modal').style.display = 'flex';
