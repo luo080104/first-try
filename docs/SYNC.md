@@ -5821,3 +5821,30 @@ ALTER TABLE wander_feedback ADD COLUMN saved INTEGER DEFAULT 0;
 ## 用法
 - 需要时读对应 md 借鉴"身份/关键规则/交付物"三段式设计
 - 金融 Agent 开 repo 时：投资研究员 prompt 作为第一个 Agent 人设蓝本
+
+---
+
+# 🗂 第二个 Agent 方向确认：AI Berkshire 价值投资研究框架（用户拍板）
+
+## 蓝本案例
+xbtlin/ai-berkshire（已克隆 ~/ai_berkshire_ref，仔细读了三遍核心）
+- 实盘验证：2024 +69.29% / 2025 +66.38%（跑赢标普 50 个百分点）
+- 六关 Checklist：能力圈→好生意→护城河→管理层→安全边际→决策纪律（每关硬性否决）
+- 四大师对抗：段永平(生意)/巴菲特(财务)/芒格(逆向)/李录(确定性)
+- 反偏见：信息丰富度 A/B/C + 逆向检验 + 否决清单 + 反共识 + 留白
+- 金融严谨性 tools/financial_rigor.py（465 行）：Decimal 精确计算/市值校验/多源交叉验证/Benford 检测/三情景估值
+- 多 Agent 并行：investment-team（4 Agent + Team Lead）
+- 20 个 skill 分层：深度研究/财报/行业筛选/持仓管理/思维工具
+
+## 用户金融项目设计（AI Berkshire × 我们的技术栈）
+```
+四大师视角（抄蓝本）
++ 情绪面/舆情因子（股吧/新闻，复用我们的爬虫+情感分析）
++ 金融严谨性工具（抄蓝本，DeepSeek 直连可实现）
++ 盯股预警（复用盯价推送架构）
++ A 股数据源（AKShare/东方财富/巨潮）
+```
+
+## 对购物项目的启发：买前六关 Checklist（v8 好价卡候选）
+①需求确认 ②全网比价 ③店铺信誉 ④历史价格 ⑤低价警示 ⑥盯价纪律
+——功能已全覆盖，只差组合展示页
