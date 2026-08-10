@@ -634,6 +634,14 @@ async def api_chat(session_id: str = Form(''), user_name: str = Form(''), messag
     result = await asyncio.to_thread(chat, sid, message.strip(), user_name.strip())
     return {'ok': True, 'session_id': sid, **result}
 
+# ========== v7 AI 费用统计（Agent Part 借鉴）==========
+
+@app.get('/api/usage')
+def api_usage():
+    """本月 AI 费用统计"""
+    from llm_usage import month_cost
+    return month_cost()
+
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')

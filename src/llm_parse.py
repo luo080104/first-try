@@ -105,6 +105,12 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
         hit = usage.get('prompt_cache_hit_tokens', 0)
         miss = usage.get('prompt_cache_miss_tokens', 0)
         _log_trace(text, reasoning, result, hit, miss)
+        # v7 费用统计
+        try:
+            from llm_usage import record_usage
+            record_usage('deepseek-v4-flash', usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0), '意图解析')
+        except Exception:
+            pass
         return result
     except Exception as e:
         print(f'[llm] 解析失败: {str(e)[:80]}，回退为原文')
@@ -155,6 +161,13 @@ def generate_options(keyword: str, groups: list) -> list:
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
             data = json.loads(r.read().decode('utf-8'))
+        # v7 费用统计
+        try:
+            from llm_usage import record_usage
+            u = data.get('usage', {})
+            record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项')
+        except Exception:
+            pass
         content = data['choices'][0]['message']['content'].strip()
         if content.startswith('```'):
             content = content.split(chr(10), 1)[1].rsplit('```', 1)[0]

@@ -255,3 +255,14 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     categories TEXT DEFAULT '[]',        -- 关注品类
     updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== v7 AI 费用统计（Agent Part 会话追踪借鉴）==========
+CREATE TABLE IF NOT EXISTS ai_usage (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model TEXT DEFAULT '',
+    input_tokens INTEGER DEFAULT 0,
+    output_tokens INTEGER DEFAULT 0,
+    cost REAL DEFAULT 0,               -- 估算费用（元）
+    scene TEXT DEFAULT '',             -- 调用场景（意图/情感/抽取/建议/导购）
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);

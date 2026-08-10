@@ -40,6 +40,12 @@ def init_db():
         price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
         concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+    # 迁移：ai_usage 表（v7 费用统计，幂等）
+    conn.execute('''CREATE TABLE IF NOT EXISTS ai_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT DEFAULT '',
+        input_tokens INTEGER DEFAULT 0, output_tokens INTEGER DEFAULT 0,
+        cost REAL DEFAULT 0, scene TEXT DEFAULT '',
+        created_at TEXT DEFAULT (datetime('now','localtime')))''')
     # 迁移：watched_items 补 last_notified_at（盯价推送防重复）
     wcols = [r[1] for r in conn.execute('PRAGMA table_info(watched_items)')]
     if 'last_notified_at' not in wcols:

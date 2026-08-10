@@ -205,6 +205,13 @@ def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, ti
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
+            # v7 费用统计
+            try:
+                from llm_usage import record_usage
+                u = data.get('usage', {})
+                record_usage(model, u.get('prompt_tokens', 0), u.get('completion_tokens', 0), 'AI建议')
+            except Exception:
+                pass
             return data['choices'][0]['message']['content']
         except Exception as e:
             last_err = e

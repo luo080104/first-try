@@ -121,6 +121,13 @@ def _call_llm(messages: list, max_tokens: int = 800, retries: int = 2) -> str:
                 data = json.loads(resp.read().decode('utf-8'))
             content = data['choices'][0]['message'].get('content') or ''
             if content.strip():
+                # v7 费用统计
+                try:
+                    from llm_usage import record_usage
+                    u = data.get('usage', {})
+                    record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '陪你出发')
+                except Exception:
+                    pass
                 return content
             last = ''
             print(f'[guide] 空返回，重试 {attempt + 1}/{retries}')
