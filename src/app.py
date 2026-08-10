@@ -345,7 +345,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             if mode == 'history':
                 yield step('查询商品库', 'running')
                 yield sse({'type': 'progress', 'msg': '📚 历史模式：正在查询商品库...'})
-                from db import query_items, find_subsidies
+                from db import query_items
                 init_db()
                 data = await asyncio.to_thread(query_items, keyword.strip(), category, '', 0, 0, 'price_asc', 1, 30)
                 items = data.get('items', [])

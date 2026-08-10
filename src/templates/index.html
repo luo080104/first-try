@@ -524,7 +524,7 @@
                                 else if (data.type === 'need') { renderNeed(data.q, data.options); }
                                 else if (data.type === 'step') { updateStep(data.step, data.status); }
                                 else if (data.type === 'progress') { advanceLoading(data.msg); }
-                                else if (data.type === 'error') { hideLoading(); prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
+                                else if (data.type === 'error') { hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
                                     finishLoading();
                                     prog.style.display = 'none';
@@ -535,7 +535,7 @@
                         });
                     }
                     return read();
-                }).catch(() => { hideLoading(); prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败</div>'; });
+                }).catch(() => { hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败，请重试</div>'; });
         }
         function pddSearch() {
             var btn = document.getElementById('pdd-btn');
