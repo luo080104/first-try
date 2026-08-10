@@ -5978,3 +5978,21 @@ AI Berkshire（价值投资深度） × TradingAgents-Astock（多Agent辩论决
 - Berkshire = 分析深度（怎么判断一家公司值不值得买）
 - TradingAgents = 决策流程（怎么组织多角色产出决策）
 - 我们的技术栈 = 实现能力（DeepSeek 直连/爬虫/推送/评估）
+
+---
+
+# ✅ 案例代码补课完成（20+ 案例全部读过代码）
+
+补课 4 个：
+1. **TradingAgents-Astock**：Bull prompt A 股框架（政策/北向/游资/估值消化/解禁）；舆情分析师"先看资金再看新闻"+"背离必写"——金融情绪因子升级设计
+2. **Taobao_Spider**：selenium-stealth+CDP 双隐身 + 12 选择器回退（确认我们登录态方案更合规更稳）
+3. **BettaFish**：ForumEngine 文件监控 + 每 5 条发言主持人介入
+4. **harnessNovel**：flash/pro 模型分工 + 禁词扫描 + prompt 追踪
+
+金融项目情绪因子最终设计（三源交叉）：
+```
+文本情感（sentiment.py 迁移）
+× 资金流硬数据（TradingAgents 思路：主力/北向/大单）
+× 热度榜/量价（同源）
+→ 背离信号（消息正面但资金流出 = 最有价值）
+```
