@@ -14,6 +14,14 @@ def get_conn() -> sqlite3.Connection:
     return conn
 
 def init_db():
+    # 2026-08-10 AI审查建议：高频查询列加索引（商品库过万条后全表扫描变慢）
+    idx = [
+        'CREATE INDEX IF NOT EXISTS idx_items_platform ON product_items(platform)',
+        'CREATE INDEX IF NOT EXISTS idx_items_itemid ON product_items(item_id)',
+        'CREATE INDEX IF NOT EXISTS idx_items_category ON product_items(category)',
+        'CREATE INDEX IF NOT EXISTS idx_items_price ON product_items(price)',
+        'CREATE INDEX IF NOT EXISTS idx_items_brand ON product_items(brand)',
+    ]
     """建库建表（幂等：已存在则跳过）"""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_conn()
@@ -84,6 +92,8 @@ def init_db():
     for col, ddl in (('product_name', 'TEXT'), ('platform', 'TEXT'), ('content_id', 'TEXT')):
         if col not in rcols:
             conn.execute('ALTER TABLE recommendations ADD COLUMN ' + col + ' ' + ddl)
+    for sql in idx:
+        conn.execute(sql)
     conn.commit()
     conn.close()
     print(f'✅ 数据库就绪: {DB_PATH}')

@@ -220,6 +220,8 @@ def submit_post(request: Request,
                 keyword: str = Form(...), title: str = Form(...),
                 platform: str = Form('other'), shop_name: str = Form(''),
                 price: float = Form(...), url: str = Form(''), note: str = Form('')):
+    if price <= 0 or price > 9999999:  # AI审查建议：输入验证
+        return templates.TemplateResponse(request, 'submit.html', {'success': False, 'keyword': keyword, 'msg': '价格需为正数'})
     init_db()
     save_manual_price(keyword.strip(), title.strip(), platform, shop_name.strip(), price, url.strip(), note.strip())
     return templates.TemplateResponse(request, 'submit.html', {'success': True, 'keyword': keyword})
@@ -405,13 +407,21 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             if len(all_items) < 5:
                 yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会+拼多多）...'})
                 tb_full, jd_full, vip_full, pdd_full = await asyncio.gather(
-                    asyncio.to_thread(search_taobao_full, keyword),
-                    asyncio.to_thread(search_jd_full, keyword),
-                    asyncio.to_thread(search_vip_full, keyword),
-                    asyncio.to_thread(search_pdd_full, keyword),
+                    asyncio.to_thread(search_taobao_full, keyword, 15),
+                    asyncio.to_thread(search_jd_full, keyword, 15),
+                    asyncio.to_thread(search_vip_full, keyword, 15),
+                    asyncio.to_thread(search_pdd_full, keyword, 15),
                 )
                 slow_items = tb_full + jd_full + vip_full + pdd_full
                 all_items = all_items + slow_items
+                # 2026-08-10 过滤服务类/租赁类商品（云渲染/远程渲染/出租/小时计费等非实物）
+                service_kw = ('远程渲染', '云渲染', '渲染农场', '云电脑', '出租', '租用', '小时计费',
+                              '显卡租赁', 'gpu租赁', '云服务', '按小时', '代练', '充值', '会员')
+                before = len(all_items)
+                all_items = [it for it in all_items
+                             if not any(k in (it.get('title') or '') for k in service_kw)]
+                if len(all_items) != before:
+                    yield sse({'type': 'progress', 'msg': f'🧹 已过滤 {before-len(all_items)} 条服务/租赁类商品'})
                 yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             elif not pdd_items:
                 # 拼多多 API 被限流/失败 → 浏览器通道兜底（2026-08-10 实测 duoId 被限）
