@@ -11,6 +11,7 @@
 # 5. 翻页加载：滚动触发更多 API 请求（xiuyegege 的 get_shop_info 模式）
 
 import sys
+import threading
 import os
 import time
 import re
@@ -61,6 +62,10 @@ def _find_browser():
             return p
     return None
 
+from browser_pool import serialize
+
+
+@serialize('tb')
 def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page: int = 1) -> list:
     """淘宝关键词搜索（浏览器自动化 + API 拦截）。
     返回: [{platform, title, price, original_price, sales, shop, location, is_ad, is_tmall,
@@ -96,7 +101,12 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
         return items[:max_items]
 
     finally:
-        pass  # 浏览器常驻，不销毁（池管理）
+        # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
+        try:
+            from browser_pool import rehide_later
+            rehide_later('tb')
+        except Exception:
+            pass
 
 def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_num: int) -> list:
     """方案 A：拦截浏览器发出的 MTOP API 请求，直接拿 JSON 响应。

@@ -20,6 +20,17 @@ PROFILES = {
 }
 _pool = {}
 _lock = threading.Lock()
+_serial_locks = {p: threading.Lock() for p in PROFILES}  # 同平台搜索串行锁
+
+
+def serialize(platform: str):
+    """装饰器：同平台搜索串行（避免并发抢同一 tab → 探活误判重建）"""
+    def deco(fn):
+        def wrapper(*a, **kw):
+            with _serial_locks[platform]:
+                return fn(*a, **kw)
+        return wrapper
+    return deco
 
 
 def _force_hide_windows(pid: int):
@@ -67,6 +78,11 @@ def _new_browser(platform: str):
     co.set_browser_path(EDGE)
     co.set_local_port(port)
     co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
+    # 终极组合：启动参数层面窗口就不可见（即使 ShowWindow 失效也不打扰）
+    co.set_argument('--window-position=-32000,-32000')
+    co.set_argument('--window-size=1,1')
+    co.set_argument('--disable-session-crashed-bubble')  # 禁恢复会话弹窗
+    co.set_argument('--no-first-run')
     b = Chromium(co)
     _hide_browser(b)
     return b
@@ -78,7 +94,7 @@ def get_browser(platform: str):
         b = _pool.get(platform)
         if b is not None:
             try:
-                b.latest_tab.url  # 探活
+                b.run_cdp('Browser.getVersion')  # 小布方案：只测CDP不碰tab（导航期不误判）
                 return b
             except Exception:
                 try:
@@ -98,6 +114,21 @@ def _sweep_hide():
             _force_hide_windows(b.process_id)
         except Exception:
             pass
+
+
+def rehide(platform: str):
+    """搜索完成后强制隐藏兜底（小布方案）"""
+    b = _pool.get(platform)
+    if b is not None:
+        try:
+            _force_hide_windows(b.process_id)
+        except Exception:
+            pass
+
+
+def rehide_later(platform: str, delay: float = 2.0):
+    """延迟隐藏：导航异步加载完成后窗口可能复现，延迟再补一刀"""
+    threading.Timer(delay, rehide, args=[platform]).start()
 
 
 def warmup():

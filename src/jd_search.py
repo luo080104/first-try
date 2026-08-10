@@ -3,6 +3,7 @@
 # 第一次使用：运行后浏览器弹出，手动登录京东一次，之后免登录
 # 用法: from jd_search import search_jd; items = search_jd('石头岛')
 import sys
+import threading
 import os
 import time
 import re
@@ -27,6 +28,10 @@ def _find_browser():
             return p
     return None
 
+from browser_pool import serialize
+
+
+@serialize('jd')
 def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int = 1) -> list:
     """京东关键词搜索（浏览器自动化）。
     返回: [{platform, title, price, original_price, sales, shop, is_ad, url}]
@@ -142,7 +147,12 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         print(f"[JD debug] '{keyword}' page={page}: cards={len(cards)}, items={len(items)}")
         return items[:max_items]
     finally:
-        pass  # 浏览器常驻，不销毁（池管理）
+        # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
+        try:
+            from browser_pool import rehide_later
+            rehide_later('jd')
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     kw = sys.argv[1] if len(sys.argv) > 1 else '石头岛'

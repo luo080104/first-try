@@ -109,8 +109,11 @@ def crawl_tb_detail(item_id: str) -> dict:
         print(f'[detail-tb] {str(e)[:60]}')
         return {}
     finally:
-        pass  # 浏览器常驻，不销毁（池管理）
-
+        try:
+            from browser_pool import rehide_later
+            rehide_later('tb')
+        except Exception:
+            pass
 
 def crawl_jd_detail(item_id: str) -> dict:
     """京东商品详情页（验证码拦截则返回空，由联盟API字段兜底）"""
@@ -140,8 +143,11 @@ def crawl_jd_detail(item_id: str) -> dict:
         print(f'[detail-jd] {str(e)[:60]}')
         return {}
     finally:
-        pass  # 浏览器常驻，不销毁（池管理）
-
+        try:
+            from browser_pool import rehide_later
+            rehide_later('jd')
+        except Exception:
+            pass
 
 def crawl_detail(platform: str, item_id: str) -> dict:
     """统一入口：按平台爬详情（低频 15-20s）"""

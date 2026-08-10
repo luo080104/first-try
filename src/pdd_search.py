@@ -2,6 +2,7 @@
 # 约束：真浏览器+登录态 / 低频(12-20s随机) / 遇验证码抛 CaptchaError（按合规原则不绕）
 # 入口：mobile.yangkeduo.com/search_result.html?search_key=xxx（2026-08-10 实测：等 10s 数据注入页面 JSON）
 import sys
+import threading
 import os
 import time
 import re
@@ -23,6 +24,10 @@ def _find_browser():
     return None
 
 
+from browser_pool import serialize
+
+
+@serialize('pdd')
 def search_pdd(keyword: str, max_items: int = 20, login_wait: int = 150, page: int = 1) -> list:
     """拼多多关键词搜索（浏览器 H5）。
     返回: [{platform, title, price, original_price, sales, shop, url, item_id, goodsId}]
@@ -72,7 +77,12 @@ def search_pdd(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
             items = _parse_search_html(html)
         return items[:max_items]
     finally:
-        pass  # 浏览器常驻，不销毁（池管理）
+        # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
+        try:
+            from browser_pool import rehide_later
+            rehide_later('pdd')
+        except Exception:
+            pass
 
 
 def _parse_search_html(html: str) -> list:
