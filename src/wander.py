@@ -19,12 +19,17 @@ def _get_conn():
 
 
 def _profile_categories(user_name: str) -> list:
-    """用户画像关注的品类（大品类：服饰/食品/日用百货/数码家电）"""
+    """用户画像关注的品类（大品类：服饰/食品/日用百货/数码家电）
+    v1.0：按置信度（出现次数）排序——高置信品类优先"""
     from guide import get_profile
-    cats = get_profile(user_name).get('categories') or []
-    # 画像里可能是细品类词，映射到大品类
+    p = get_profile(user_name)
+    cats = p.get('categories') or []
+    counts = p.get('category_counts') or {}
     MAP = {'数码家电': '数码家电', '游戏': '数码家电'}
-    return [MAP.get(c, c) for c in cats if c]
+    cats = [MAP.get(c, c) for c in cats if c]
+    # 置信度排序：出现次数多的品类在前
+    cats.sort(key=lambda c: counts.get(c, 0), reverse=True)
+    return cats
 
 
 def _recent_categories(user_name: str) -> list:

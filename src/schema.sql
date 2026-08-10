@@ -253,6 +253,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     brands TEXT DEFAULT '[]',            -- 品牌倾向 JSON
     concerns TEXT DEFAULT '[]',          -- 在意点（售后/正品/性价比/性能）
     categories TEXT DEFAULT '[]',        -- 关注品类
+    category_counts TEXT DEFAULT '{}',   -- v1.0 品类出现次数（→置信度）
     updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
 

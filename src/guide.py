@@ -50,11 +50,13 @@ def get_profile(user_name: str) -> dict:
     row = conn.execute('SELECT * FROM user_profiles WHERE user_name=?', (user_name or '',)).fetchone()
     conn.close()
     if not row:
-        return {'budget_tier': '', 'price_sensitive': 0, 'brands': [], 'concerns': [], 'categories': []}
+        return {'budget_tier': '', 'price_sensitive': 0, 'brands': [], 'concerns': [], 'categories': [],
+                'category_counts': {}}
     p = dict(row)
     return {'budget_tier': p.get('budget_tier', ''), 'price_sensitive': p.get('price_sensitive', 0),
             'brands': json.loads(p.get('brands') or '[]'), 'concerns': json.loads(p.get('concerns') or '[]'),
-            'categories': json.loads(p.get('categories') or '[]')}
+            'categories': json.loads(p.get('categories') or '[]'),
+            'category_counts': json.loads(p.get('category_counts') or '{}')}
 
 
 def merge_profile(user_name: str, need_card: dict):
@@ -72,20 +74,25 @@ def merge_profile(user_name: str, need_card: dict):
         p['brands'].append(need_card['brand'])
     if need_card.get('purpose'):
         cats = {'游戏': '数码家电', '办公': '数码家电', '学习': '数码家电'}.get(need_card['purpose'], '')
-        if cats and cats not in p['categories']:
-            p['categories'].append(cats)
+        if cats:
+            # v1.0 置信度：出现次数累计（漫游优先推高置信品类）
+            p['category_counts'][cats] = p['category_counts'].get(cats, 0) + 1
+            if cats not in p['categories']:
+                p['categories'].append(cats)
     conn = get_conn()
     # UPSERT：不存在则插入（首次画像）
-    conn.execute('''INSERT INTO user_profiles (user_name, budget_tier, price_sensitive, brands, concerns, categories, updated_at)
-        VALUES (?,?,?,?,?,?,datetime('now','localtime'))
+    conn.execute('''INSERT INTO user_profiles (user_name, budget_tier, price_sensitive, brands, concerns, categories, category_counts, updated_at)
+        VALUES (?,?,?,?,?,?,?,datetime('now','localtime'))
         ON CONFLICT(user_name) DO UPDATE SET
             budget_tier=excluded.budget_tier, brands=excluded.brands,
             concerns=excluded.concerns, categories=excluded.categories,
+            category_counts=excluded.category_counts,
             updated_at=datetime('now','localtime')''',
                  (user_name or '', p['budget_tier'], p['price_sensitive'],
                   json.dumps(p['brands'], ensure_ascii=False),
                   json.dumps(p['concerns'], ensure_ascii=False),
-                  json.dumps(p['categories'], ensure_ascii=False)))
+                  json.dumps(p['categories'], ensure_ascii=False),
+                  json.dumps(p['category_counts'], ensure_ascii=False)))
     conn.commit()
     conn.close()
 

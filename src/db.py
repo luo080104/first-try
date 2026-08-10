@@ -40,6 +40,10 @@ def init_db():
         price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
         concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+# 迁移：user_profiles 加 category_counts（v1.0 画像置信度，幂等）
+    pcols = [r[1] for r in conn.execute('PRAGMA table_info(user_profiles)')]
+    if 'category_counts' not in pcols:
+        conn.execute("ALTER TABLE user_profiles ADD COLUMN category_counts TEXT DEFAULT '{}'")
     # 迁移：invite_codes 表（v8 邀请码，幂等）
     conn.execute('''CREATE TABLE IF NOT EXISTS invite_codes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE,
