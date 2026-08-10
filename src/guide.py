@@ -283,6 +283,11 @@ def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
             # 没有关键词：把 reply 当作搜索意图，尝试提取
             new_card['keyword'] = _extract_keyword(reply + user_text)
             items = search_recommend(new_card)
+        # 个性化推荐语（IntelliCommerce 分群文案借鉴，按画像风格）
+        if items:
+            p = get_profile(user_name or sess['user_name'])
+            for it in items:
+                it['copy'] = copy_for_user(p, it, new_card)
 
     return {'reply': reply, 'need_card': new_card, 'action': action, 'items': items,
             'profile_updated': bool(user_name or sess['user_name'])}
@@ -343,6 +348,30 @@ def match_score(it: dict, need_card: dict) -> float:
     except Exception:
         s += 5
     return round(min(98, s))
+
+
+# ========== 个性化推荐语（IntelliCommerce 营销文案分群借鉴，纯规则不调 LLM）==========
+
+def copy_for_user(profile: dict, it: dict, need_card: dict) -> str:
+    """按画像分群生成一行推荐语（风格参考 IntelliCommerce 分群文案）"""
+    title = str(it.get('title') or '')
+    price = it.get('actualPrice') or 0
+    tier = profile.get('budget_tier') or ''
+    brands = profile.get('brands') or []
+    concerns = profile.get('concerns') or []
+    brand_hit = any(b and b in title for b in brands)
+    # 分群判断
+    if tier == '低' or profile.get('price_sensitive'):
+        return '💸 性价比之选，这个价位很实在'
+    if tier == '高':
+        return '✨ 品质之选，配得上你的标准'
+    if brand_hit:
+        return f'👍 你关注的品牌，品质有保障'
+    if need_card.get('purpose') == '游戏':
+        return '🎮 适合你的游戏需求'
+    if price and price >= 500:
+        return '🏆 高价值商品，建议看店铺信誉'
+    return '👀 值得一看，销量口碑都不错'
 
 
 if __name__ == '__main__':

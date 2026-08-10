@@ -82,6 +82,7 @@
                 div.className = 'rec-card';
                 var mc = it.match >= 80 ? '#27ae60' : (it.match >= 60 ? '#e67e22' : '#b2bec3');
                 div.innerHTML = '<div class="r-title">' + esc(it.title || '') + '</div>' +
+                    (it.copy ? '<div class="r-meta" style="color:#ff6b35">' + esc(it.copy) + '</div>' : '') +
                     '<div class="r-meta">' + platName(it.platform) + ' ・ ' + esc(it.shopName || '') +
                     (it.monthSales ? ' ・ 销量 ' + it.monthSales : '') + '</div>' +
                     '<span class="r-price">¥' + it.actualPrice + '</span> ' +
