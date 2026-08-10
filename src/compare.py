@@ -159,12 +159,39 @@ async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) 
 
 # ========== AI 建议面板（R1，WorkBuddy 4 段模板）==========
 
-ADVICE_SYSTEM = """你是购物比价顾问。根据给定的商品对比数据，输出 4 段建议：
-【当前位】当前各平台价格（含券/国补后）
-【历史】数据积累期内的最低价（注意：如果记录天数很少，要说明"数据积累中"）
-【判断】偏低位 / 绝对低点 / 偏高位 / 高位
-【行动】刚需→建议平台+价格；不急→心理价位建议+到价提醒
-要求：只输出这 4 段，简洁大白话，每段 1-2 行。"""
+ADVICE_SYSTEM = """你是购物比价顾问。你的建议直接影响用户下单决策，必须准确、谨慎。
+
+## 输出格式（严格四段，以【】开头，每段间空一行）
+
+【行动】最重要，放第一段。分两行：
+- 刚需→推荐平台+到手价（券/国补已减），如有券说明用券后价格
+- 不急→心理价位（历史最低×1.1）+ 盯价提醒
+示例：【行动】刚需→京东自营 ¥2999；不急→设心理价位 ¥2750，降价自动提醒
+
+【当前位】每平台一行，标最低价平台"▼最低"，店铺<3.5标注"⚠️低分"。
+示例：【当前位】
+京东自营 ▼最低 ¥2999
+淘宝 ¥3199（券后 ¥3099）
+拼多多 ¥2899 ⚠️店铺3.2分
+
+【判断】只输出五词之一 + 置信度：
+- "绝对低点"（当前<=最低，置信高）
+- "偏低位"（高于最低<阈值，阈值因价格而异：500+元→5%、50-500元→10%、<50元→15%）
+- "正常位"（高于最低阈值-30%）
+- "偏高位"（高于最低30-50%）
+- "高位"（高于最低>50%）
+历史记录<10条时置信度降为"参考"，加"⚠️数据少"前缀。
+示例：【判断】偏高位（置信高）   或   ⚠️数据少 · 偏高位（参考）
+
+【历史】有>=10条记录且跨度>3月→"近3月最低¥X，历史最低¥Y"；少→"数据积累中，已记录最低¥X"
+示例：【历史】近3月最低 ¥2680，历史最低 ¥2499（去年11月），当前 ¥2999
+
+## 禁止事项
+- 不推荐店铺评分<3.0的商品；全平台<3.0时推荐评分最高的那个，但标注"⚠️全平台店铺评分均低"
+- 不编造优惠券/国补、历史不足时不比较
+- 当前价低于组内均价70%时加"⚠️价差过大，谨防二手/仿品"
+- 仅1个平台有数据时加"（仅此平台有数据）"
+- 同组商品数过少（<2个平台）时不强行比较"""
 
 def build_advice_input(keyword: str, group: dict, subsidies: list, history_rows: list) -> str:
     """组装给 R1 的结构化数据"""
@@ -205,18 +232,24 @@ def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, ti
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = json.loads(resp.read().decode('utf-8'))
-            # v7 费用统计
-            try:
-                from llm_usage import record_usage
-                u = data.get('usage', {})
-                record_usage(model, u.get('prompt_tokens', 0), u.get('completion_tokens', 0), 'AI建议')
-            except Exception:
-                pass
-            return data['choices'][0]['message']['content']
+            content = data['choices'][0]['message'].get('content') or ''
+            if content.strip():
+                # v7 费用统计
+                try:
+                    from llm_usage import record_usage
+                    u = data.get('usage', {})
+                    record_usage(model, u.get('prompt_tokens', 0), u.get('completion_tokens', 0), 'AI建议')
+                except Exception:
+                    pass
+                return content
+            # 空返回：重试（实测 DeepSeek 偶发空 content）
+            last_err = '空响应'
+            print(f'[advice] 空返回，重试 {attempt + 1}/{retries}')
         except Exception as e:
             last_err = e
             if attempt < retries:
-                time.sleep(5 * (2 ** attempt))  # 指数退避：5s → 10s
+                print(f'[advice] 调用异常，重试 {attempt + 1}/{retries}: {str(e)[:50]}')
+        time.sleep(1.5 * (attempt + 1))
     raise last_err
 
 
