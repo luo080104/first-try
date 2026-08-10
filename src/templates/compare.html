@@ -287,6 +287,8 @@
 
             // AI 建议（异步补）
             html += '<div id="card-advice" style="font-size:13px;color:#636e72;margin-top:8px;background:#f8f9fa;border-radius:8px;padding:8px;min-height:24px">🤖 AI 建议加载中…</div>';
+            html += '<button class="btn" style="margin-top:8px;width:100%" onclick="loadDebate(this)">💬 听听大家怎么看</button>' +
+                '<div id="card-debate" style="margin-top:6px"></div>';
 
             html += '</div>';
             document.getElementById('card-body').innerHTML = html;
@@ -340,6 +342,22 @@
             var t = document.getElementById('card-body').innerText;
             if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
             else { alert('复制失败，请手动选择复制'); }
+        }
+        function loadDebate(btn) {
+            btn.disabled = true; btn.innerText = '💬 大家正在吵…';
+            var fd = new FormData();
+            fd.append('keyword', currentKw);
+            fd.append('category', currentCat);
+            fd.append('group_key', LAST_RESULT.groups[0].key);
+            fetch('/api/debate', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
+                var box = document.getElementById('card-debate');
+                if (!d.ok || !d.views) { box.innerHTML = '辩论失败，稍后再试'; btn.style.display = 'none'; return; }
+                box.innerHTML = d.views.map(function(v) {
+                    var icon = {性价比派: '💰', 品质派: '🏪', 性能派: '⚡'}[v.role] || '💬';
+                    return '<div style="font-size:13px;margin:5px 0;padding:7px 9px;background:#f8f9fa;border-radius:8px"><b>' + icon + ' ' + esc(v.role) + '</b>：' + esc(v.view) + '</div>';
+                }).join('');
+                btn.style.display = 'none';
+            }).catch(() => { document.getElementById('card-debate').innerHTML = '辩论失败，稍后再试'; });
         }
         function closeCard() { document.getElementById('card-modal').style.display = 'none'; }
     </script>

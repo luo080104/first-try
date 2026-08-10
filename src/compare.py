@@ -269,6 +269,34 @@ def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list) -
 
 # ========== 内容摘要（博主评测一句话）==========
 
+# ========== v8.5 多视角辩论（分角色 prompt，WorkBuddy：不真多模型省钱50倍）==========
+
+DEBATE_ROLES = [
+    ('性价比派', '你是「性价比派」购物参谋。只看价格和值不值：券后价、历史低点、单斤价。观点犀利简短（1-2 句），可以吐槽贵得离谱。'),
+    ('品质派', '你是「品质派」购物参谋。只看店铺信誉和正品保障：自营/旗舰店/好评率/售后。观点犀利简短（1-2 句），可以警告杂牌店风险。'),
+    ('性能派', '你是「性能派」购物参谋。只看配置和性能：参数、规格、使用体验。观点犀利简短（1-2 句），可以指出配置短板。'),
+]
+
+
+def gen_debate(keyword: str, group: dict) -> list:
+    """三派各自点评同一商品组（同一模型、不同角色 prompt，各调一次）"""
+    lines = [f'商品: {keyword}']
+    plats = group.get('platforms') or {}
+    for p, it in plats.items():
+        lines.append(f'- {p}: ¥{it.get("actualPrice")}'
+                     + (f'（券¥{it.get("couponPrice") or it.get("coupon_amount") or 0}）' if it.get('couponPrice') or it.get('coupon_amount') else '')
+                     + (f' 店:{it.get("shopName") or ""}' if it.get('shopName') else ''))
+    user_text = chr(10).join(lines)
+    views = []
+    for name, role_prompt in DEBATE_ROLES:
+        try:
+            v = _call_llm_retry(user_text, 'deepseek-v4-flash', role_prompt, 200, timeout=60)
+            views.append({'role': name, 'view': v.strip()[:120]})
+        except Exception:
+            views.append({'role': name, 'view': '（该派别暂时失联）'})
+    return views
+
+
 def content_summary(keyword: str) -> dict:
     """相关内容摘要：条数 + 平均可信度 + 高频词（简单规则，不调 LLM）"""
     try:

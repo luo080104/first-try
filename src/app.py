@@ -748,6 +748,32 @@ def api_advice_stats():
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
             'by_scene': [dict(r) for r in by_scene]}
 
+@app.post('/api/debate')
+async def api_debate(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
+    """多视角辩论：三派各自点评（分角色 prompt）"""
+    from compare import search_compare_slow, gen_debate
+    data = await search_compare_slow(keyword, category)
+    group = next((g for g in data['groups'] if g['key'] == group_key), None)
+    if not group:
+        return {'ok': False, 'msg': '未找到该商品组'}
+    views = await asyncio.to_thread(gen_debate, keyword, group)
+    return {'ok': True, 'views': views}
+
+# ========== v8.5 热搜联想 + 相似推荐（大淘客现成接口）==========
+
+@app.get('/api/hotwords')
+def api_hotwords():
+    """热搜榜（首页'大家正在搜'）"""
+    from api_client import get_hot_words
+    return {'words': get_hot_words()}
+
+@app.get('/api/similar')
+def api_similar(id: str = ''):
+    """相似商品（猜你喜欢）"""
+    from api_client import get_similar_goods
+    items = get_similar_goods(id, 8) if id else []
+    return {'items': items}
+
 # ========== v8 邀请码（WorkBuddy 极简设计：一张表+两个页面）==========
 
 @app.post('/api/invite_gen')

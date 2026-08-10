@@ -219,6 +219,44 @@ def search_vip(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
     return items
 
 
+def get_hot_words() -> list:
+    """大淘客热搜榜（无参数，内存缓存 1h）"""
+    import time as _t
+    if not hasattr(get_hot_words, '_cache') or _t.time() - get_hot_words._cache_ts > 3600:
+        try:
+            r = get('etc/search/list-hot-words', {})
+            data = r.get('data') or {}
+            words = []
+            hot = data.get('hotWords') or data.get('list') or [] if isinstance(data, dict) else (data or [])
+            if isinstance(hot, list):
+                for w in hot:
+                    if isinstance(w, dict):
+                        words.append(str(w.get('words') or w.get('word') or w.get('hotWords') or ''))
+                    else:
+                        words.append(str(w))
+            get_hot_words._cache = [w for w in words if w][:12]
+            get_hot_words._cache_ts = _t.time()
+        except Exception as e:
+            print(f'⚠️ 热搜获取失败: {str(e)[:60]}')
+            get_hot_words._cache = []
+            get_hot_words._cache_ts = _t.time()
+    return get_hot_words._cache
+
+
+def get_similar_goods(goods_id: str, size: int = 8) -> list:
+    """大淘客相似商品（猜你喜欢，需大淘客商品 id）"""
+    try:
+        r = get('goods/list-similer-goods-by-open', {'id': str(goods_id), 'size': str(size)})
+        data = r.get('data') or {}
+        lst = data.get('list') if isinstance(data, dict) else data
+        if not isinstance(lst, list):
+            return []
+        return parse_goods_list(lst, platform='tb')
+    except Exception as e:
+        print(f'⚠️ 相似商品失败: {str(e)[:60]}')
+        return []
+
+
 def sort_by_relevance(items: list, keyword: str) -> list:
     """按标题相关性排序：含完整关键词的排前，含部分词的次之（解决 PDD 匹配松散问题）"""
     def score(it):

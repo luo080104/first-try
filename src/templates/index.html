@@ -86,6 +86,7 @@
                 <label onclick="pickMode('history', this)"><input type="radio" name="mode" value="history">📚 看以往数据<small>（读库秒出，零成本）</small></label>
             </div>
             <div class="mode-tip" id="mode-tip">⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多</div>
+            <div id="hot-words" style="margin-top:10px;font-size:13px;color:#b2bec3;min-height:20px"></div>
             <button type="button" id="search-btn" class="btn btn-tb" onclick="doSearch()">开始比价</button>
         </div>
         <div id="progress" style="display:none;text-align:center;color:#0984e3;font-size:15px;margin-top:16px"></div>
@@ -737,6 +738,18 @@
             box.innerHTML = html;
         }
         loadFamily();  // v6 多用户：初始化角色/品类
+        // v8.5 热搜联想（大淘客热搜榜）
+        fetch('/api/hotwords').then(r => r.json()).then(d => {
+            var box = document.getElementById('hot-words');
+            if (!box || !d.words || !d.words.length) return;
+            box.innerHTML = '🔥 大家正在搜：' + d.words.map(function(w) {
+                return '<a href="javascript:hotSearch('' + esc(w).replace(/'/g, '\'') + '')" style="color:#0984e3;text-decoration:none;margin:0 5px">' + esc(w) + '</a>';
+            }).join('');
+        }).catch(function(){});
+        function hotSearch(w) {
+            document.getElementById('kw').value = w;
+            doSearch();
+        }
         // v8 PWA：注册 Service Worker（手机可安装到桌面像 App）
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js').catch(function() {});
