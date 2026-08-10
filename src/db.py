@@ -40,6 +40,11 @@ def init_db():
         price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
         concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+    # 迁移：wander_feedback 表（v7 漫游反馈，幂等）
+    conn.execute('''CREATE TABLE IF NOT EXISTS wander_feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_name TEXT DEFAULT '',
+        item_id TEXT DEFAULT '', action TEXT DEFAULT 'dislike',
+        created_at TEXT DEFAULT (datetime('now','localtime')))''')
     # 迁移：ai_usage 表（v7 费用统计，幂等）
     conn.execute('''CREATE TABLE IF NOT EXISTS ai_usage (
         id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT DEFAULT '',

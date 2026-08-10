@@ -266,3 +266,12 @@ CREATE TABLE IF NOT EXISTS ai_usage (
     scene TEXT DEFAULT '',             -- 调用场景（意图/情感/抽取/建议/导购）
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== v7 购物漫游反馈（推荐闭环）==========
+CREATE TABLE IF NOT EXISTS wander_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_name TEXT DEFAULT '',
+    item_id TEXT DEFAULT '',
+    action TEXT DEFAULT 'dislike',  -- dislike=不感兴趣
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
