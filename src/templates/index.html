@@ -375,9 +375,7 @@
         }
         // ===== v8 邀请码（WorkBuddy 设计：管理端生成 / 亲戚端输入）=====
         function openInvite() {
-            var action = prompt('邀请码做什么？
-1. 生成新码（给亲戚）
-2. 输入码加入（我是亲戚）', '1');
+            var action = prompt('邀请码做什么？\n1. 生成新码（给亲戚）\n2. 输入码加入（我是亲戚）', '1');
             if (action === null) return;
             if (action === '1') {
                 var name = prompt('给谁用？（如：妈妈）');
@@ -389,10 +387,7 @@
                 fd.append('categories', JSON.stringify(picked));
                 fetch('/api/invite_gen', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
                     if (d.ok) {
-                        alert('✅ 邀请码生成：' + d.code + '
-
-把这个码发给' + name + '，让 TA 打开网页点「🔑 邀请码」输入即可
-（一个码只能用一次）');
+                        alert('✅ 邀请码生成：' + d.code + '\n把这个码发给' + name + '，让 TA 打开网页点「🔑 邀请码」输入即可\n（一个码只能用一次）');
                     } else { alert(d.msg); }
                 });
             } else {
@@ -416,8 +411,7 @@
                     saveMembers(members);
                     setCurrent(d.user_name);
                     renderRole();
-                    alert('🎉 欢迎 ' + d.user_name + '！你的角色已创建：' + (cats.length ? cats.join('、') : '全部品类') + '
-以后打开网页就是你的界面了');
+                    alert('🎉 欢迎 ' + d.user_name + '！你的角色已创建：' + (cats.length ? cats.join('、') : '全部品类') + '\n以后打开网页就是你的界面了');
                 });
             }
         }
@@ -743,7 +737,7 @@
             var box = document.getElementById('hot-words');
             if (!box || !d.words || !d.words.length) return;
             box.innerHTML = '🔥 大家正在搜：' + d.words.map(function(w) {
-                return '<a href="javascript:hotSearch('' + esc(w).replace(/'/g, '\'') + '')" style="color:#0984e3;text-decoration:none;margin:0 5px">' + esc(w) + '</a>';
+                return '<a href="javascript:hotSearch(\'' + esc(w) + '\')" style="color:#0984e3;text-decoration:none;margin:0 5px">' + esc(w) + '</a>';
             }).join('');
         }).catch(function(){});
         function hotSearch(w) {
