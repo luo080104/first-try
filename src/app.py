@@ -331,6 +331,9 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
         nonlocal keyword, category
         def sse(data):
             return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
+        def step(name, status):
+            # 步骤可视化（Agent Part 借鉴：pending/running/completed）
+            yield sse({'type': 'step', 'step': name, 'status': status})
         try:
             # v6 用户记忆：记录本次搜索（教材3章）
             try:
@@ -365,13 +368,16 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             # ===== ⚡ 实时模式：现场抓取 =====
             yield sse({'type': 'progress', 'msg': '⚡ 实时模式：绕过缓存现场抓取...'})
             # 意图解析（对话式输入支持）
+            yield step('理解需求', 'running')
             intent = await asyncio.to_thread(parse_intent, keyword)
+            yield step('理解需求', 'done')
             search_kw = intent.get('keyword') or keyword
             search_cat = intent.get('category') or category
             if search_kw != keyword or search_cat != category:
                 yield sse({'type': 'progress', 'msg': f'🤖 明白了：搜索「{search_kw}」' + (f'（{search_cat}）' if search_cat else '')})
             keyword, category = search_kw, search_cat
             # 快通道：API 并行（v5.2 加唯品会）
+            yield step('搜索淘宝/拼多多/唯品会', 'running')
             yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多 + 唯品会（实时抓取）...'})
             from api_client import search_vip
             tb_items, pdd_items, vip_items = await asyncio.gather(
@@ -412,6 +418,8 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             else:
                 yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条 + 唯品会 {len(vip_items)} 条，正在 SKU 分组...'})
 
+            yield step('搜索平台', 'done')
+            yield step('比价合并', 'running')
             init_db()
             groups = []
             if category and category in ADAPTERS and ADAPTERS[category]:
@@ -481,10 +489,13 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                 if options:
                     yield sse({'type': 'guide', 'options': options})
 
+            yield step('比价合并', 'done')
+            yield step('内容联动', 'running')
             content = await asyncio.to_thread(read_content_items, keyword)
             # v5.2 来源受限标注（购物研究助手案例）：内容数据 <5 条时诚实标注
             content_limited = len(content.get('items', [])) < 5
             subsidies = await asyncio.to_thread(find_subsidies, keyword, search_cat)
+            yield step('内容联动', 'done')
             yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                        'groups': groups, 'total': len(all_items),
                        'tb_count': len(tb_items), 'pdd_count': len(pdd_items),

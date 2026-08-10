@@ -92,6 +92,7 @@
                 <div class="loading-title">正在为你出发寻宝…</div>
                 <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
                 <div class="loading-msg" id="loading-msg">准备行囊…</div>
+                <div class="loading-steps" id="loading-steps" style="text-align:left;margin:12px 8px;font-size:13px;line-height:2"></div>
                 <div class="loading-slogan">购物就是一场旅行，请放慢脚步，享受等待的美好。</div>
             </div>
         </div>
@@ -406,6 +407,20 @@
             ov.style.display = 'flex';
             document.getElementById('loading-fill').style.width = '8%';
             document.getElementById('loading-msg').innerText = '准备行囊…';
+            document.getElementById('loading-steps').innerHTML = '';
+            window._steps = {};
+        }
+        function updateStep(name, status) {
+            // 步骤可视化（Agent Part 借鉴）
+            var box = document.getElementById('loading-steps');
+            if (!box) return;
+            if (!window._steps) window._steps = {};
+            window._steps[name] = status;
+            var icons = {running: '<span style="color:#0984e3">🔄</span>', done: '<span style="color:#27ae60">✅</span>', failed: '<span style="color:#d63031">❌</span>'};   
+            box.innerHTML = Object.keys(window._steps).map(function(n) {
+                var st = window._steps[n];
+                return '<div>' + (icons[st] || '⏳') + ' ' + esc(n) + '</div>';
+            }).join('');
         }
         function advanceLoading(msg) {
             var fill = document.getElementById('loading-fill');
@@ -457,6 +472,7 @@
                                 var data = JSON.parse(evt.slice(6));
                                 if (data.type === 'guide') { renderGuide(data.options, kw, prog, box); }
                                 else if (data.type === 'need') { renderNeed(data.q, data.options); }
+                                else if (data.type === 'step') { updateStep(data.step, data.status); }
                                 else if (data.type === 'progress') { advanceLoading(data.msg); }
                                 else if (data.type === 'error') { hideLoading(); prog.style.display = 'none'; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
