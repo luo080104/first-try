@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Go购 - 全网比价助手</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <meta name="theme-color" content="#ff6b35">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         .search-box { background: #fff; border-radius: 16px; padding: 24px;
                       box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
@@ -732,6 +737,10 @@
             box.innerHTML = html;
         }
         loadFamily();  // v6 多用户：初始化角色/品类
+        // v8 PWA：注册 Service Worker（手机可安装到桌面像 App）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+        }
     </script>
 </body>
 </html>
