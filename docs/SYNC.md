@@ -6750,3 +6750,85 @@ def get_browser(name):
 
 ## 环境
 DrissionPage 4.1.1.4 / Edge / Windows / 服务 vbs 启动 / 端口 9300-9303
+
+---
+
+## 小布第二次回复（2026-08-10 深夜）
+
+### Q1：为什么 hide 的浏览器搜索后会出现？
+
+**是重建，不是取消隐藏。** 证据链完整：
+
+```
+搜索触发 → tab.get() 导航中 → 探活调 latest_tab.url → 
+导航期间抛异常 → 池误判浏览器死亡 → quit 旧实例 → 
+新建 Chromium(co) → 窗口出现（新实例没来得及 hide） →
+Edge 恢复会话 → 显示上次搜索页面
+```
+
+新浏览器实例启动时 `hide()` 还没来得及调，窗口就闪现了。
+
+### Q2：Edge 会话恢复
+
+`--disable-session-crashed-bubble` 只关崩溃提示弹窗，不关会话恢复。要加：
+
+```
+co.set_argument('--no-session-restore')         # 不恢复上次会话
+co.set_argument('--disable-features=SessionRestore')  # 禁用恢复功能
+```
+
+但核心问题不是会话恢复——是**重建本身**。只要不误杀浏览器，就不需要重建，就没有新窗口。
+
+### Q3：选型 — b) 探活改轻量，后续补 a)
+
+| 选项 | 评价 |
+|------|------|
+| **b) 探活改轻量** ✅ 做 | 根因修复。不碰 tab，只测 CDP 连接 |
+| **a) 每搜完强制 hide** ✅ 做 | 兜底。finally 里补一刀，新建的漏网之鱼也能盖住 |
+| c) 换 Chrome | 不解决根因。Chrome 同样可能导航异常。Edge 没问题不要换 |
+| **d) requests+cookie** ❌ 不做 | 淘宝反爬在 API 层面，requests 没浏览器指纹会被识别。浏览器通道不能丢 |
+
+**结论：b + a 组合。** 一个堵根因，一个兜底。
+
+### Q4：探活怎么不误判
+
+当前问题：`browser.latest_tab.url` 在导航期间访问会抛异常。
+
+**改法：不碰 tab，只测 CDP 连接。**
+
+```python
+def is_browser_alive(browser):
+    """轻量探活：只测 CDP，不碰任何 tab"""
+    try:
+        browser._driver.execute('Browser.getVersion')
+        return True
+    except Exception:
+        return False
+```
+
+`Browser.getVersion` 是 CDP 原生命令，不触发导航、不依赖 tab 状态。成功 = 浏览器活着。失败 = 真死了。
+
+同时去掉探活中的 `latest_tab.url`——这个操作是误判的根源。
+
+### 最终方案（两行改动）
+
+```python
+# 1. 池探活改 CDP（消除误判）
+alive = is_browser_alive(browser)  # 代替 latest_tab.url
+
+# 2. 搜索函数 finally 里强制 hide（兜底重建的新窗口）
+try:
+    result = do_search(tab, keyword)
+finally:
+    tab.set.window.hide()
+```
+
+根因修补 + 兜底覆盖。不需要换浏览器、不需要换技术方案。
+
+## ⭐ 用户提供的关键线索（请小布优先考虑）
+**用户原话："之前一直没有这个问题"**
+- 解读：今晚之前（v7-v9 时代）用户搜索**不弹窗**
+- 今晚变化：①第一次手机测试 ②可能第一次用**实时模式**（⚡现场抓取）
+- **重要推论**：之前用户主要用**历史模式**（📚读库秒出，**不启动浏览器**）→ 零弹窗；今晚手机测实时模式（必须启动浏览器抓取）→ 弹窗
+- **如果此推论成立**：弹窗 = 实时模式的浏览器进程可见性问题（非新 bug），解决方向不变（浏览器隐形化），但**优先级可降**（历史模式无弹窗可先用）
+- 请小布确认：实时模式浏览器隐形化 vs 默认历史模式 的产品权衡
