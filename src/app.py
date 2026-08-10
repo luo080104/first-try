@@ -745,4 +745,20 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
     return {'ok': True, 'advice': advice, 'cached': False}
 
 if __name__ == '__main__':
+    import uvicorn
+
+    async def _watch_loop():
+        """盯价定时检查（v6 最后一环）：启动时跑一次 + 每 6 小时一次"""
+        import asyncio
+        while True:
+            try:
+                from notify import check_and_notify
+                stat = await asyncio.to_thread(check_and_notify)
+                print(f'[watch] 盯价检查: {stat}')
+            except Exception as e:
+                print(f'[watch] 检查异常: {str(e)[:80]}')
+            await asyncio.sleep(6 * 3600)  # 6 小时
+
+    import threading
+    threading.Thread(target=lambda: asyncio.run(_watch_loop()), daemon=True).start()
     uvicorn.run(app, host='0.0.0.0', port=8001)

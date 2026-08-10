@@ -27,6 +27,10 @@ def init_db():
     tcols = [r[1] for r in conn.execute('PRAGMA table_info(crawl_tasks)')]
     if 'fail_count' not in tcols:
         conn.execute('ALTER TABLE crawl_tasks ADD COLUMN fail_count INTEGER DEFAULT 0')
+    # 迁移：watched_items 补 last_notified_at（盯价推送防重复）
+    wcols = [r[1] for r in conn.execute('PRAGMA table_info(watched_items)')]
+    if 'last_notified_at' not in wcols:
+        conn.execute('ALTER TABLE watched_items ADD COLUMN last_notified_at TEXT')
     # 迁移：search_history 唯一索引（用户+词，INSERT OR REPLACE 前提，WorkBuddy P1-3）
     # 先清理历史重复（每组 user_name+keyword 保留最新一条），再建唯一索引
     conn.execute('''DELETE FROM search_history WHERE id NOT IN

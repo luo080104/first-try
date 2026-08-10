@@ -218,3 +218,16 @@ CREATE TABLE IF NOT EXISTS search_history (
     searched_at TEXT DEFAULT (datetime('now','localtime'))
 );
 CREATE INDEX IF NOT EXISTS idx_search_hist ON search_history(user_name, searched_at);
+
+-- ========== v6 盯价推送（最后一环）==========
+-- watched_items 增加 last_notified_at（最近推送时间，防重复推送）
+-- 推送记录（历史留痕）
+CREATE TABLE IF NOT EXISTS push_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    watch_id INTEGER,
+    title TEXT,
+    price REAL,
+    target REAL,
+    platform TEXT,
+    pushed_at TEXT DEFAULT (datetime('now','localtime'))
+);
