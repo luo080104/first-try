@@ -6053,3 +6053,61 @@ AI Berkshire（价值投资深度） × TradingAgents-Astock（多Agent辩论决
 - PWA 手机体验
 - 大淘客相似商品/详情接口（漫游关联路增强）
 - 金融项目开 repo（三蓝本融合，用户拍板时启动）
+
+---
+
+# 📤 给 WorkBuddy 的案例学习包（pi 同步，请你也去学）
+
+## 用户 Agent 路线图（三项目）
+```
+① 购物比价（v7 完成，母版）→ ② 金融（价值投资×多Agent辩论×舆情情绪因子）→ ③ 网文写作
+共性骨架：多通道数据+结构化提取+状态记忆+多轮对话+定时推送+可视化+多Agent协作
+```
+
+## 案例全清单（20+ 个，本地已克隆，请 WorkBuddy 按需学习）
+
+### 与购物相关（已完成 ✅，可了解）
+| 案例 | 本地位置 | 一句话核心 |
+|---|---|---|
+| ShopAgent-X | ~/shopagentx_ref | 四级搜索流水线/意图路由/防幻觉 |
+| MindPeek | ~/mindpeek_ref | LLM 用户画像（confidence/evidence） |
+| A2A Match | ~/a2a_match_ref | 多维加权匹配 |
+| Agent Part | ~/agent_part_ref | 多Agent编排/步骤状态机/token费用 |
+| IntelliCommerce | ~/ecom_rec_lab | LLM画像→推荐hint/文案分群/A-B实验 |
+| Taobao_Spider | ~/taobao_spider_ref | selenium-stealth（未采用）/看板 |
+| pachong | ~/pachong_ref | 断点续爬/两级爬取 |
+| 省柴柴/比价助手/购物研究 | ~/price_compare_ref* | 偏好/店铺类型/需求追问 |
+| CrawlerTutorial | ~/crawler_tutorial_ref | 验证码预防/UA轮换 |
+| ai-mall-platform | — | 企业微服务（确认不采用） |
+
+### 与金融相关（请重点学 ⭐）
+| 案例 | 本地位置 | 核心价值 |
+|---|---|---|
+| **AI Berkshire** | ~/ai_berkshire_ref | ⭐ 价值投资框架（六关/四大师/反偏见/严谨工具/实盘+69%） |
+| **TradingAgents-Astock** | ~/tradingagents_ref | ⭐ 多Agent辩论（7分析师/Bull-Bear/分角色模型/评估） |
+| **BettaFish** | ~/bettafish_ref | ⭐ 舆情分析（ForumEngine论坛协作/情感模型族） |
+| top50大赛 | ~/item_rec_top50 | 多路召回（确认需海量数据） |
+
+### 与写作相关（请重点学 ⭐）
+| 案例 | 本地位置 | 核心价值 |
+|---|---|---|
+| **harnessNovel** | ~/harnessnovel_ref | 拆书+仿写/叙事模式/机制层 |
+| **ainovel-cli** | ~/ainovel_ref | 确定性引擎/状态机/Step断点/上下文压缩 |
+
+### 角色库
+| agency-agents-zh | ~/agency_agents_ref | 268 角色（10 个已装 WorkBuddy） |
+
+## 请 WorkBuddy 做的 3 件事
+1. **学习金融 3 蓝本**（AI Berkshire / TradingAgents-Astock / BettaFish）——为金融项目开 repo 做准备
+2. **学习写作 2 蓝本**（harnessNovel / ainovel-cli）——为写作项目做准备
+3. 学习后给金融项目设计提建议（三蓝本融合方案见下）
+
+## 金融项目三蓝本融合方案（pi 初稿，请 WorkBuddy 审）
+```
+AI Berkshire（分析深度：四大师/六关/反偏见）
+× TradingAgents-Astock（决策流程：7分析师/Bull-Bear辩论/分角色模型）
+× 舆情情绪因子（三源交叉：文本情感×资金流×量价背离）
++ 数据源：mootdx/东财/新浪（免费）+ DeepSeek 直连
++ 评估：direction_accuracy + 评级区分度
++ 合规：免责声明 + 不产可执行价位
+```
