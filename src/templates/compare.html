@@ -308,6 +308,16 @@
                     var el = document.getElementById('card-hist');
                     if (d.summary) {
                         el.innerHTML = '④ 历史价：近 ' + d.summary.count + ' 次记录 · 最低 ¥' + d.summary.lowest + ' · 当前 ¥' + d.summary.current;
+                        // 降价预测（纯规则，零LLM）
+                        fetch('/api/price_prediction?platform=' + first.platform + '&item_id=' + encodeURIComponent(first.goodsId))
+                            .then(r => r.json()).then(p => {
+                                if (p.ok && p.verdict) {
+                                    var pe = document.createElement('div');
+                                    pe.style.cssText = 'font-size:13px;color:#0984e3;margin:4px 0;font-weight:600';
+                                    pe.innerText = p.verdict;
+                                    el.appendChild(pe);
+                                }
+                            }).catch(function(){});
                     } else {
                         el.innerHTML = '④ 历史价 <span style="font-size:11px;color:#b2bec3">数据积累中</span>';
                     }
