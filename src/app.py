@@ -723,13 +723,13 @@ def api_wander_favs(user: str = ''):
 # ========== v7 评估埋点（建议采纳率闭环）==========
 
 @app.post('/api/event')
-async def api_event(scene: str = Form(''), keyword: str = Form(''), action: str = Form('shown'), user_name: str = Form('')):
-    """记录行为事件：shown=展示 / adopt=采纳（点击去购买/去比价）"""
+async def api_event(scene: str = Form(''), keyword: str = Form(''), action: str = Form('shown'), user_name: str = Form(''), variant: str = Form('a')):
+    """记录行为事件：shown=展示 / adopt=采纳（点击去购买/去比价），variant 供 A-B 统计"""
     from db import get_conn, init_db
     init_db()  # 确保表存在
     conn = get_conn()
-    conn.execute('INSERT INTO advice_events (scene, keyword, action, user_name) VALUES (?,?,?,?)',
-                 (scene[:20], (keyword or '')[:60], action, user_name[:30]))
+    conn.execute('INSERT INTO advice_events (scene, keyword, action, user_name, variant) VALUES (?,?,?,?,?)',
+                 (scene[:20], (keyword or '')[:60], action, user_name[:30], variant[:4]))
     conn.commit(); conn.close()
     return {'ok': True}
 
@@ -743,10 +743,19 @@ def api_advice_stats():
     adopt = conn.execute("SELECT COUNT(*) FROM advice_events WHERE action='adopt'").fetchone()[0]
     by_scene = conn.execute('''SELECT scene, COUNT(*) n FROM advice_events WHERE action='adopt'
         GROUP BY scene ORDER BY n DESC''').fetchall()
+    # v1.0 A-B：按 variant 分别统计采纳率
+    by_variant = conn.execute('''SELECT variant,
+        SUM(CASE WHEN action='shown' THEN 1 ELSE 0 END) shown,
+        SUM(CASE WHEN action='adopt' THEN 1 ELSE 0 END) adopt
+        FROM advice_events GROUP BY variant''').fetchall()
     conn.close()
     rate = round(adopt / shown * 100, 1) if shown else 0
+    ab = {}
+    for r in by_variant:
+        s, a = r['shown'], r['adopt']
+        ab[r['variant']] = {'shown': s, 'adopt': a, 'rate': round(a / s * 100, 1) if s else 0}
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
-            'by_scene': [dict(r) for r in by_scene]}
+            'by_scene': [dict(r) for r in by_scene], 'ab': ab}
 
 @app.get('/api/price_prediction')
 def api_price_prediction(platform: str = '', item_id: str = ''):
