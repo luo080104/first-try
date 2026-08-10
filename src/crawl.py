@@ -258,6 +258,14 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
 
 
 if __name__ == '__main__':
+    # 2026-08-11 单实例保护（弹窗事故教训：fill_shop 双进程循环）
+    import socket as _sock
+    try:
+        _s = _sock.socket()
+        _s.bind(('127.0.0.1', 9331))
+    except OSError:
+        print('[crawl] 已有采集实例在运行，退出')
+        sys.exit(0)
     # 自测：单轮（1 页，快）
     import sys
     pages = int(sys.argv[1]) if len(sys.argv) > 1 else 1
