@@ -97,7 +97,7 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回 (入库件数, items)"""
     from api_client import search_goods, search_pdd, search_vip
     from db import get_conn, upsert_product_item
-    from app import search_taobao_full, search_vip_full
+    from app import search_taobao_full, search_vip_full, search_pdd_full
 
     all_items = []
     # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
@@ -106,9 +106,9 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     vip_items = await asyncio.to_thread(search_vip, keyword)
     all_items += tb_items + pdd_items + vip_items
 
-    # 慢通道：浏览器翻页（串行，频率受限：tb 30s / vip 12-20s）
+    # 慢通道：浏览器翻页（串行，频率受限：tb 30s / vip 12-20s / pdd 12-20s）
     # 注：京东不走浏览器（搜索页验证码多，案例启发）→ 改为采集轮次的全局榜单通道 crawl_jd_by_elite
-    tb_full, vip_full = [], []
+    tb_full, vip_full, pdd_full = [], [], []
     for p in range(1, pages + 1):
         batch = await asyncio.to_thread(search_taobao_full, keyword, p, 8, True)
         tb_full += batch
@@ -121,7 +121,13 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
         if len(batch) < 8:
             break
         await asyncio.sleep(2)
-    all_items += tb_full + vip_full
+    for p in range(1, pages + 1):
+        batch = await asyncio.to_thread(search_pdd_full, keyword, p, 8, True)
+        pdd_full += batch
+        if len(batch) < 8:
+            break
+        await asyncio.sleep(2)
+    all_items += tb_full + vip_full + pdd_full
 
     # 入库（platform+item_id 去重；try/finally 保证连接不泄漏——无人值守 8 小时关键）
     conn = None

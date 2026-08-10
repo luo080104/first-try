@@ -85,6 +85,31 @@ def search_vip_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     except Exception as e:
         print(f'[vip_full] 失败: {str(e)[:80]}')
         return []
+
+def search_pdd_full(keyword: str, page: int = 1, max_items: int = 8, propagate_captcha: bool = False) -> list:
+    """拼多多全量搜索（慢通道，浏览器 H5），失败返回空；字段统一 actualPrice
+    propagate_captcha=True：验证码异常向上抛（采集层用于暂停该词）"""
+    try:
+        import pdd_search
+        items = pdd_search.search_pdd(keyword, max_items=max_items, page=page)
+        for it in items:
+            if 'actualPrice' not in it and it.get('price') is not None:
+                it['actualPrice'] = it['price']
+            it['monthSales'] = it.get('sales') or 0
+            it['shopName'] = it.get('shop') or ''
+            it['title'] = it.get('title', '')
+            it['platform'] = 'pdd'
+            it['_source'] = 'browser'
+        return items
+    except Exception as e:
+        from errors import CaptchaError
+        if isinstance(e, CaptchaError):
+            if propagate_captcha:
+                raise
+            print(f'[pdd_full] 验证码，跳过（{str(e)[:40]}）')
+            return []
+        print(f'[pdd_full] 失败: {str(e)[:80]}')
+        return []
 from score import score_content
 from price_trap import detect_trap
 from matcher import parse_items, group_by_sku, ADAPTERS
@@ -160,6 +185,13 @@ def search_tb_api(keyword: str = ''):
 def search_jd_api(keyword: str = ''):
     import jd_search
     items = jd_search.search_jd(keyword, max_items=8)
+    return {'items': items}
+
+@app.get('/search_pdd')
+def search_pdd_api(keyword: str = ''):
+    """拼多多浏览器补搜（v6.1 打通）"""
+    import pdd_search
+    items = pdd_search.search_pdd(keyword, max_items=10)
     return {'items': items}
 
 @app.get('/history')
@@ -360,16 +392,17 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     yield sse({'type': 'progress', 'msg': f'🔕 已按你的偏好排除：{"、".join(excluded)}'})
             all_items = tb_items + pdd_items + vip_items
 
-            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东 + 唯品会（用户要求：默认所有，不分平台）
+            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东 + 唯品会 + 拼多多（用户要求：默认所有，不分平台）
             slow_items = []
             if len(all_items) < 5:
-                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会）...'})
-                tb_full, jd_full, vip_full = await asyncio.gather(
+                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会+拼多多）...'})
+                tb_full, jd_full, vip_full, pdd_full = await asyncio.gather(
                     asyncio.to_thread(search_taobao_full, keyword),
                     asyncio.to_thread(search_jd_full, keyword),
                     asyncio.to_thread(search_vip_full, keyword),
+                    asyncio.to_thread(search_pdd_full, keyword),
                 )
-                slow_items = tb_full + jd_full + vip_full
+                slow_items = tb_full + jd_full + vip_full + pdd_full
                 all_items = tb_items + pdd_items + vip_items + slow_items
                 yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             else:

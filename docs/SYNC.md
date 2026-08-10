@@ -5217,3 +5217,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_search_unique ON search_history(user_name,
 | crawl.py jd_full 死代码 | 已删（京东走 API 榜单） | ✅ 语法+grep 无残留 |
 | CATEGORY_HINTS 单字误判 | 去掉'奶''茶'单字，加'奶制品''奶茶''茶叶''奶瓶'等精确词 | ✅ 奶瓶→日用/奶茶→食品/茶杯→日用 |
 | search_history DELETE+INSERT | 改 INSERT OR REPLACE + 唯一索引迁移 | ✅ 幂等去重通过 |
+
+---
+
+# ✅ 拼多多浏览器通道打通（pi，2026-08-10）
+
+## 过程（用户配合扫码登录）
+1. 探测：mobile.yangkeduo.com 搜索页需登录（标题"登录"）
+2. login_pdd.py 扫码登录成功（pdd_user_id cookie）
+3. 关键调试：数据在页面注入 JSON（等 10s 才出数据，6s 不够）；价格单位是"分"；商品 ID 在 goods.html?goods_id=xxx
+4. 接口 xg/pfb/a4 返回的是加密签名 token（不直接给数据）——最终方案：解析页面注入 JSON
+
+## 交付
+- `src/pdd_search.py`：H5 搜索爬虫（端口 9303、12-20s 低频、验证码抛 CaptchaError、登录检测）
+- `app.search_pdd_full()`：字段统一 + propagate_captcha
+- 接入三处：SSE 慢通道补搜（四路并行 tb/jd/vip/pdd）、采集引擎、/search_pdd 补搜接口 + 前端"🛍️ 用拼多多补搜"按钮
+- 修复：JSON 中文直接解析（unicode_escape 画蛇添足）+ \uXXXX 转义处理
+- 实测「羽绒服」15 条真实数据（鸭鸭 ¥489/雅鹿 ¥245/拉夏贝尔 ¥399）
+
+## 现状：四平台全通道打通
+```
+淘宝(API+浏览器) + 京东(API榜单+浏览器) + 拼多多(API+浏览器) + 唯品会(API+浏览器)
+```
