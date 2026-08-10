@@ -124,6 +124,11 @@ async def no_cache(request, call_next):
     resp = await call_next(request)
     if request.url.path.endswith(('.html', '/')) or not request.url.path:
         resp.headers['Cache-Control'] = 'no-store'
+    # 2026-08-10 TradeGuard 扫描建议：安全头（保守不加 CSP 以免破坏内联脚本/SSE）
+    resp.headers['X-Content-Type-Options'] = 'nosniff'
+    resp.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    resp.headers['Server'] = 'GoGou'
     return resp
 templates = Jinja2Templates(directory=templates_dir)
 
