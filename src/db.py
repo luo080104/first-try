@@ -192,6 +192,29 @@ SUBSIDY_KEYWORDS = {
     '服饰': ['羽绒服', '外套', '鞋', '运动鞋', '卫衣', '裤'],
 }
 
+# 品类推断词表（v6 优化：自动扩展词/未分类商品按标题归类）
+CATEGORY_HINTS = {
+    '数码家电': ['电脑', '笔记本', '手机', '耳机', '显示器', '显卡', '键盘', '鼠标', '游戏本', '平板',
+                '智能', '电视', '冰箱', '空调', '洗衣机', '电饭煲', '空气炸锅', '吸尘器', '音响', '相机',
+                '手表', '门锁', '音箱', '充电', '硬盘', '内存', '主板', '路由器', '摄像头', '扫地机'],
+    '食品': ['牛奶', '奶', '坚果', '零食', '咖啡', '茶', '酸奶', '巧克力', '螺蛳粉', '面包', '蛋糕',
+             '饼干', '饮料', '果汁', '麦片', '蜂蜜', '粮油', '大米', '食用油', '调味', '罐头', '肉干'],
+    '服饰': ['衣', '服', '羽绒', '卫衣', '外套', '裤', '裙', '鞋', '帽', '袜', '围巾', '运动鞋', 'T恤',
+             '冲锋衣', '毛衣', '衬衫', '牛仔裤', '内衣', '睡衣', '靴'],
+    '日用百货': ['洗衣', '纸', '垃圾袋', '洗洁精', '湿巾', '杯', '毛巾', '收纳', '牙刷', '洗发',
+                '沐浴', '护肤', '面霜', '精华', '防晒', '面膜', '口红', '粉底', '彩妆', '宠物', '猫粮',
+                '狗粮', '猫砂', '奶粉', '尿不湿', '纸尿裤', '四件套', '枕头', '窗帘', '地毯', '玩具',
+                '图书', '小说', '文具', '五金', '工具', '锅', '碗', '盘', '保鲜膜'],
+}
+
+def infer_category(keyword: str) -> str:
+    """按关键词推断大品类（数码家电/食品/服饰/日用百货；无法判断返回空）"""
+    kw = (keyword or '').lower()
+    for cat, words in CATEGORY_HINTS.items():
+        if any(w in kw for w in words):
+            return cat
+    return ''
+
 def add_subsidy(region, category, amount, requirements, valid_from='', valid_to='', source_url='', max_price=None):
     """人工维护国补/优惠政策（max_price=适用商品价格上限，空=不限）"""
     conn = get_conn()
@@ -526,12 +549,13 @@ def resume_crawl_tasks(limit: int = 100):
 
 
 def add_auto_keywords(words: list):
-    """自动扩展：新词入库（幂等，已有词跳过）"""
+    """自动扩展：新词入库（幂等，已有词跳过）+ 按标题推断品类（v6 优化）"""
     conn = get_conn()
     added = 0
     for w in words:
-        cur = conn.execute('INSERT OR IGNORE INTO crawl_tasks (keyword, source) VALUES (?,?)',
-                           (w, 'auto'))
+        cat = infer_category(w)
+        cur = conn.execute('INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?,?)',
+                           (w, cat, 'auto'))
         added += cur.rowcount
     conn.commit()
     conn.close()
