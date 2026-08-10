@@ -28,6 +28,9 @@ def init_db():
     if 'fail_count' not in tcols:
         conn.execute('ALTER TABLE crawl_tasks ADD COLUMN fail_count INTEGER DEFAULT 0')
     # 迁移：search_history 唯一索引（用户+词，INSERT OR REPLACE 前提，WorkBuddy P1-3）
+    # 先清理历史重复（每组 user_name+keyword 保留最新一条），再建唯一索引
+    conn.execute('''DELETE FROM search_history WHERE id NOT IN
+        (SELECT MAX(id) FROM search_history GROUP BY user_name, keyword)''')
     conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_search_hist_uniq ON search_history(user_name, keyword)')
     # 迁移：recommendations 补内容抽取字段（幂等）
     rcols = [r[1] for r in conn.execute('PRAGMA table_info(recommendations)')]
