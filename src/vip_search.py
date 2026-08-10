@@ -49,6 +49,11 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
     co.set_argument('--start-maximized')
     browser = Chromium(co)
     tab = browser.latest_tab
+    try:
+        _b_.latest_tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
+    except Exception:
+        pass
+
 
     try:
         # 搜索入口（ff=品牌|分类|页码|排序，页码位可翻页）

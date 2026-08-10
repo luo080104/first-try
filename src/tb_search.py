@@ -88,6 +88,11 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
     co.set_argument('--start-maximized')
     browser = Chromium(co)
     tab = browser.latest_tab
+    try:
+        _b_.latest_tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
+    except Exception:
+        pass
+
 
     try:
         # 方案 A：page.listen 拦截 MTOP API JSON（首选）

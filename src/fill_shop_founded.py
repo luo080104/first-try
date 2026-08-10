@@ -42,6 +42,11 @@ def crawl_shop_founded(user_id: str, shop_name: str) -> int:
     browser = Chromium(co)
     tab = browser.latest_tab
     try:
+        _b_.latest_tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
+    except Exception:
+        pass
+
+    try:
         tab.get('https://www.taobao.com/')
         tab.wait.doc_loaded()
         time.sleep(4)

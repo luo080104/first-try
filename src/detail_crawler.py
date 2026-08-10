@@ -38,7 +38,12 @@ def _browser(platform):
     co.set_local_port(port)
     co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
     co.set_argument('--window-position=-32000,-32000')  # 移出屏幕：不打扰用户
-    return Chromium(co)
+    _b_ = Chromium(co)
+    try:
+        _b_.latest_tab.set.window.hide()
+    except Exception:
+        pass
+    return _b_
 
 
 def crawl_tb_detail(item_id: str) -> dict:
