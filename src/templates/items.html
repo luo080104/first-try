@@ -59,6 +59,8 @@
             {% endfor %}
         </div>
 
+        <!-- v7 商品库分析看板（Taobao_Spider 可视化借鉴） -->
+        <div id="analysis-box" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px"></div>
         <div class="filters">
             <div class="f-row">
                 <input type="text" id="f-kw" placeholder="搜索商品 / 品牌 / 型号…">
@@ -261,6 +263,51 @@
         var urlCat = new URLSearchParams(location.search).get('cat');
         if (urlCat) { document.getElementById('f-cat').value = urlCat; }
         loadItems(1);
+        loadAnalysis();
+        function loadAnalysis() {
+            fetch('/api/analysis').then(r => r.json()).then(d => {
+                var box = document.getElementById('analysis-box');
+                if (!window.echarts) { return; }
+                box.innerHTML = '';
+                // ① 价格分布直方图
+                var c1 = document.createElement('div');
+                c1.style.cssText = 'flex:1;min-width:260px;height:220px;background:#fff;border-radius:12px;padding:8px';
+                box.appendChild(c1);
+                var ch1 = echarts.init(c1);
+                ch1.setOption({
+                    title: {text: '💰 价格分布', textStyle: {fontSize: 13}},
+                    tooltip: {},
+                    xAxis: {type: 'category', data: d.price_hist.map(p => p.range)},
+                    yAxis: {type: 'value'},
+                    series: [{type: 'bar', data: d.price_hist.map(p => p.n),
+                              itemStyle: {color: '#ff6b35'}, barWidth: '55%'}]
+                });
+                // ② 品牌 TOP8 饼图
+                var c2 = document.createElement('div');
+                c2.style.cssText = 'flex:1;min-width:240px;height:220px;background:#fff;border-radius:12px;padding:8px';
+                box.appendChild(c2);
+                var ch2 = echarts.init(c2);
+                ch2.setOption({
+                    title: {text: '🏷️ 品牌 TOP8', textStyle: {fontSize: 13}},
+                    tooltip: {},
+                    series: [{type: 'pie', radius: ['35%', '65%'],
+                              data: d.brand_share.map(b => ({name: b.name, value: b.value}))}]
+                });
+                // ③ 价格 vs 销量散点
+                var c3 = document.createElement('div');
+                c3.style.cssText = 'flex:1.3;min-width:280px;height:220px;background:#fff;border-radius:12px;padding:8px';
+                box.appendChild(c3);
+                var ch3 = echarts.init(c3);
+                ch3.setOption({
+                    title: {text: '📈 价格 vs 销量', textStyle: {fontSize: 13}},
+                    tooltip: {},
+                    xAxis: {type: 'log', name: '价格(元)'},
+                    yAxis: {type: 'log', name: '销量'},
+                    series: [{type: 'scatter', data: d.scatter.map(s => [s.price, s.sales]),
+                              itemStyle: {color: '#0984e3', opacity: 0.6}, symbolSize: 6}]
+                });
+            });
+        }
     </script>
 </body>
 </html>

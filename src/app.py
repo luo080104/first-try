@@ -787,6 +787,32 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
         save_advice_cache(cache_key, advice)
     return {'ok': True, 'advice': advice, 'cached': False}
 
+# ========== v7 商品库分析（Taobao_Spider 可视化看板借鉴，ECharts 版）==========
+
+@app.get('/api/analysis')
+def api_analysis():
+    """商品库分析：价格分布 + 品牌占比 + 价格销量散点（供看板图表）"""
+    from db import get_conn
+    conn = get_conn()
+    # 价格区间分布
+    bins = [(0, 100), (100, 300), (300, 1000), (1000, 3000), (3000, 999999)]
+    labels = ['0-100', '100-300', '300-1000', '1000-3000', '3000+']
+    price_hist = []
+    for (lo, hi), lb in zip(bins, labels):
+        n = conn.execute('SELECT COUNT(*) FROM product_items WHERE price >= ? AND price < ?', (lo, hi)).fetchone()[0]
+        price_hist.append({'range': lb, 'n': n})
+    # 品牌 TOP8 占比
+    brands = conn.execute('''SELECT brand, COUNT(*) n FROM product_items
+        WHERE brand != '' GROUP BY brand ORDER BY n DESC LIMIT 8''').fetchall()
+    total = conn.execute("SELECT COUNT(*) FROM product_items WHERE brand != ''").fetchone()[0] or 1
+    brand_share = [{'name': r['brand'], 'value': r['n']} for r in brands]
+    # 价格 vs 销量散点（样本 300 条）
+    scatter = [{'price': r['price'], 'sales': r['sales']} for r in conn.execute(
+        "SELECT price, sales FROM product_items WHERE price > 0 AND sales > 0 ORDER BY id DESC LIMIT 300")]
+    conn.close()
+    return {'price_hist': price_hist, 'brand_share': brand_share, 'brand_total': total,
+            'scatter': scatter, 'total': total}
+
 if __name__ == '__main__':
     import uvicorn
 
@@ -805,3 +831,4 @@ if __name__ == '__main__':
     import threading
     threading.Thread(target=lambda: asyncio.run(_watch_loop()), daemon=True).start()
     uvicorn.run(app, host='0.0.0.0', port=8001)
+
