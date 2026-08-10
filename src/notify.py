@@ -1,14 +1,14 @@
 # notify.py - 盯价推送（v6 最后一环，WorkBuddy 计划②）
-# 渠道：企业微信群机器人 webhook（免费无需认证）
-# 流程：定时检查 watched_items → 按标题搜索最新价 → 命中目标价 → 推送到企业微信群
+# 渠道：Server酱 / PushPlus / 企业微信 webhook（任一配置即可，个人免拉群）
+# 流程：定时检查 watched_items → 按标题搜索最新价 → 命中目标价 → 推送
 import os
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-# 企业微信群机器人 webhook（.env 配置 WECHAT_WEBHOOK；未配置则只记录不推送）
-def _get_webhook() -> str:
+
+def _get_env() -> dict:
     env = {}
     path = os.path.join(os.path.dirname(__file__), '..', '.env')
     if os.path.exists(path):
@@ -18,32 +18,62 @@ def _get_webhook() -> str:
                 if line and '=' in line and not line.startswith('#'):
                     k, v = line.split('=', 1)
                     env[k.strip()] = v.strip()
-    return os.environ.get('WECHAT_WEBHOOK', '') or env.get('WECHAT_WEBHOOK', '')
+    return env
 
 
 def push_wechat(text: str) -> bool:
-    """企业微信群机器人推送（markdown）。未配置 webhook 返回 False。"""
-    hook = _get_webhook()
-    if not hook:
-        print('[notify] 未配置 WECHAT_WEBHOOK，跳过推送（只记录）')
-        return False
-    try:
-        import json
-        import urllib.request
-        body = json.dumps({
-            'msgtype': 'markdown',
-            'markdown': {'content': text},
-        }).encode('utf-8')
-        req = urllib.request.Request(hook, data=body, headers={'Content-Type': 'application/json'})
-        resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
-        if resp.get('errcode') == 0:
-            print('[notify] ✅ 企业微信推送成功')
-            return True
-        print(f'[notify] 推送失败: {resp}')
-        return False
-    except Exception as e:
-        print(f'[notify] 推送异常: {str(e)[:80]}')
-        return False
+    """多渠道推送：Server酱 > PushPlus > 企业微信 webhook（任一成功即返回 True）"""
+    env = _get_env()
+    # ① Server酱（推荐，个人免拉群）
+    sendkey = os.environ.get('SERVERCHAN_SENDKEY', '') or env.get('SERVERCHAN_SENDKEY', '')
+    if sendkey:
+        try:
+            import json
+            import urllib.request
+            import urllib.parse
+            body = urllib.parse.urlencode({'title': '🎯 Go购 盯价提醒', 'desp': text}).encode('utf-8')
+            req = urllib.request.Request(f'https://sctapi.ftqq.com/{sendkey}.send', data=body)
+            resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
+            if resp.get('code') == 0:
+                print('[notify] ✅ Server酱推送成功')
+                return True
+            print(f'[notify] Server酱失败: {resp.get("message", resp)}')
+        except Exception as e:
+            print(f'[notify] Server酱异常: {str(e)[:60]}')
+    # ② PushPlus
+    token = os.environ.get('PUSHPLUS_TOKEN', '') or env.get('PUSHPLUS_TOKEN', '')
+    if token:
+        try:
+            import json
+            import urllib.request
+            body = json.dumps({'token': token, 'title': '🎯 Go购 盯价提醒',
+                               'content': text, 'template': 'markdown'}).encode('utf-8')
+            req = urllib.request.Request('https://www.pushplus.plus/send', data=body,
+                                         headers={'Content-Type': 'application/json'})
+            resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
+            if resp.get('code') == 200:
+                print('[notify] ✅ PushPlus推送成功')
+                return True
+            print(f'[notify] PushPlus失败: {resp}')
+        except Exception as e:
+            print(f'[notify] PushPlus异常: {str(e)[:60]}')
+    # ③ 企业微信 webhook（需要建群）
+    hook = os.environ.get('WECHAT_WEBHOOK', '') or env.get('WECHAT_WEBHOOK', '')
+    if hook:
+        try:
+            import json
+            import urllib.request
+            body = json.dumps({'msgtype': 'markdown', 'markdown': {'content': text}}).encode('utf-8')
+            req = urllib.request.Request(hook, data=body, headers={'Content-Type': 'application/json'})
+            resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
+            if resp.get('errcode') == 0:
+                print('[notify] ✅ 企业微信推送成功')
+                return True
+            print(f'[notify] 企业微信失败: {resp}')
+        except Exception as e:
+            print(f'[notify] 企业微信异常: {str(e)[:60]}')
+    print('[notify] 未配置推送通道（SERVERCHAN_SENDKEY / PUSHPLUS_TOKEN / WECHAT_WEBHOOK），跳过')
+    return False
 
 
 def check_and_notify() -> dict:
@@ -102,7 +132,7 @@ def check_and_notify() -> dict:
                 last = w['last_notified_at']
                 if not last or new_price < float(w['current_price'] or 0):
                     stat['hit'] += 1
-                    msg = (f"<font color=\"warning\">🎯 盯价提醒！</font>\n"
+                    msg = (f"**🎯 盯价提醒！**\n\n"
                            f"> **{title[:40]}**\n"
                            f"> 现价 **¥{new_price}**（目标 ¥{target}）✅\n"
                            f"> 平台：{platform}")
