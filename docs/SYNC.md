@@ -5239,3 +5239,39 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_search_unique ON search_history(user_name,
 ```
 淘宝(API+浏览器) + 京东(API榜单+浏览器) + 拼多多(API+浏览器) + 唯品会(API+浏览器)
 ```
+
+---
+
+# 📤 审阅包更新 ⑦（pi，2026-08-10，今日第二批）
+
+## 距上次共享（更新⑥）以来的工作
+
+### 1️⃣ WorkBuddy 审查 3 个 P1 修复（全部完成）
+- jd_full 死代码删除 / CATEGORY_HINTS 词边界（奶瓶→日用、奶茶→食品、茶杯→日用）/ search_history 改 INSERT OR REPLACE + 唯一索引（含历史重复清理）
+
+### 2️⃣ 店铺信誉评分（用户核心需求：识别"假旗舰店"）
+- 新模块 `shop_rating.py`：基础 4.0 + 名称信号（自营/天猫/旗舰店）+ 平台评分（DSR/服务/物流/好评率）+ 店铺等级（京东 5 分制/淘宝数字等级）+ 成立年限（shop_profiles 表）+ 官方认证标记（shopLabel）
+- 2 年内新店降权（当年开 -0.8，1 年 -0.5）
+- **value_score 升级**（dsdb 公式）：销量 0.4 + 店铺信誉 0.3 + 价格 0.3
+- 透传字段：大淘客（dsrScore/serviceScore/shipScore/shopLevel/goldSellers/sellerId）+ 京东联盟（shopLevel 5分制/shopLabel/afterServiceScore/logisticsLvyueScore/userEvaluateScore/goodCommentsShare/shopId）
+- 前端展示：🏪 信誉分（绿/黄/红）+ 信号标签
+- 实测：上好佳官方旗舰 5.0 / 京喜自营 4.6 / 紫安拼购店 3.2 ✅
+- ⚠️ 成立时间：京东店铺页被"京东验证"拦截（爬不了），改用官方评分数据替代（假旗舰店 DSR 低能抓住）——已记录
+
+### 3️⃣ 拼多多浏览器通道（用户配合扫码登录）
+- 过程：搜索页需登录 → login_pdd.py 扫码（pdd_user_id）→ 数据在页面注入 JSON（等 10s）+ 价格单位"分" + goods_id 在链接
+- 交付：`pdd_search.py`（端口 9303/低频/验证码抛异常）+ search_pdd_full + 接入 SSE 补搜（四路并行）/采集引擎//search_pdd + 前端按钮
+- 实测「羽绒服」15 条真实数据
+- **四平台全通道打通**：淘宝/京东/拼多多/唯品会 = API + 浏览器
+
+### 4️⃣ 品类归类（上一批的延续）
+- CATEGORY_HINTS 词表 + infer_category + 历史回填 5209 件
+
+## 今日 commit（本轮）
+- 72be3b4 / 39d2582：WorkBuddy 3 项修复
+- 8a0e9f5 / 7617a47：店铺信誉评分
+- c18258d：拼多多浏览器通道
+
+## 给 WorkBuddy 的 2 个问题
+1. **店铺信誉权重**：当前公式（基础4.0 + 名称0.6 + 评分0.3 + 等级0.3 + 年限±）合理吗？要不要给"成立年限"更高权重（用户特别在意新店）？
+2. **拼多多通道合规**：H5 页面 JSON 解析（非接口签名逆向），12-20s 低频 + 登录态——和京东通道同等策略，是否 OK？
