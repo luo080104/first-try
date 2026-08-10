@@ -333,7 +333,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             return 'data: ' + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
         def step(name, status):
             # 步骤可视化（Agent Part 借鉴：pending/running/completed）
-            yield sse({'type': 'step', 'step': name, 'status': status})
+            return sse({'type': 'step', 'step': name, 'status': status})
         try:
             # v6 用户记忆：记录本次搜索（教材3章）
             try:
@@ -343,6 +343,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                 pass
             # ===== 📚 历史模式：只读商品库，零 API 零爬虫 =====
             if mode == 'history':
+                yield step('查询商品库', 'running')
                 yield sse({'type': 'progress', 'msg': '📚 历史模式：正在查询商品库...'})
                 from db import query_items, find_subsidies
                 init_db()
@@ -358,6 +359,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                                    'best': {'actualPrice': it.get('price')}})
                 content = await asyncio.to_thread(read_content_items, keyword)
                 subsidies = await asyncio.to_thread(find_subsidies, keyword, category)
+                yield step('查询商品库', 'done')
                 yield sse({'type': 'done', 'keyword': keyword, 'category': category,
                            'groups': groups, 'total': len(items),
                            'tb_count': 0, 'pdd_count': 0, 'manual_count': 0,
