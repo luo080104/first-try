@@ -242,6 +242,26 @@ def search_recommend(need_card: dict) -> list:
 
 # ========== 主入口 ==========
 
+# ========== 意图分流（ShopAgent-X RouterAgent 借鉴：闲聊不触发搜索）==========
+
+CHITCHAT_WORDS = ['你好', '您好', 'hello', 'hi', '嗨', '在吗', '谢谢', '感谢', '再见', '拜拜',
+                  '哈哈', '哈哈哈哈', '辛苦了', '晚安', '早安', '你是谁', '你叫什么', '干嘛', '没事', '好的', '好哒']
+CHITCHAT_REPLIES = [
+    '😄 我在呢！想买点什么都可以问我，或者随便逛逛也行～',
+    '👋 你好呀！说说你想买什么，我帮你参谋参谋！',
+    '💬 在的在的～不知道买什么也没关系，我陪你聊出想法来！',
+    '🤗 不客气！有购物问题随时找我！',
+]
+
+
+def detect_intent(text: str) -> str:
+    """简单意图分类（规则版，不调 LLM）：chitchat / shopping"""
+    t = (text or '').strip().lower()
+    if len(t) <= 12 and any(w in t for w in CHITCHAT_WORDS):
+        return 'chitchat'
+    return 'shopping'
+
+
 def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
     """一轮聊天：返回 {reply, need_card, action, items, profile_updated}"""
     sess = get_session(session_id)
@@ -249,6 +269,15 @@ def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
     need_card = sess['need_card']
     if user_name and not sess['user_name']:
         sess['user_name'] = user_name
+
+    # 意图分流（ShopAgent-X RouterAgent 借鉴）：闲聊直接回，不触发搜索/LLM
+    if detect_intent(user_text) == 'chitchat' and len(history) <= 2:
+        import random as _r
+        reply = _r.choice(CHITCHAT_REPLIES)
+        history.append({'role': 'user', 'content': user_text})
+        history.append({'role': 'assistant', 'content': reply})
+        save_session(session_id, history, need_card, user_name or sess['user_name'])
+        return {'reply': reply, 'need_card': need_card, 'action': 'ask', 'items': [], 'profile_updated': False}
 
     history.append({'role': 'user', 'content': user_text})
     # 只保留最近 12 轮（上下文控制）
