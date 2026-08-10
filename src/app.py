@@ -411,6 +411,8 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     asyncio.to_thread(search_pdd_full, keyword),
                 )
                 slow_items = tb_full + jd_full + vip_full + pdd_full
+                all_items = all_items + slow_items
+                yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             elif not pdd_items:
                 # 拼多多 API 被限流/失败 → 浏览器通道兜底（2026-08-10 实测 duoId 被限）
                 yield sse({'type': 'progress', 'msg': '拼多多 API 暂时受限，改用浏览器补拼多多...'})
