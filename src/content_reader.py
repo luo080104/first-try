@@ -2,12 +2,36 @@
 # 职责：读 mc_ref jsonl 缓存 → 均衡三平台 → 可信度评分 → 套路检测
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 from score import score_content
 from price_trap import detect_trap
 
+# 内容读取缓存（60s：同一关键词短时间不重复读 jsonl）
+_content_cache = {}  # keyword -> (timestamp, result)
+CONTENT_CACHE_SECONDS = 60
+
+
+def _content_cache_get(keyword: str):
+    hit = _content_cache.get(keyword)
+    if hit and time.time() - hit[0] < CONTENT_CACHE_SECONDS:
+        return hit[1]
+    return None
+
+
+def _content_cache_set(keyword: str, result: dict):
+    _content_cache[keyword] = (time.time(), result)
+    if len(_content_cache) > 200:
+        keys = list(_content_cache)
+        for k in keys[:100]:
+            _content_cache.pop(k, None)
+
 def read_content_items(keyword: str) -> dict:
+    # 缓存命中直接返回（60s）
+    cached = _content_cache_get(keyword)
+    if cached is not None:
+        return cached
     """读内容联动数据（jsonl 缓存，秒回）——B站/贴吧/小红书均衡 10 条 + 评分 + 套路检测"""
     import glob
     import json as _j
@@ -63,4 +87,5 @@ def read_content_items(keyword: str) -> dict:
     result = {'items': items[:30]}
     if trap.get('has_trap') or trap.get('has_fake_original'):
         result['trap'] = {'trap': trap.get('trap_msg'), 'fake': trap.get('fake_msg')}
+    _content_cache_set(keyword, result)
     return result

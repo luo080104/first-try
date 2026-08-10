@@ -2,6 +2,7 @@
 # P0-1：静态指令移 system message（命中 DeepSeek 前缀缓存）
 import json
 import os
+import time
 import urllib.request
 from datetime import datetime
 
@@ -9,6 +10,25 @@ from datetime import datetime
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 API_URL = 'https://api.deepseek.com/chat/completions'
 TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.log')
+
+# 意图解析缓存（内存 24h：同关键词不重复调 LLM，提速 + 省钱）
+_intent_cache = {}  # text -> (timestamp, result)
+INTENT_CACHE_SECONDS = 24 * 3600
+
+
+def _cache_get(text: str):
+    hit = _intent_cache.get(text)
+    if hit and time.time() - hit[0] < INTENT_CACHE_SECONDS:
+        return hit[1]
+    return None
+
+
+def _cache_set(text: str, result: dict):
+    _intent_cache[text] = (time.time(), result)
+    if len(_intent_cache) > 500:  # 防内存膨胀：超 500 条清一半
+        keys = list(_intent_cache)
+        for k in keys[:250]:
+            _intent_cache.pop(k, None)
 
 # 静态指令（system message，前缀缓存友好）
 SYSTEM_PROMPT = """你是Go购的意图解析器。提取规则：
@@ -33,6 +53,10 @@ def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cach
         pass
 
 def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V4-Flash（简单任务），R1 留给 AI 建议面板
+    # 缓存命中：同关键词 24h 内秒回（优化：省 LLM 调用）
+    cached = _cache_get(text)
+    if cached:
+        return cached
     body = json.dumps({
         'model': 'deepseek-v4-pro' if use_reasoner else 'deepseek-v4-flash',
         'messages': [
@@ -63,6 +87,7 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
             'pref_word': result.get('pref_word', ''),
             'pref_category': result.get('pref_category', ''),
         }
+        _cache_set(text, result)
         # v5.2：偏好自动记忆（"不要拼多多"→排除平台；"要纯棉"→品类偏好）
         try:
             from db import add_excluded_platform, add_category_pref, add_global_pref
