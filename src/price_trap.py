@@ -114,12 +114,13 @@ def predict_price(prices: list) -> dict:
     else:
         trend = '平稳'
 
-    if trend == '下降' and from_low > 0.10:
+    # 低点优先：已在最低附近 → 入手；否则看趋势
+    if from_low <= 0.02:
+        verdict = '🎯 当前接近历史最低，可入手'
+    elif trend == '下降' and from_low > 0.10:
         verdict = '📉 预计还会降，建议再等'
     elif trend == '下降':
         verdict = '📉 降价趋势中，可再观望几天'
-    elif from_low <= 0.02:
-        verdict = '🎯 当前接近历史最低，可入手'
     elif trend == '上升':
         verdict = '📈 价格趋势上行，早买早用或挂盯价'
     else:
