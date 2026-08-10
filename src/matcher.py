@@ -78,6 +78,10 @@ class ClothingMatcher:
 def classify_digital(title: str) -> str:
     """数码商品类型归类（规则识别，顺序敏感：笔记本>显卡>整机>配件）"""
     t = (title or '').lower()
+    # 文具排除：纸质/手账/线圈本不是电脑笔记本
+    if any(k in t for k in ('纸质', '手账', '手帐', '文具', '线圈', '记事本', '办公用',
+                            '商务', '横线', '牛皮纸', 'a5', 'a4', 'b5', '草稿本', '便签')):
+        return '其他'
     if any(k in t for k in ('游戏本', '笔记本', '笔记本电脑', '本本', 'thinkpad',
                             '灵越', '拯救者', '天选', '暗影精灵', '星book', 'yoga')):
         return '笔记本'

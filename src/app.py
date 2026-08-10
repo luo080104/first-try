@@ -360,17 +360,24 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                 items = data.get('items', [])
                 # 2026-08-11 类型归类排序：笔记本>整机>显卡>配件>其他（用户搜「5090电脑」不想先看显卡）
                 from matcher import classify_digital
+                # 2026-08-11 仅数码场景启用类型排序（防 T恤等非数码商品被误排）
+                kw_l = (keyword or '').lower()
+                is_digital = ('数码家电' in (category or '')) or any(k in kw_l for k in
+                              ('5090', '5070', '5060', 'rtx', 'gtx', '显卡', '电脑', '笔记本',
+                               '主机', '手机', '游戏本', '台式', 'cpu', '内存', '固态', '显示器'))
                 _TORDER = {'笔记本': 0, '整机': 1, '显卡': 2, '配件': 3, '其他': 4}
                 groups = []
                 for it in items:
+                    gtype = classify_digital(it.get('title') or '') if is_digital else ''
                     groups.append({'key': (it.get('title') or '')[:30], 'count': 1,
-                                   'type': classify_digital(it.get('title') or ''),
+                                   'type': gtype,
                                    'platforms': [{'platform': it.get('platform'), 'title': it.get('title'),
                                                   'actualPrice': it.get('price'), 'shopName': it.get('shop_name'),
                                                   'url': it.get('url'), 'goodsId': it.get('item_id'),
                                                   'monthSales': it.get('sales')}],
                                    'best': {'actualPrice': it.get('price'), 'title': it.get('title')}})
-                groups.sort(key=lambda g: (_TORDER.get(g.get('type'), 9), g['best']['actualPrice'] or 999999))
+                if is_digital:
+                    groups.sort(key=lambda g: (_TORDER.get(g.get('type'), 9), g['best']['actualPrice'] or 999999))
                 content = await asyncio.to_thread(read_content_items, keyword)
                 subsidies = await asyncio.to_thread(find_subsidies, keyword, category)
                 yield step('查询商品库', 'done')
