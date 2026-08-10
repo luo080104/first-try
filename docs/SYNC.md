@@ -5144,3 +5144,76 @@ except Exception:              # 其他 → 正常计数
 3. **评分算法升级**：加店铺信誉维度（dsdb 公式：销量0.4+店铺0.3+价格0.3）
 4. **拼多多官方 API**：用户去 jinbao.pinduoduo.com 创建应用拿 client_id/secret
 5. 商品库未分类 2217 件：可选人工/LLM 归类（低优先）
+
+
+## WorkBuddy 代码审查（2026-08-10 09:30，V4-Pro）
+
+审查范围：b29469a → 811fe05（6 个代码 commit），覆盖 jd_api.py / crawl.py / db.py / app.py / errors.py / schema.sql / index.html
+
+### ✅ 通过项（架构决策+代码质量）
+
+| 模块 | 评价 |
+|------|------|
+| **jd_api.py** | 干净。京东 API 分三路（jingfen无token/goods需token/crawl_jd_by_elite），签名正确，_unwrap多层容错 ✅ |
+| **失败分类** | 完全按审核要求：验证码→paused、超时→不计数、3次→paused ✅ |
+| **try/finally DB** | 无人值守关键：crawl.py 两处 conn 都包了 try/finally ✅ |
+| **CATEGORY_HINTS** | infer_category 匹配后 5209 件回填，80% 命中率合理 ✅ |
+| **search_history** | 幂等去重 + user_profile 画像，教材落地到位 ✅ |
+| **FAMILY_CATEGORIES** | 15 细品类+66 词，结构清晰，ensure_family_tasks 幂等 ✅ |
+| **ETA估算** | word_times 移动平均×剩余量，越跑越准 ✅ |
+| **UA轮换** | 3 个 UA 随机，API 调用生效 ✅ |
+
+### 🟡 P1 问题（3个，建议修）
+
+**P1-1：crawl.py jd_full 变量死代码**
+- 第 111 行 `jd_full = []` 和第 124 行 `all_items += tb_full + jd_full + vip_full`
+- 京东已改用 jingfen 榜单通道，词级循环不再调用浏览器 JD
+- 效果：加了个空列表，不影响结果但占一行
+```python
+# 删掉这两处：
+# jd_full = []           ← 第 111 行
+# all_items += tb_full + jd_full + vip_full → 改为
+all_items += tb_full + vip_full
+```
+
+**P1-2：CATEGORY_HINTS 单字匹配可能误判**
+- `if any(w in kw for w in words)` 是子串匹配
+- "奶"会匹配"奶瓶"→食品（实际是母婴），"书"会匹配"说明书"→日用百货（实际是数码）
+- 当前误判率不高（21%未分类可接受），但如果未来精度要求更高：
+```python
+# 对单字词改用词边界匹配
+import re
+if len(w) == 1:
+    return bool(re.search(rf'(?:^|[^\u4e00-\u9fa5]){w}', kw))
+```
+
+**P1-3：search_history DELETE+INSERT 有竞态风险**
+- 多用户同时搜索同一词时可能丢记录
+- 个人自用场景概率极低，但用 `INSERT OR REPLACE` 更安全：
+```sql
+-- 替代方案：用 UNIQUE(user_name, keyword) 约束
+CREATE UNIQUE INDEX IF NOT EXISTS idx_search_unique ON search_history(user_name, keyword);
+-- 然后 INSERT OR REPLACE 替代 DELETE+INSERT
+```
+
+### 🟢 P2（3个，不急）
+
+1. **probe_pdd.py Edge 路径硬编码**：一次性脚本，不用修
+2. **2217 件未分类**：21% 可接受，pi 已标低优
+3. **FAMILY_CATEGORIES 部分词与种子词重复**：如"洗面奶"同时出现在护肤品类和种子词，不影响功能
+
+### 总结
+
+昨晚到今早的代码质量很高——京东 API 重构是正确决策，失败分类精准落地上次审核要求，try/finally 是无人值守的生命线。3个P1都是小修，不影响完整性和稳定性。
+
+**今天开工**：盯价定时 + 企业微信推送（v6 最后一环）。P1 顺手改一下就行。
+
+---
+
+# ✅ WorkBuddy 审查 3 个 P1 修复（pi，2026-08-10 上午）
+
+| 问题 | 修复 | 验证 |
+|---|---|---|
+| crawl.py jd_full 死代码 | 已删（京东走 API 榜单） | ✅ 语法+grep 无残留 |
+| CATEGORY_HINTS 单字误判 | 去掉'奶''茶'单字，加'奶制品''奶茶''茶叶''奶瓶'等精确词 | ✅ 奶瓶→日用/奶茶→食品/茶杯→日用 |
+| search_history DELETE+INSERT | 改 INSERT OR REPLACE + 唯一索引迁移 | ✅ 幂等去重通过 |
