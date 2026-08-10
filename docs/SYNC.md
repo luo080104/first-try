@@ -6665,3 +6665,88 @@ v1.0 审核通过 ✅。复盘确认：「淘宝风控」是误判，根因是�
 - DrissionPage 4.1.1.4 + Edge（有头必须：无头破坏通道）
 - 端口：9300 tb / 9301 jd / 9302 vip / 9303 pdd
 - 服务：FastAPI 8001（vbs 启动，隐藏窗口）
+
+---
+
+## 小布排查结果 + 方案（2026-08-10 晚）
+
+### 根因确认
+
+看了 tb_search/jd_search/vip_search 的代码——每个搜索请求都 `Chromium(co)` 新建一个浏览器实例，搜完 `browser.quit()` 销毁。**每搜一次弹一次窗。** hide() 有启动间隙，用户看到的就是那个 1-2 秒的闪现。
+
+### 解决方案：浏览器常驻池（browser_pool.py）
+
+服务启动时预开浏览器，搜索时复用，永不关闭。弹窗只在服务器刚启动时出现一次。
+
+```python
+# browser_pool.py —— 新建文件，接入 app.py
+import threading
+from DrissionPage import Chromium, ChromiumOptions
+
+BROWSERS = {}  # {'tb': browser, 'jd': browser, ...}
+
+def init_browsers():
+    """服务启动时调用一次，直接隐藏"""
+    ports = {'tb': (9300, 'tb_profile'), 'jd': (9301, 'jd_profile'), 
+             'vip': (9302, 'vip_profile'), 'pdd': (9303, 'pdd_profile')}
+    for name, (port, profile) in ports.items():
+        co = ChromiumOptions()
+        co.set_browser_path(EDGE)
+        co.set_local_port(port)
+        co.set_user_data_path(DATA_DIR / profile)
+        browser = Chromium(co)
+        browser.latest_tab.set.window.hide()  # 只闪一次
+        BROWSERS[name] = browser
+
+def get_browser(name):
+    """复用已启动的浏览器，返回新的 tab"""
+    b = BROWSERS.get(name)
+    if b is None:
+        init_browsers()
+        b = BROWSERS.get(name)
+    return b.new_tab(), b  # 新tab，但窗口是隐藏的
+```
+
+**改动范围**：
+- 新增 `browser_pool.py`（约 30 行）
+- `app.py` 启动时调 `init_browsers()`
+- `tb_search/jd_search/vip_search/pdd_search` 里 `Chromium(co)` 改为 `get_browser('tb')`
+- `browser.quit()` 删掉——浏览器常驻，不关
+
+**代价**：四个浏览器常驻内存约 800MB——你的 32GB 内存不在乎这个。收益：再也不弹窗。
+
+### 其他弹窗来源快速排查
+
+- vbs 启动的 uvicorn 控制台 → 如果也弹，改成 `start_server.vbs` 里加隐藏窗口参数
+- login_tb/login_jd 脚本 → 只在手动登录时弹一次，不是高频来源
+- 不需要用户截图——DrissionPage 确认是来源
+
+---
+
+# 🚨🚨 弹窗问题第二次求助（小P排查到深水区，请小布介入）
+
+## 最新发现（比上次更精确）
+1. **根因不是"每搜新建"那么简单**（已改常驻池后仍弹）
+2. **搜索后窗口 +1**：窗口标题 `首页-庖小厨旗舰店-天猫Tmall.com - 用户配置 1`（PID 41896）
+   → **是 tb 浏览器重建**（探活失败→quit→新建）→ **Edge 恢复上次会话** → 窗口弹出显示上次搜索的页面！
+3. **触发重建的原因**：搜索时 `tab.get()` 导航 + `latest_tab.url` 探活——**并发/导航期间探活可能抛异常 → 误判浏览器死亡 → 重建循环**
+4. 已加：并发锁（serialize 装饰器）+ 启动参数（--window-position=-32000,-32000 + --window-size=1,1 + --disable-session-crashed-bubble + --no-first-run）——**尚未验证搜索后效果**（c3db6d6 后连续测试仍+1，最新组合参数刚上）
+
+## 全部尝试记录
+| 方案 | 结果 |
+|---|---|
+| headless | ❌ 破坏通道（淘宝 CDP 404/京东唯品会抓空） |
+| --window-position | ❌ 无效（窗口仍左上角） |
+| dp set.window.hide() | ⚠️ 启动瞬间窗口未就绪，调用失败被吞 |
+| ctypes ShowWindow 按 PID 隐藏 + 预热后补扫 | ✅ 预热后窗口=0，**但搜索后重建的浏览器窗口又出现** |
+| 串行锁 serialize | ✅ 已加（防并发抢 tab） |
+| 启动参数屏外+1x1+禁会话恢复 | 🆕 刚上，待验证 |
+
+## 请小布重点回答
+1. **为什么 hide 的浏览器搜索后会出现？** 是重建（探活误判）还是导航取消隐藏？
+2. **Edge 恢复会话**问题：重建后窗口恢复上次页面——`--disable-session-crashed-bubble` 是否够？要不要 `--restore-last-session` 反向设置？
+3. **更稳的方案建议**：a) 搜索函数 finally 里强制 hide（每搜完补一次）b) 探活改轻量（不访问 latest_tab.url，改查 CDP 连接）c) 放弃 Edge，用 Chrome？d) 淘宝搜索改 requests+cookie（不走浏览器，绕开整个问题）——请选型
+4. 池的探活逻辑：怎么判断浏览器"真死"（不误判）？
+
+## 环境
+DrissionPage 4.1.1.4 / Edge / Windows / 服务 vbs 启动 / 端口 9300-9303
