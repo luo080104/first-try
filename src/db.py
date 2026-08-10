@@ -27,6 +27,8 @@ def init_db():
     tcols = [r[1] for r in conn.execute('PRAGMA table_info(crawl_tasks)')]
     if 'fail_count' not in tcols:
         conn.execute('ALTER TABLE crawl_tasks ADD COLUMN fail_count INTEGER DEFAULT 0')
+    # 迁移：search_history 唯一索引（用户+词，INSERT OR REPLACE 前提，WorkBuddy P1-3）
+    conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS idx_search_hist_uniq ON search_history(user_name, keyword)')
     # 迁移：recommendations 补内容抽取字段（幂等）
     rcols = [r[1] for r in conn.execute('PRAGMA table_info(recommendations)')]
     for col, ddl in (('product_name', 'TEXT'), ('platform', 'TEXT'), ('content_id', 'TEXT')):
