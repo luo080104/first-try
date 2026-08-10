@@ -84,7 +84,7 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
     co.set_browser_path(browser_path)
     co.set_local_port(9300)  # 9300：淘宝专属，与京东 9301 / CDP 9222 分开
     co.set_user_data_path(PROFILE_DIR)
-    co.headless()  # 2026-08-10 无头模式：搜索不再弹窗打扰用户
+    co.set_argument('--window-position=-32000,-32000')  # 移出屏幕：不弹窗且保持真实渲染
     co.set_argument('--start-maximized')
     browser = Chromium(co)
     tab = browser.latest_tab

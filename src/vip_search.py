@@ -45,7 +45,7 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
     co.set_browser_path(browser_path)
     co.set_local_port(LOCAL_PORT)
     co.set_user_data_path(PROFILE_DIR)
-    co.headless()
+    co.set_argument('--window-position=-32000,-32000')  # 窗口移出屏幕：不打扰用户且保持真实渲染
     co.set_argument('--start-maximized')
     browser = Chromium(co)
     tab = browser.latest_tab
