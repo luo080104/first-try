@@ -75,6 +75,23 @@ class ClothingMatcher:
 
 # ========== 数码家电适配器 ==========
 
+def classify_digital(title: str) -> str:
+    """数码商品类型归类（规则识别，顺序敏感：笔记本>显卡>整机>配件）"""
+    t = (title or '').lower()
+    if any(k in t for k in ('游戏本', '笔记本', '笔记本电脑', '本本', 'thinkpad',
+                            '灵越', '拯救者', '天选', '暗影精灵', '星book', 'yoga')):
+        return '笔记本'
+    # 配件优先于显卡：显卡支架/散热硅脂都是配件（用户不会当显卡买）
+    if any(k in t for k in ('支架', '硅脂', '贴纸', '散热器', '散热片', '风扇', '螺丝',
+                            '电源线', '膜', '盒子', '线材', '转接', '挡板', '背板')):
+        return '配件'
+    if any(k in t for k in ('独立显卡', '显卡', ' gpu', 'rtx', 'gtx')):
+        return '显卡'
+    if any(k in t for k in ('主机', '台式', '整机', 'itx', 'atx', '机箱')):
+        return '整机'
+    return '其他'
+
+
 class DigitalMatcher:
     """数码家电：品牌 + 型号 + 核心配置（GPU/CPU/内存/存储）"""
 

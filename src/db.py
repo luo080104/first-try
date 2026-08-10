@@ -386,6 +386,10 @@ def query_items(keyword: str = '', category: str = '', platform: str = '',
     """商品库查询：关键词模糊 + 品类/平台/价格筛选 + 排序 + 分页
     2026-08-11 小布方案3：整句搜 0 结果 → 分词降级（去停用词/提取型号token）自动重搜"""
     where, args = [], []
+    # 2026-08-11 服务/租赁类过滤（与 live 模式一致）：云渲染/出租等非实物不展示
+    for _s in ('远程渲染', '云渲染', '渲染农场', '云电脑', '出租', '代渲染', '按小时'):
+        where.append('title NOT LIKE ?')
+        args.append(f'%{_s}%')
     if keyword:
         where.append('(title LIKE ? OR brand LIKE ? OR series LIKE ?)')
         k = f'%{keyword}%'
@@ -411,29 +415,60 @@ def query_items(keyword: str = '', category: str = '', platform: str = '',
     if total == 0 and keyword:
         # 分词降级：提取型号token（5070ti/rtx5090）+ 去停用词后的中文词，逐个试
         import re
-        _STOP = ('帮我', '我看', '的电脑', '电脑', '买', '一个', '想要', '大概', '什么',
+        _STOP = ('帮我', '我看', '的电脑', '买', '一个', '想要', '大概', '什么',
                  '价格', '推荐', '看看', '搜索', '给我', '找', '一下', '有没有',
                  '便宜', '性价比', '好的', '这个', '那种', '多少钱', '怎么样', '推荐下')
+        # 注意：'电脑'/'显卡' 等品类词不能删（语义词）——'5090电脑'要保留'电脑'
         tokens = re.findall(r'[a-zA-Z0-9]+', keyword)
         kw2 = keyword
         for w in _STOP:
             kw2 = kw2.replace(w, ' ')
         chinese = [p.strip() for p in kw2.split() if p.strip()]
-        cands = tokens + chinese
+        # 剥离 token：'5090电脑' → '电脑'（token 与中文粘连时拆开）
+        chinese = [re.sub(r'[a-zA-Z0-9]+', '', c).strip() for c in chinese]
+        chinese = [c for c in chinese if c]
+        # 降级候选：①token+中文词 AND 组合（5090 AND 电脑）→ ②单 token → ③单中文词
+        cands = []
+        if tokens and chinese:
+            for tok in tokens:
+                for cw in chinese:
+                    cands.append(('AND', tok, cw))
+        for tok in tokens:
+            cands.append(('ONE', tok))
+        for cw in chinese:
+            cands.append(('ONE', cw))
         for c in cands:
-            if len(c) < 2:
-                continue
-            k2 = f'%{c}%'
             conn = get_conn()
-            t2 = conn.execute('SELECT COUNT(*) FROM product_items WHERE title LIKE ? OR brand LIKE ? OR series LIKE ?',
-                              (k2, k2, k2)).fetchone()[0]
-            if t2 > 0:
-                rows2 = conn.execute(f'''SELECT * FROM product_items WHERE title LIKE ? OR brand LIKE ? OR series LIKE ?
-                    ORDER BY {order} LIMIT ? OFFSET ?''', (k2, k2, k2, size, (page - 1) * size)).fetchall()
-                conn.close()
-                return {'total': t2, 'page': page, 'size': size,
-                        'items': [dict(r) for r in rows2],
-                        'degraded': True, 'degraded_kw': c}
+            if c[0] == 'AND':
+                tok, cw = c[1], c[2]
+                if len(tok) < 2 or len(cw) < 2:
+                    conn.close(); continue
+                like1, like2 = f'%{tok}%', f'%{cw}%'
+                filt = ''.join(f" AND title NOT LIKE '%{s}%'" for s in ('远程渲染', '云渲染', '渲染农场', '云电脑', '出租', '代渲染', '按小时'))
+                w3 = f'(title LIKE ? AND title LIKE ?){filt}'
+                t2 = conn.execute(f'SELECT COUNT(*) FROM product_items WHERE {w3}', (like1, like2)).fetchone()[0]
+                if t2 > 0:
+                    rows2 = conn.execute(f'''SELECT * FROM product_items WHERE {w3}
+                        ORDER BY {order} LIMIT ? OFFSET ?''', (like1, like2, size, (page - 1) * size)).fetchall()
+                    conn.close()
+                    return {'total': t2, 'page': page, 'size': size,
+                            'items': [dict(r) for r in rows2],
+                            'degraded': True, 'degraded_kw': f'{tok} {cw}'}
+            else:
+                cw = c[1]
+                if len(cw) < 2:
+                    conn.close(); continue
+                k2 = f'%{cw}%'
+                filt2 = ''.join(f" AND title NOT LIKE '%{s}%'" for s in ('远程渲染', '云渲染', '渲染农场', '云电脑', '出租', '代渲染', '按小时'))
+                w4 = f'(title LIKE ? OR brand LIKE ? OR series LIKE ?){filt2}'
+                t2 = conn.execute(f'SELECT COUNT(*) FROM product_items WHERE {w4}', (k2, k2, k2)).fetchone()[0]
+                if t2 > 0:
+                    rows2 = conn.execute(f'''SELECT * FROM product_items WHERE {w4}
+                        ORDER BY {order} LIMIT ? OFFSET ?''', (k2, k2, k2, size, (page - 1) * size)).fetchall()
+                    conn.close()
+                    return {'total': t2, 'page': page, 'size': size,
+                            'items': [dict(r) for r in rows2],
+                            'degraded': True, 'degraded_kw': cw}
             conn.close()
     return {'total': total, 'page': page, 'size': size,
             'items': [dict(r) for r in rows]}
