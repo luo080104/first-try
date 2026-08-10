@@ -31,19 +31,9 @@ def _rate_limit():
 
 
 def _browser(platform):
-    from DrissionPage import Chromium, ChromiumOptions
-    prof, port = PROFILES[platform]
-    co = ChromiumOptions()
-    co.set_browser_path(EDGE)
-    co.set_local_port(port)
-    co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
-    co.set_argument('--window-position=-32000,-32000')  # 移出屏幕：不打扰用户
-    _b_ = Chromium(co)
-    try:
-        _b_.latest_tab.set.window.hide()
-    except Exception:
-        pass
-    return _b_
+    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁）
+    from browser_pool import get_browser
+    return get_browser(platform)
 
 
 def crawl_tb_detail(item_id: str) -> dict:
@@ -119,7 +109,7 @@ def crawl_tb_detail(item_id: str) -> dict:
         print(f'[detail-tb] {str(e)[:60]}')
         return {}
     finally:
-        browser.quit()
+        pass  # 浏览器常驻，不销毁（池管理）
 
 
 def crawl_jd_detail(item_id: str) -> dict:
@@ -150,7 +140,7 @@ def crawl_jd_detail(item_id: str) -> dict:
         print(f'[detail-jd] {str(e)[:60]}')
         return {}
     finally:
-        browser.quit()
+        pass  # 浏览器常驻，不销毁（池管理）
 
 
 def crawl_detail(platform: str, item_id: str) -> dict:

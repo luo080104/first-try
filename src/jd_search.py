@@ -45,20 +45,10 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         print('❌ 未找到 Chrome/Edge')
         return []
 
-    from DrissionPage import Chromium, ChromiumOptions
-    co = ChromiumOptions()
-    co.set_browser_path(browser_path)
-    co.set_local_port(LOCAL_PORT)  # 9301：避免与 CDP 9222 / 淘宝 9300 冲突
-    co.set_user_data_path(PROFILE_DIR)
-    co.set_argument('--window-position=-32000,-32000')  # 窗口移出屏幕：不打扰用户且保持真实渲染
-    co.set_argument('--start-maximized')
-    browser = Chromium(co)
+    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁，彻底无弹窗）
+    from browser_pool import get_browser
+    browser = get_browser('jd')
     tab = browser.latest_tab
-    try:
-        _b_.latest_tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
-    except Exception:
-        pass
-
 
     try:
         url = f'https://search.jd.com/Search?keyword={keyword}&enc=utf-8'
@@ -152,7 +142,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         print(f"[JD debug] '{keyword}' page={page}: cards={len(cards)}, items={len(items)}")
         return items[:max_items]
     finally:
-        browser.quit()
+        pass  # 浏览器常驻，不销毁（池管理）
 
 if __name__ == '__main__':
     kw = sys.argv[1] if len(sys.argv) > 1 else '石头岛'
