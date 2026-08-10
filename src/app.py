@@ -748,6 +748,20 @@ def api_advice_stats():
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
             'by_scene': [dict(r) for r in by_scene]}
 
+@app.get('/api/price_prediction')
+def api_price_prediction(platform: str = '', item_id: str = ''):
+    """降价预测（纯规则：斜率+低点+波动，零 LLM，小布方案）"""
+    from db import get_conn
+    from price_trap import predict_price
+    if not item_id:
+        return {'ok': False, 'msg': '缺少商品 ID'}
+    conn = get_conn()
+    rows = conn.execute('''SELECT price FROM price_history
+        WHERE platform=? AND item_id=? ORDER BY queried_at ASC''', (platform, str(item_id))).fetchall()
+    conn.close()
+    prices = [r['price'] for r in rows if r['price'] and r['price'] > 1]
+    return {'ok': True, **predict_price(prices)}
+
 @app.get('/api/detail')
 def api_detail(platform: str = '', id: str = ''):
     """商品详情（淘宝 get-goods-details；PDD/京东暂无详情接口则返回基本信息）"""

@@ -86,3 +86,44 @@ if __name__ == '__main__':
     import sys
     kw = sys.argv[1] if len(sys.argv) > 1 else '金典纯牛奶'
     print(detect_trap(kw))
+
+
+# ========== v9 降价预测（小布方案：纯规则，斜率+低点+波动，零 LLM）==========
+
+def predict_price(prices: list) -> dict:
+    """价格走势预测：斜率（趋势）+ 低点距离 + 波动率 → 建议
+    prices: 按时间升序的价格列表"""
+    import statistics
+    if len(prices) < 5:
+        return {'verdict': '数据积累中', 'detail': '历史数据不足（<5 条），暂无法预测'}
+    n = len(prices)
+    half = n // 2
+    first_avg = sum(prices[:half]) / half
+    last_avg = sum(prices[half:]) / (n - half)
+    slope = (last_avg - first_avg) / first_avg if first_avg else 0  # 正=涨
+    low = min(prices)
+    cur = prices[-1]
+    from_low = (cur - low) / low if low else 0  # 距低点百分比
+    mean = sum(prices) / n
+    vol = statistics.stdev(prices) / mean if mean and n > 1 else 0  # 波动率
+
+    if slope < -0.05:
+        trend = '下降'
+    elif slope > 0.05:
+        trend = '上升'
+    else:
+        trend = '平稳'
+
+    if trend == '下降' and from_low > 0.10:
+        verdict = '📉 预计还会降，建议再等'
+    elif trend == '下降':
+        verdict = '📉 降价趋势中，可再观望几天'
+    elif from_low <= 0.02:
+        verdict = '🎯 当前接近历史最低，可入手'
+    elif trend == '上升':
+        verdict = '📈 价格趋势上行，早买早用或挂盯价'
+    else:
+        verdict = '😐 价格波动不大，按需购买即可'
+
+    return {'verdict': verdict,
+            'detail': f'趋势:{trend} 距低点:{from_low*100:.0f}% 波动率:{vol*100:.0f}%'}
