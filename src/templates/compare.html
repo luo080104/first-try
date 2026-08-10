@@ -191,6 +191,7 @@
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
                 });
                 html += '</div>';
+                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, '' + esc(g.key).replace(/'/g, '') + '')">🔍 相似款</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
                 if (g.low_price_warning) {
                     html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
                 }
@@ -342,6 +343,23 @@
             var t = document.getElementById('card-body').innerText;
             if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
             else { alert('复制失败，请手动选择复制'); }
+        }
+        function loadSimilar(btn, groupKey) {
+            var g = null;
+            (LAST_RESULT.groups || []).forEach(function(x) { if (x.key === groupKey) g = x; });
+            if (!g) return;
+            var it = null;
+            g.platforms.forEach(function(p) { if (!it && p.platform === 'tb' && p.goodsId) it = p; });
+            if (!it) { alert('没有可用的商品 ID'); return; }
+            var box = btn.nextElementSibling;
+            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
+            box.innerHTML = '加载相似款…'; box.style.display = 'block';
+            fetch('/api/similar?id=' + encodeURIComponent(it.goodsId)).then(r => r.json()).then(d => {
+                if (!d.items || !d.items.length) { box.innerHTML = '<div style="font-size:12px;color:#b2bec3">没找到相似款</div>'; return; }
+                box.innerHTML = '<div style="font-size:12px;color:#636e72;margin-bottom:4px">🔍 相似款：</div>' + d.items.slice(0, 5).map(function(s) {
+                    return '<div style="font-size:12px;margin:3px 0"><b>¥' + s.actualPrice + '</b> ' + esc(s.title.slice(0, 40)) + '</div>';
+                }).join('');
+            }).catch(() => { box.innerHTML = '相似款加载失败'; });
         }
         function loadDebate(btn) {
             btn.disabled = true; btn.innerText = '💬 大家正在吵…';
