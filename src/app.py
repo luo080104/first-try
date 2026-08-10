@@ -999,19 +999,22 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
             history += [dict(r) for r in rows]
             break
     conn.close()
-    advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history)
+    # v1.0 A-B 实验分流：按 user_name 稳定 hash → variant（a=新版prompt / b=旧版）
+    uname = ''  # api_advice 无 user 参数，用 keyword hash 稳定分流
+    variant = 'a' if (sum(ord(c) for c in keyword) % 2 == 0) else 'b'
+    advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history, variant)
     if not advice.startswith('【当前位】AI 建议暂时不可用'):
         save_advice_cache(cache_key, advice)
-    # v7 评估埋点：建议展示记录（shown）
+    # v7 评估埋点：建议展示记录（shown，带 variant 供 A-B 统计）
     try:
         from db import get_conn
         conn = get_conn()
-        conn.execute('INSERT INTO advice_events (scene, keyword, action) VALUES (?,?,?)',
-                     ('compare', keyword[:60], 'shown'))
+        conn.execute('INSERT INTO advice_events (scene, keyword, action, variant) VALUES (?,?,?,?)',
+                     ('compare', keyword[:60], 'shown', variant))
         conn.commit(); conn.close()
     except Exception:
         pass
-    return {'ok': True, 'advice': advice, 'cached': False}
+    return {'ok': True, 'advice': advice, 'cached': False, 'variant': variant}
 
 # ========== v7 商品库分析（Taobao_Spider 可视化看板借鉴，ECharts 版）==========
 

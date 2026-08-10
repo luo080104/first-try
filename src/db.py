@@ -50,6 +50,10 @@ def init_db():
         user_name TEXT DEFAULT '', categories TEXT DEFAULT '[]',
         used_by TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now','localtime')),
         used_at TEXT)''')
+    # 迁移：advice_events 加 variant（v1.0 A-B 实验分流，幂等）
+    acols = [r[1] for r in conn.execute('PRAGMA table_info(advice_events)')]
+    if 'variant' not in acols:
+        conn.execute("ALTER TABLE advice_events ADD COLUMN variant TEXT DEFAULT 'a'")
     # 迁移：advice_events 表（v7 评估埋点，幂等）
     conn.execute('''CREATE TABLE IF NOT EXISTS advice_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT, scene TEXT DEFAULT '',

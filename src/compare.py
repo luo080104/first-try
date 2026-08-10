@@ -159,6 +159,28 @@ async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) 
 
 # ========== AI 建议面板（R1，WorkBuddy 4 段模板）==========
 
+# v1.0 A-B 实验：旧版 prompt（对照组 B，对比新版采纳率）
+OLD_ADVICE_SYSTEM = """你是购物比价顾问。根据给定的商品对比数据，输出 4 段建议：
+【当前位】当前各平台价格（含券/国补后）
+【历史】数据积累期内的最低价（注意：如果记录天数很少，要说明"数据积累中"）
+【判断】偏低位 / 绝对低点 / 偏高位 / 高位
+【行动】刚需→建议平台+价格；不急→心理价位建议+到价提醒
+要求：只输出这 4 段，简洁大白话，每段 1-2 行。"""
+
+
+def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list, variant: str = 'a') -> str:
+    """AI 建议（variant a=新版优化 prompt / b=旧版，A-B 实验对比采纳率）"""
+    if not API_KEY:
+        return '【当前位】无法分析（未配置 API Key）\n【历史】-\n【判断】-\n【行动】-'
+    user_text = build_advice_input(keyword, group, subsidies, history_rows)
+    system = ADVICE_SYSTEM if variant == 'a' else OLD_ADVICE_SYSTEM
+    try:
+        return _call_llm_retry(user_text, 'deepseek-v4-pro', system, 800)
+    except Exception as e:
+        print(f'[advice] 生成失败: {str(e)[:80]}')
+        return f'【当前位】AI 建议暂时不可用（{str(e)[:40]}），请稍后再试\n【历史】-\n【判断】-\n【行动】-'
+
+
 ADVICE_SYSTEM = """你是购物比价顾问。你的建议直接影响用户下单决策，必须准确、谨慎。
 
 ## 输出格式（严格四段，以【】开头，每段间空一行）
@@ -255,17 +277,6 @@ def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, ti
         last_err = RuntimeError(last_err)
     raise last_err
 
-
-def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list) -> str:
-    """AI 建议面板（V4-Pro 思考模式；失败给降级文案不崩，WorkBuddy P1-2）"""
-    if not API_KEY:
-        return '【当前位】无法分析（未配置 API Key）\n【历史】-\n【判断】-\n【行动】-'
-    user_text = build_advice_input(keyword, group, subsidies, history_rows)
-    try:
-        return _call_llm_retry(user_text, 'deepseek-v4-pro', ADVICE_SYSTEM, 800)
-    except Exception as e:
-        print(f'[advice] 生成失败: {str(e)[:80]}')
-        return f'【当前位】AI 建议暂时不可用（{str(e)[:40]}），请稍后再试\n【历史】-\n【判断】-\n【行动】-'
 
 # ========== 内容摘要（博主评测一句话）==========
 

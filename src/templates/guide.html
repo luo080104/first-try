@@ -109,6 +109,7 @@
             fd.append('scene', scene);
             fd.append('keyword', curUser());
             fd.append('action', 'adopt');
+            fd.append('variant', localStorage.getItem('gobuy_variant') || 'a');
             fetch('/api/event', {method: 'POST', body: fd});
         }
 
