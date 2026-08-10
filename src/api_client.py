@@ -297,8 +297,10 @@ if __name__ == '__main__':
 
 
 def value_score(item: dict) -> float:
-    """性价比评分（dsdb 公式 v6.1：销量 0.4 + 店铺信誉 0.3 + 价格 0.3）
-    店铺信誉 = shop_rating_of（评分/等级/好评率/成立年限综合，识别假旗舰店）"""
+    """性价比评分（用户需求：按物品贵重程度动态调权重）
+    贵重物（≥500元）：店铺 0.5 主导 —— 买电脑必须看店铺靠不靠谱
+    普通品（50-500）：店铺 0.3 + 销量 0.4
+    小件（<50元）：店铺 0.15 + 价格销量主导 —— 买螺丝便宜就行"""
     try:
         sales = float(item.get('monthSales', 0) or 0)
         price = float(item.get('actualPrice', 0) or 0)
@@ -311,4 +313,11 @@ def value_score(item: dict) -> float:
         shop_score = shop_rating_of(item)['rating'] / 5.0
     except Exception:
         shop_score = 0.8
-    return round((sales_score * 0.4 + shop_score * 0.3 + price_score * 0.3) * 100, 1)
+    # 动态权重：按价格分档（贵重物店铺权重高，小件价格销量权重高）
+    if price >= 500:
+        w_shop, w_sales, w_price = 0.5, 0.2, 0.3
+    elif price >= 50:
+        w_shop, w_sales, w_price = 0.3, 0.4, 0.3
+    else:
+        w_shop, w_sales, w_price = 0.15, 0.5, 0.35
+    return round((sales_score * w_sales + shop_score * w_shop + price_score * w_price) * 100, 1)
