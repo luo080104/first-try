@@ -748,6 +748,25 @@ def api_advice_stats():
     return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
             'by_scene': [dict(r) for r in by_scene]}
 
+@app.get('/api/detail')
+def api_detail(platform: str = '', id: str = ''):
+    """商品详情（淘宝 get-goods-details；PDD/京东暂无详情接口则返回基本信息）"""
+    from db import get_conn
+    if not id:
+        return {'ok': False, 'msg': '缺少商品 ID'}
+    if platform == 'tb':
+        from api_client import get_goods_details
+        d = get_goods_details(id)
+        return {'ok': True, **d} if d else {'ok': False, 'msg': '详情获取失败'}
+    # 其他平台：返回商品库已有信息
+    conn = get_conn()
+    row = conn.execute('SELECT title, shop_name, price, sales, url, img FROM product_items WHERE item_id=? LIMIT 1', (id,)).fetchone()
+    conn.close()
+    if row:
+        return {'ok': True, 'title': row['title'], 'shop': row['shop_name'], 'img': row['img'],
+                'sales': row['sales'], 'desc': ''}
+    return {'ok': False, 'msg': '未找到商品'}
+
 @app.post('/api/spec_compare')
 async def api_spec_compare(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
     """数码参数对比：同组商品用 DigitalMatcher 提取参数并排"""

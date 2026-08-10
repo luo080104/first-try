@@ -192,7 +192,8 @@
                 });
                 html += '</div>';
                 html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, '' + esc(g.key).replace(/'/g, '') + '')">🔍 相似款</button>' +
-                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare('' + esc(g.key).replace(/'/g, '') + '')">⚙️ 参数对比</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
+                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare('' + esc(g.key).replace(/'/g, '') + '')">⚙️ 参数对比</button>' +
+                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openDetail(this, '' + esc(g.key).replace(/'/g, '') + '')">📄 详情</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
                 if (g.low_price_warning) {
                     html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
                 }
@@ -345,6 +346,34 @@
             if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
             else { alert('复制失败，请手动选择复制'); }
         }
+        function openDetail(btn, groupKey) {
+            var g = null;
+            (LAST_RESULT.groups || []).forEach(function(x) { if (x.key === groupKey) g = x; });
+            if (!g) return;
+            var it = null;
+            g.platforms.forEach(function(p) { if (!it && p.goodsId) it = p; });
+            if (!it) { alert('该商品没有 ID'); return; }
+            var box = document.getElementById('detail-modal-body');
+            box.innerHTML = '加载详情…';
+            document.getElementById('detail-modal').style.display = 'flex';
+            fetch('/api/detail?platform=' + it.platform + '&id=' + encodeURIComponent(it.goodsId)).then(r => r.json()).then(d => {
+                if (!d.ok) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">' + esc(d.msg) + '</div>'; return; }
+                var html = '<div style="display:flex;gap:12px;margin-bottom:10px">' +
+                    (d.img ? '<img src="' + esc(d.img) + '" style="width:90px;height:90px;border-radius:10px;object-fit:cover" onerror="this.style.display='none'">' : '') +
+                    '<div style="flex:1"><div style="font-size:15px;font-weight:700">' + esc(d.title || '') + '</div>' +
+                    '<div style="font-size:12px;color:#636e72;margin-top:4px">🏪 ' + esc(d.shop || '') +
+                    (d.sales ? ' ・ 销量 ' + d.sales : '') + '</div></div></div>';
+                if (d.dsr) {
+                    html += '<div style="font-size:13px;margin:6px 0"><b>店铺评分</b><br>' +
+                        '描述 ' + d.dsr + ' ・ 服务 ' + (d.service || '-') + ' ・ 物流 ' + (d.ship || '-') + '</div>';
+                }
+                if (d.desc) {
+                    html += '<div style="font-size:12px;color:#636e72;background:#f8f9fa;border-radius:8px;padding:8px;margin-top:6px">📝 ' + esc(d.desc) + '</div>';
+                }
+                box.innerHTML = html;
+            }).catch(() => { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">详情加载失败</div>'; });
+        }
+        function closeDetail() { document.getElementById('detail-modal').style.display = 'none'; }
         function openSpecCompare(groupKey) {
             // 调后端解析同组商品参数 → 弹窗并排表
             var fd = new FormData();
@@ -415,6 +444,14 @@
                 <button class="btn" style="flex:1" onclick="copyCardText()">📋 复制文字</button>
                 <button class="btn" style="flex:0 0 auto" onclick="closeCard()">关闭</button>
             </div>
+        </div>
+    </div>
+
+    <!-- v9 详情模态框 -->
+    <div id="detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
+        <div style="width:min(440px, 94vw);background:#fff;border-radius:14px;padding:16px">
+            <div id="detail-modal-body"></div>
+            <div style="text-align:center;margin-top:12px"><button class="btn" onclick="closeDetail()">关闭</button></div>
         </div>
     </div>
 

@@ -243,6 +243,27 @@ def get_hot_words() -> list:
     return get_hot_words._cache
 
 
+def get_goods_details(goods_id: str) -> dict:
+    """淘宝商品详情（大淘客 get-goods-details）：DSR三围/主图/描述/销量"""
+    try:
+        r = get('goods/get-goods-details', {'goodsId': str(goods_id)})
+        d = r.get('data') or {}
+        if not isinstance(d, dict) or not d.get('goodsId'):
+            return {}
+        return {
+            'title': d.get('dtitle') or d.get('title') or '',
+            'shop': d.get('shopName') or '',
+            'dsr': d.get('dsrScore'), 'service': d.get('serviceScore'), 'ship': d.get('shipScore'),
+            'desc': (d.get('desc') or '')[:200],
+            'img': d.get('mainPic') or '',
+            'sales': d.get('monthSales'),
+            'brand': d.get('brandName') or '',
+        }
+    except Exception as e:
+        print(f'⚠️ 详情失败: {str(e)[:60]}')
+        return {}
+
+
 def get_similar_goods(goods_id: str, size: int = 8) -> list:
     """大淘客相似商品（猜你喜欢，需大淘客商品 id）"""
     try:
