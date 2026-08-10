@@ -153,11 +153,14 @@
                 .catch(() => { finishLoading(); box.innerHTML = '<div style="text-align:center;color:#d63031;padding:30px">搜索失败</div>'; });
         }
 
+        var LAST_RESULT = null;
         function renderGroups(d, box) {
+            LAST_RESULT = d;
             var html = '<div class="stat">淘宝 ' + d.tb_count + ' + 拼多多 ' + d.pdd_count + ' 条' +
                 (d.jd_count ? ' + 京东 ' + d.jd_count + ' 条' : '') +
                 (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
-                ' 候选，' + d.groups.length + ' 个同款组</div>';
+                ' 候选，' + d.groups.length + ' 个同款组</div>' +
+                '<div style="text-align:center;margin:10px 0"><button class="btn btn-primary" onclick="openCard()">📋 生成好价卡</button></div>';
             if (d.subsidies && d.subsidies.length) {
                 html += '<div class="subsidy-bar">' + d.subsidies.map(function(s) {
                     return '🎯 <b>[' + esc(s.category) + ']</b> ' + esc(s.requirements) +
@@ -236,6 +239,121 @@
                 .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
                 .catch(() => alert('盯价失败'));
         }
+        // ===== v8 好价卡（六关拼图，WorkBuddy 设计）=====
+        function openCard() {
+            if (!LAST_RESULT || !LAST_RESULT.groups || !LAST_RESULT.groups.length) { alert('先搜索再生成好价卡'); return; }
+            var d = LAST_RESULT;
+            // 用第一个同款组做卡片（用户可后续选组）
+            var g = d.groups[0];
+            var best = g.platforms.slice().sort(function(a, b) { return a.price - b.price; })[0];
+            var card = document.getElementById('card-box');
+            var html = '<div class="card-head" style="text-align:center;padding:10px;background:linear-gradient(135deg,#ff6b35,#e74c3c);color:#fff;border-radius:12px 12px 0 0">' +
+                '<div style="font-size:18px;font-weight:700">🛒 Go购 · 好价卡</div>' +
+                '<div style="font-size:12px;opacity:0.9">购物就是一场旅行</div></div>' +
+                '<div style="padding:14px">' +
+                '<div style="font-size:16px;font-weight:700;margin-bottom:10px">📦 ' + esc(g.key) + '</div>';
+
+            // ② 全网比价
+            html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">② 全网比价</div>';
+            g.platforms.forEach(function(it) {
+                var isBest = it === best;
+                var st = it.shop_type ? ' <span style="font-size:11px;color:#0984e3">' + esc(it.shop_type) + '</span>' : '';
+                html += '<div style="font-size:13px;margin:3px 0">' + platName(it.platform) + st + ' ' +
+                    (isBest ? '▼ ' : '') + '<b>¥' + it.price + '</b>' +
+                    (it.shop_rating ? ' <span style="font-size:11px;color:' + (it.shop_rating >= 4.5 ? '#27ae60' : (it.shop_rating >= 4 ? '#e67e22' : '#d63031')) + '">' + it.shop_rating + '分</span>' : '') + '</div>';
+            });
+
+            // ③ 店铺信誉
+            var shopInfo = [];
+            g.platforms.slice(0, 2).forEach(function(it) {
+                if (it.shop) shopInfo.push(esc(it.shop) + (it.shop_rating ? ' ' + it.shop_rating + '分' : '') + (it.shop_signals ? ' · ' + esc(it.shop_signals.split('、')[0]) : ''));
+            });
+            if (shopInfo.length) {
+                html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">③ 店铺信誉</div>' +
+                    shopInfo.map(function(s) { return '<div style="font-size:13px;margin:2px 0">🏪 ' + s + '</div>'; }).join('');
+            }
+
+            // ④ 历史价（异步补）
+            html += '<div id="card-hist" style="font-size:14px;font-weight:700;margin:8px 0 4px">④ 历史价 <span style="font-size:11px;color:#b2bec3;font-weight:400">加载中…</span></div>';
+
+            // ⑤ 低价警示
+            if (g.low_price_warning) {
+                html += '<div style="font-size:13px;margin:4px 0;color:#d63031">⚠️ 最低价低于其他平台 30% 以上，警惕二手/仿品</div>';
+            }
+
+            // ⑥ 盯价纪律
+            html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">⑥ 盯价纪律</div>' +
+                '<div style="font-size:13px;color:#636e72">建议心理价位 = 历史最低 × 1.1，可设置降价提醒</div>';
+
+            // AI 建议（异步补）
+            html += '<div id="card-advice" style="font-size:13px;color:#636e72;margin-top:8px;background:#f8f9fa;border-radius:8px;padding:8px;min-height:24px">🤖 AI 建议加载中…</div>';
+
+            html += '</div>';
+            document.getElementById('card-body').innerHTML = html;
+            document.getElementById('card-modal').style.display = 'flex';
+            loadCardHistory(g);
+            loadCardAdvice(g);
+        }
+        function loadCardHistory(g) {
+            var first = null;
+            g.platforms.forEach(function(it) { if (!first && it.goodsId) first = it; });
+            if (!first) { document.getElementById('card-hist').innerHTML = '④ 历史价 <span style="font-size:11px;color:#b2bec3">暂无数据</span>'; return; }
+            fetch('/history?platform=' + first.platform + '&item_id=' + encodeURIComponent(first.goodsId))
+                .then(r => r.json()).then(d => {
+                    var el = document.getElementById('card-hist');
+                    if (d.summary) {
+                        el.innerHTML = '④ 历史价：近 ' + d.summary.count + ' 次记录 · 最低 ¥' + d.summary.lowest + ' · 当前 ¥' + d.summary.current;
+                    } else {
+                        el.innerHTML = '④ 历史价 <span style="font-size:11px;color:#b2bec3">数据积累中</span>';
+                    }
+                }).catch(() => {});
+        }
+        function loadCardAdvice(g) {
+            var fd = new FormData();
+            fd.append('keyword', currentKw);
+            fd.append('category', currentCat);
+            fd.append('group_key', g.key);
+            fetch('/api/advice', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
+                var el = document.getElementById('card-advice');
+                if (d.advice) el.innerHTML = '🤖 ' + d.advice.split('
+').map(esc).join('<br>');
+            }).catch(() => { document.getElementById('card-advice').innerHTML = '🤖 AI 建议暂不可用'; });
+        }
+        function saveCard() {
+            // html2canvas 截图保存（CDN 加载）
+            if (!window.html2canvas) {
+                var s = document.createElement('script');
+                s.src = 'https://cdn.staticfile.org/html2canvas/1.4.1/html2canvas.min.js';
+                s.onload = function() { doSave(); };
+                document.head.appendChild(s);
+            } else { doSave(); }
+        }
+        function doSave() {
+            html2canvas(document.getElementById('card-body')).then(function(canvas) {
+                var a = document.createElement('a');
+                a.download = '好价卡.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            });
+        }
+        function copyCardText() {
+            var t = document.getElementById('card-body').innerText;
+            if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
+            else { alert('复制失败，请手动选择复制'); }
+        }
+        function closeCard() { document.getElementById('card-modal').style.display = 'none'; }
     </script>
+
+    <!-- v8 好价卡模态框 -->
+    <div id="card-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
+        <div style="width:min(420px, 94vw);background:#fff;border-radius:14px">
+            <div id="card-body" style="font-size:14px"></div>
+            <div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #eee">
+                <button class="btn btn-primary" style="flex:1" onclick="saveCard()">💾 保存图片</button>
+                <button class="btn" style="flex:1" onclick="copyCardText()">📋 复制文字</button>
+                <button class="btn" style="flex:0 0 auto" onclick="closeCard()">关闭</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
