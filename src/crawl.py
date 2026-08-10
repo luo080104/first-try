@@ -145,7 +145,7 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     return added, all_items
 
 
-async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
+async def run_crawl_round(pages: int = 2, max_seconds: int = 72000) -> dict:  # 20h兜底（小骆：不要设限，词跑完自然停）
     """跑一轮采集：pending+failed 词 → 报告。
     max_seconds: 硬性时长上限（默认 8 小时），到点自动停止，未完成词保持 pending 下轮继续。
     进度含 avg_per_word/eta 精准预估（实测均值 × 剩余量）。"""
@@ -236,9 +236,9 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 28800) -> dict:
                           avg_per_word=int(avg) if avg else 0,
                           eta=int(eta))
 
-        # 自动扩展：从本轮新入库商品标题提取新词（≥3 次 + 排除短词）
-        new_words = find_new_words(all_new_items)
-        added_words = add_auto_keywords(new_words) if new_words else 0
+        # 2026-08-11 关闭自动扩展（小骆：不要漫无边际——只采现有词，跑完自然停）
+        new_words = []
+        added_words = 0
     except Exception as e:
         # 无人值守兜底：任何非词级异常都不能让 running 卡死
         with _lock:

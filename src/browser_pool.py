@@ -90,8 +90,6 @@ def _new_browser(platform: str):
 
 def get_browser(platform: str):
     """从池取常驻浏览器；不存在/已死则新建（线程安全）"""
-    import traceback
-    traceback.print_stack(file=sys.stderr)  # 小布方案：定位谁在偷偷调浏览器
     with _lock:
         b = _pool.get(platform)
         if b is not None:
