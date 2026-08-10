@@ -780,18 +780,20 @@ def api_detail(platform: str = '', id: str = ''):
     if platform == 'tb':
         from api_client import get_goods_details
         d = get_goods_details(id)
-        return {'ok': True, **d} if d else {'ok': False, 'msg': '详情获取失败'}
+        if d:
+            return {'ok': True, **d}
     if platform == 'pdd':
         from api_client import get_pdd_details
         d = get_pdd_details(id)
-        return {'ok': True, **d} if d else {'ok': False, 'msg': '详情获取失败'}
-    # 其他平台：返回商品库已有信息
+        if d:
+            return {'ok': True, **d}
+    # API 失败/不可用 → 回退商品库已有信息（保证详情总能用）
     conn = get_conn()
     row = conn.execute('SELECT title, shop_name, price, sales, url, img FROM product_items WHERE item_id=? LIMIT 1', (id,)).fetchone()
     conn.close()
     if row:
         return {'ok': True, 'title': row['title'], 'shop': row['shop_name'], 'img': row['img'],
-                'sales': row['sales'], 'desc': ''}
+                'sales': row['sales'], 'desc': '', 'fallback': True}
     return {'ok': False, 'msg': '未找到商品'}
 
 @app.post('/api/spec_compare')
