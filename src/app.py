@@ -725,7 +725,8 @@ def api_wander_favs(user: str = ''):
 @app.post('/api/event')
 async def api_event(scene: str = Form(''), keyword: str = Form(''), action: str = Form('shown'), user_name: str = Form('')):
     """记录行为事件：shown=展示 / adopt=采纳（点击去购买/去比价）"""
-    from db import get_conn
+    from db import get_conn, init_db
+    init_db()  # 确保表存在
     conn = get_conn()
     conn.execute('INSERT INTO advice_events (scene, keyword, action, user_name) VALUES (?,?,?,?)',
                  (scene[:20], (keyword or '')[:60], action, user_name[:30]))
@@ -735,7 +736,8 @@ async def api_event(scene: str = Form(''), keyword: str = Form(''), action: str 
 @app.get('/api/advice_stats')
 def api_advice_stats():
     """建议采纳率统计：adopt/shown（纯行为数据，零 LLM 成本）"""
-    from db import get_conn
+    from db import get_conn, init_db
+    init_db()  # 确保表存在
     conn = get_conn()
     shown = conn.execute("SELECT COUNT(*) FROM advice_events WHERE action='shown'").fetchone()[0]
     adopt = conn.execute("SELECT COUNT(*) FROM advice_events WHERE action='adopt'").fetchone()[0]
