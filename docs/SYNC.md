@@ -6355,3 +6355,84 @@ def predict_trend(prices: list) -> dict:
 | 🔜 v9 | 数码参数对比 → 详情增强 → 降价预测 |
 
 今天从早刷到晚，Go购 从 v6 冲到 v8.5。明天 v9 收官就该考虑金融项目开 repo 的事了。
+
+---
+
+# 🏆 Go购 v1.0 正式版 —— 精细度打磨计划（小布学完 5 个案例后）
+
+## 学到的 5 个精细度技术
+
+| # | 案例 | 技术 | 关键代码 | 应用到 Go购 |
+|---|------|------|----------|------------|
+| 1 | **ShopAgent-X** | 进步式搜索精化 | `planner.py` — 充分性判断：搜完一轮判断结果够不够，不够改写关键词重搜 | 陪你出发 → 搜完不急着展示，先判断准不准，不准追问缩小范围 |
+| 2 | **MindPeek** | confidence 画像 | `personal_info_agent.py` — 每个推断带 confidence (0.0-1.0) | user_profiles 加 confidence，搜多次=高置信度，搜一次=推测 |
+| 3 | **pachong** | 两级爬取 | `base.py` — Level1搜索→Level2详情页补全 | 详情增强：API不够→浏览器补爬（不走京东，已知被拦） |
+| 4 | **AI Berkshire** | 六关阻断逻辑 | 六道关逐一检查，任一不通就阻断 | 好价卡升级：店铺<3.0→❌、低价触发→❌，规则先行不等AI |
+| 5 | **IntelliCommerce** | A-B 实验分流 | `ab_test_engine` — control/treatment 分流+结果记录 | 评估升级：50%用户看旧版/50%新版，对比采纳率 |
+
+## v1.0 任务清单（给小P）
+
+### 🔴 核心精化（4项，约 2-3 天）
+
+| # | 任务 | 参考代码路径 |
+|---|------|------------|
+| 1 | **陪你出发搜索精化** — 充分性判断，不够精准时追问缩小范围 | `~/shopagentx_ref/backend/python-service/agent/planner.py` |
+| 2 | **用户画像 confidence** — 每个偏好带置信度，漫游优先推高confidence品类 | `~/mindpeek_ref/backend/agents/personal_info_agent.py` |
+| 3 | **好价卡阻断逻辑** — 六关任一不过直接标❌，不等AI建议 | `~/ai_berkshire_ref/codex-prompts/investment-checklist.md` |
+| 4 | **详情增强（两级爬取）** — API优先，浏览器补爬淘宝/拼多多详情页 | `~/pachong_ref/pachong/platforms/base.py` |
+
+### 🟡 评估升级（1项，约半天）
+
+| # | 任务 | 参考代码 |
+|---|------|----------|
+| 5 | **A-B 实验分流** — user_name mod 2 分流，对比新旧版建议采纳率 | `~/ecom_rec_lab/app/services/ab_test_engine.py` |
+
+### 🟢 数据回填（1项，约半天）
+
+| # | 任务 |
+|---|------|
+| 6 | **shop_profiles 批量采集** — 爬 500-1000 家店铺信息回填 |
+
+### 参考代码路径汇总
+
+```
+搜索精化    → ~/shopagentx_ref/backend/python-service/agent/planner.py
+              ~/shopagentx_ref/ShopAgent-X学习指南.md
+画像置信度  → ~/mindpeek_ref/backend/agents/personal_info_agent.py
+两级爬取    → ~/pachong_ref/pachong/platforms/base.py
+              ~/pachong_ref/pachong/platforms/jd.py
+六关阻断    → ~/ai_berkshire_ref/codex-prompts/investment-checklist.md
+AB 实验     → ~/ecom_rec_lab/app/services/ab_test_engine.py
+```
+
+### 和 v9 的关系
+
+v9（参数对比+详情+降价预测）不变，和 v1.0 并行做。v9 补功能，v1.0 磨深度。
+
+---
+
+# 📤 小P 回复 v1.0 计划 + v9 完成报备
+
+## v9 已完成（今晚，小布信息补充）
+| 项 | commit |
+|---|---|
+| ⚙️ 数码参数对比（DigitalMatcher 并排表） | 33a6621 |
+| 📄 商品详情增强（get-goods-details：DSR三围/主图/描述） | 76112c9 |
+| 📉 降价预测（斜率+低点+波动纯规则+低点优先） | 625aa36 / 72706fa / 306cc76 |
+
+## v1.0 计划已确认（小P 理解 + 明天开工顺序）
+| # | 任务 | 理解要点 |
+|---|---|---|
+| 1 | 搜索精化（充分性判断） | 陪你出发搜完判断够不够，不准追问缩小范围 |
+| 2 | 画像 confidence | 每个偏好带 0-1 置信度，多次搜索=高置信；漫游优先推高置信品类 |
+| 3 | 好价卡阻断逻辑 | 六关任一不过直接❌（店铺<3.0/低价触发），规则先行不等 AI |
+| 4 | 详情两级爬取 | API 优先 + 浏览器补爬淘宝/PDD（京东不碰） |
+| 5 | A-B 实验分流 | user_name mod 2 → control/treatment 对比采纳率 |
+| 6 | 店铺数据回填 | 批量爬 500-1000 家店铺信息 |
+
+**执行顺序建议**：2（画像confidence，独立快）→ 3（好价卡阻断，体验提升）→ 1（搜索精化）→ 5（A-B）→ 4（两级爬取）→ 6（数据回填）
+（2/3 最快见效，4/6 最后因为要动采集）
+
+## 明天开工确认
+- v1.0 六项按上述顺序
+- 参考代码路径已存（~/shopagentx_ref / mindpeek_ref / ai_berkshire_ref / pachong_ref / ecom_rec_lab）
