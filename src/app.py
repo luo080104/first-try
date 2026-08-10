@@ -720,6 +720,32 @@ def api_wander_favs(user: str = ''):
     conn.close()
     return {'items': [dict(r) for r in rows]}
 
+# ========== v7 评估埋点（建议采纳率闭环）==========
+
+@app.post('/api/event')
+async def api_event(scene: str = Form(''), keyword: str = Form(''), action: str = Form('shown'), user_name: str = Form('')):
+    """记录行为事件：shown=展示 / adopt=采纳（点击去购买/去比价）"""
+    from db import get_conn
+    conn = get_conn()
+    conn.execute('INSERT INTO advice_events (scene, keyword, action, user_name) VALUES (?,?,?,?)',
+                 (scene[:20], (keyword or '')[:60], action, user_name[:30]))
+    conn.commit(); conn.close()
+    return {'ok': True}
+
+@app.get('/api/advice_stats')
+def api_advice_stats():
+    """建议采纳率统计：adopt/shown（纯行为数据，零 LLM 成本）"""
+    from db import get_conn
+    conn = get_conn()
+    shown = conn.execute("SELECT COUNT(*) FROM advice_events WHERE action='shown'").fetchone()[0]
+    adopt = conn.execute("SELECT COUNT(*) FROM advice_events WHERE action='adopt'").fetchone()[0]
+    by_scene = conn.execute('''SELECT scene, COUNT(*) n FROM advice_events WHERE action='adopt'
+        GROUP BY scene ORDER BY n DESC''').fetchall()
+    conn.close()
+    rate = round(adopt / shown * 100, 1) if shown else 0
+    return {'shown': shown, 'adopt': adopt, 'adopt_rate': rate,
+            'by_scene': [dict(r) for r in by_scene]}
+
 # ========== v5 采集引擎接口 ==========
 
 @app.post('/api/crawl')
@@ -850,6 +876,15 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
     advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history)
     if not advice.startswith('【当前位】AI 建议暂时不可用'):
         save_advice_cache(cache_key, advice)
+    # v7 评估埋点：建议展示记录（shown）
+    try:
+        from db import get_conn
+        conn = get_conn()
+        conn.execute('INSERT INTO advice_events (scene, keyword, action) VALUES (?,?,?)',
+                     ('compare', keyword[:60], 'shown'))
+        conn.commit(); conn.close()
+    except Exception:
+        pass
     return {'ok': True, 'advice': advice, 'cached': False}
 
 # ========== v7 商品库分析（Taobao_Spider 可视化看板借鉴，ECharts 版）==========

@@ -88,7 +88,7 @@
                     '<span class="r-price">¥' + it.actualPrice + '</span> ' +
                     (it.originalPrice && it.originalPrice > it.actualPrice ? '<span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + it.originalPrice + '</span>' : '') +
                     ' <span style="color:' + mc + ';font-size:13px;font-weight:600">🎯 匹配度 ' + (it.match || '?') + '%</span>' +
-                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '">⚖️ 去比价 →</a>';
+                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '" onclick="trackAdopt('guide', this)">⚖️ 去比价 →</a>';
                 box.insertBefore(div, document.getElementById('typing'));
             });
             window.scrollTo(0, document.body.scrollHeight);
@@ -103,6 +103,14 @@
             doChat(text);
         }
         function quickSend(t) { addMsg('me', t); doChat(t); }
+        function trackAdopt(scene, el) {
+            // 评估埋点：AI 建议被采纳（WorkBuddy 确认方案）
+            var fd = new FormData();
+            fd.append('scene', scene);
+            fd.append('keyword', curUser());
+            fd.append('action', 'adopt');
+            fetch('/api/event', {method: 'POST', body: fd});
+        }
 
         function doChat(text) {
             document.getElementById('typing').style.display = 'block';

@@ -275,3 +275,13 @@ CREATE TABLE IF NOT EXISTS wander_feedback (
     action TEXT DEFAULT 'dislike',  -- dislike=不感兴趣
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== v7 评估埋点（建议采纳率，WorkBuddy 确认）==========
+CREATE TABLE IF NOT EXISTS advice_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    scene TEXT DEFAULT '',           -- compare/guide/wander
+    keyword TEXT DEFAULT '',
+    action TEXT DEFAULT 'shown',     -- shown=展示 / adopt=采纳(点击去购买/去比价)
+    user_name TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);

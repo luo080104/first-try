@@ -40,6 +40,11 @@ def init_db():
         price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
         concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
         updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+    # 迁移：advice_events 表（v7 评估埋点，幂等）
+    conn.execute('''CREATE TABLE IF NOT EXISTS advice_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, scene TEXT DEFAULT '',
+        keyword TEXT DEFAULT '', action TEXT DEFAULT 'shown',
+        user_name TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now','localtime')))''')
     # 迁移：wander_feedback 表（v7 漫游反馈，幂等）
     conn.execute('''CREATE TABLE IF NOT EXISTS wander_feedback (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_name TEXT DEFAULT '',

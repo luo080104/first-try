@@ -250,6 +250,9 @@ def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, ti
             if attempt < retries:
                 print(f'[advice] 调用异常，重试 {attempt + 1}/{retries}: {str(e)[:50]}')
         time.sleep(1.5 * (attempt + 1))
+    raise RuntimeError(str(last_err)) if not isinstance(last_err, BaseException) else None
+    if not isinstance(last_err, BaseException):
+        last_err = RuntimeError(last_err)
     raise last_err
 
 
