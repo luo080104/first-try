@@ -669,7 +669,8 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
                         'original': it.get('originalPrice'), 'coupon': it.get('couponPrice') or it.get('coupon_amount') or 0,
                         'shop': it.get('shopName') or '', 'url': it.get('url') or '',
                         'goodsId': it.get('goodsId') or '', 'sales': it.get('monthSales') or 0,
-                        'shop_type': it.get('shop_type') or '', 'unit_price': it.get('unit_price')}
+                        'shop_type': it.get('shop_type') or '', 'unit_price': it.get('unit_price'),
+                        'shop_rating': it.get('shop_rating'), 'shop_signals': it.get('shop_signals')}
                        for p, it in g['platforms'].items()],
          'best_price': g['best']['actualPrice'],
          'low_price_warning': g.get('low_price_warning', False),

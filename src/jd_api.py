@@ -111,6 +111,14 @@ def _to_item(g: dict) -> dict:
         'url': url or (f'https://item.jd.com/{sku}.html' if sku else ''),
         'img': ((g.get('imageInfo') or {}).get('imageList') or [{}])[0].get('url', '') if g.get('imageInfo') else '',
         '_source': 'jd_api',
+        # v6.1 店铺信誉字段（京东联盟 shopInfo 现成：等级/服务/物流/评价分 + 好评率）
+        'shop_level': shop.get('shopLevel'),
+        'shop_id': shop.get('shopId'),
+        'shop_label': shop.get('shopLabel'),
+        'after_service_score': shop.get('afterServiceScore'),
+        'logistics_score': shop.get('logisticsLvyueScore'),
+        'user_evaluate_score': shop.get('userEvaluateScore'),
+        'good_comment_rate': g.get('goodCommentsShare'),
     }
 
 

@@ -576,6 +576,7 @@
                     html += '<div class="alert-bar">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只/翻新</div>';
                 }
                 var stMap = {自营:'background:#eaf2fb;color:#0984e3', 天猫:'background:#fdeeee;color:#d63031', 旗舰店:'background:#fdf3e3;color:#e67e22', 百亿补贴:'background:#e8f7ee;color:#27ae60'};
+                var rtColor = function(r) { return r >= 4.5 ? '#27ae60' : (r >= 4.0 ? '#e67e22' : '#d63031'); };
                 g.platforms.forEach(function(it) {
                     var isBest = g.best && it === g.best;
                     var gid = it.goodsId || it.item_id || '';
@@ -584,6 +585,7 @@
                         '<span class="plat">' + platName + '</span>' + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:8px;padding:1px 8px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') +
                         '<div class="info"><div class="title">' + it.title + '</div>' +
                         '<div class="shop">' + (it.shopName || '') + (isBest ? '<span class="badge">最低价</span>' : '') +
+                        (it.shop_rating ? '<span style="color:' + rtColor(it.shop_rating) + ';font-size:11px;margin-left:6px">🏪' + it.shop_rating + '分' + (it.shop_signals ? ' ' + esc(it.shop_signals.split('、')[0]) : '') + '</span>' : '') +
                         (gid ? '<a class="link" href="javascript:void(0)" data-plat="' + it.platform + '" data-gid="' + encodeURIComponent(gid) + '" onclick="loadHistory(this)">📈 历史价</a>' : '') +
                         '</div><div class="hist-box" style="display:none"></div></div>' +
                         '<div class="price"><div class="now">¥' + it.actualPrice + '</div>' +

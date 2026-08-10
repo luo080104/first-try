@@ -276,6 +276,14 @@ def parse_goods_list(raw_list: list, platform: str = 'tb') -> list:
             'coupon_end': g.get('couponEndTime'),
             'coupon_link': g.get('couponLink'),
             'coupon_cond': g.get('couponConditions'),
+            # v6.1 店铺信誉字段（大淘客现成：DSR/服务/发货分 + 店铺等级 + 金牌卖家）
+            'shop_level': g.get('shopLevel'),
+            'dsr_score': g.get('dsrScore') or g.get('descScore'),
+            'service_score': g.get('serviceScore'),
+            'ship_score': g.get('shipScore'),
+            'gold_seller': g.get('goldSellers'),
+            'seller_id': g.get('sellerId'),
+            'shop_type': '天猫' if g.get('shopType') == 1 else '',
         })
     return items
 
@@ -289,8 +297,8 @@ if __name__ == '__main__':
 
 
 def value_score(item: dict) -> float:
-    """性价比评分（借鉴 price-compare-tool 公式，用真实数据）
-    销量权重 0.4 + 价格权重 0.6，销量越高价越低分越高"""
+    """性价比评分（dsdb 公式 v6.1：销量 0.4 + 店铺信誉 0.3 + 价格 0.3）
+    店铺信誉 = shop_rating_of（评分/等级/好评率/成立年限综合，识别假旗舰店）"""
     try:
         sales = float(item.get('monthSales', 0) or 0)
         price = float(item.get('actualPrice', 0) or 0)
@@ -298,4 +306,9 @@ def value_score(item: dict) -> float:
         sales, price = 0, 0
     sales_score = min(sales / 10000, 1.0)
     price_score = 1.0 / (1.0 + price / 1000)
-    return round((sales_score * 0.4 + price_score * 0.6) * 100, 1)
+    try:
+        from shop_rating import shop_rating_of
+        shop_score = shop_rating_of(item)['rating'] / 5.0
+    except Exception:
+        shop_score = 0.8
+    return round((sales_score * 0.4 + shop_score * 0.3 + price_score * 0.3) * 100, 1)

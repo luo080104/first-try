@@ -175,6 +175,7 @@
                 html += '</div>';
                 html += '<div class="price-row">';
                 var stMap = {自营:'background:#eaf2fb;color:#0984e3', 天猫:'background:#fdeeee;color:#d63031', 旗舰店:'background:#fdf3e3;color:#e67e22', 百亿补贴:'background:#e8f7ee;color:#27ae60'};
+                var rtColor = function(r) { return r >= 4.5 ? '#27ae60' : (r >= 4.0 ? '#e67e22' : '#d63031'); };
                 g.platforms.forEach(function(it) {
                     var isBest = it === best;
                     html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
@@ -182,6 +183,7 @@
                         '<div class="pprice">¥' + it.price + '</div>' +
                         (it.unit_price ? '<div class="pmeta" style="color:#27ae60">≈¥' + it.unit_price + '/百毫升</div>' : '') +
                         '<div class="pmeta">' + esc(it.shop || '') +
+                        (it.shop_rating ? '<br><span style="color:' + rtColor(it.shop_rating) + '">🏪信誉 ' + it.shop_rating + '分' + (it.shop_signals ? ' ' + esc(it.shop_signals.split('、')[0]) : '') + '</span>' : '') +
                         (it.coupon > 0 ? '<br>券¥' + it.coupon : '') +
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
                 });

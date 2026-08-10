@@ -217,11 +217,18 @@ def unit_price_of(item: dict, category: str = '') -> float:
 
 
 def annotate_item(it: dict, category: str):
-    """给单条商品补店铺类型 + 单价（就地修改）"""
+    """给单条商品补店铺类型 + 单价 + 店铺信誉分（就地修改）"""
     it['shop_type'] = shop_type_of(it)
     up = unit_price_of(it, category)
     if up:
         it['unit_price'] = up
+    try:
+        from shop_rating import shop_rating_of
+        sr = shop_rating_of(it)
+        it['shop_rating'] = sr['rating']
+        it['shop_signals'] = sr['label']
+    except Exception:
+        pass
     return it
 
 def annotate_group(g: dict, category: str):
