@@ -116,9 +116,8 @@ from matcher import parse_items, group_by_sku, ADAPTERS
 from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies, upsert_product_item, query_items, stats_items, list_recommendations
 
 app = FastAPI(title='Go购')
-# 2026-08-10 WorkBuddy 方案：浏览器常驻池预热（后台线程，不阻塞启动）
-from browser_pool import warmup
-warmup()
+# 2026-08-10 弹窗终极方案：不预热！浏览器懒加载（仅实时模式首次搜索时创建）
+# 默认历史模式（读库）永远零浏览器零弹窗；实时模式首次搜索才建浏览器（复用+隐藏）
 templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
 app.mount('/static', StaticFiles(directory=os.path.join(templates_dir, 'static')), name='static')
 

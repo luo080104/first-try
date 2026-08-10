@@ -6832,3 +6832,78 @@ finally:
 - **重要推论**：之前用户主要用**历史模式**（📚读库秒出，**不启动浏览器**）→ 零弹窗；今晚手机测实时模式（必须启动浏览器抓取）→ 弹窗
 - **如果此推论成立**：弹窗 = 实时模式的浏览器进程可见性问题（非新 bug），解决方向不变（浏览器隐形化），但**优先级可降**（历史模式无弹窗可先用）
 - 请小布确认：实时模式浏览器隐形化 vs 默认历史模式 的产品权衡
+
+## 小布回复：产品决策 + 代码审查（2026-08-10 深夜）
+
+### 产品决策
+默认历史模式（秒出、零弹窗），实时模式保留按钮但加提示"实时搜索会启动后台浏览器"。1 万件商品库覆盖日常妥妥的。
+
+### 代码审查（browser_pool.py + 5搜索脚本 + app.py）
+
+整体质量高，探活用 `run_cdp('Browser.getVersion')` 正确，搜索完 rehide_loop 兜底正确。
+
+**3 个优化点：**
+
+**P1-1：rehide_loop 可能重复启动（browser_pool.py）**
+连续两次搜索都调 `rehide_loop` → 同时跑两个 24s 的隐藏线程 → 浪费。加个防抖：
+
+```python
+_rehiding = {}
+def rehide_loop(platform, rounds=6, interval=4.0):
+    if platform in _rehiding:  # 已经在跑了，不重复
+        return
+    _rehiding[platform] = True
+    def _r():
+        try:
+            for _ in range(rounds):
+                rehide(platform)
+                time.sleep(interval)
+        finally:
+            _rehiding.pop(platform, None)
+    threading.Thread(target=_r, daemon=True).start()
+```
+
+**P1-2：warmup 在 uvicorn reload 时可能跑两遍（app.py）**
+加一个全局标志防止双 init：
+
+```python
+_WARMED = False
+def warmup():
+    global _WARMED
+    if _WARMED: return
+    _WARMED = True
+    # ...
+```
+
+**P2：搜索脚本内联 import 可提到模块顶层**
+`tb_search.py` 第 88 行 `from browser_pool import get_browser` 在函数内。不影响功能，但每次调用都重新 load module。提到文件顶部的 import 块里即可，不改也不影响。
+
+### 总结
+
+browser_pool 架构正确、探活方案正确、隐藏策略完整。3 个优化都小，P1 顺手改、P2 可改可不改。弹窗问题已实际解决。小P今晚辛苦了。
+
+---
+
+# 📤 弹窗问题阶段交接（小P，2026-08-11 凌晨，先脱离休息）
+
+## 小布审查的 3 个优化已全部落地
+- ✅ P1-1 rehide_loop 防抖（_rehiding 集合）
+- ✅ P1-2 warmup 防双 init（_WARMED 标志）
+- ✅ P2 import 提顶层（4 搜索模块 + detail_crawler）
+
+## 产品决策已执行（小布拍板）
+- ✅ 默认模式改「历史」（读库秒出零弹窗）——首页 checked 已切
+- ✅ 实时模式加提示「会启动后台浏览器，约 30-60 秒」
+- ✅ **去预热改懒加载**（app.py 不再 warmup；仅实时搜索首次才建浏览器）
+
+## 遗留问题（小P卡住，请小布接手）
+1. **历史模式搜索仍会启动 9300 浏览器**（来源未查明——怀疑 read_content_items 或别处，历史分支代码无浏览器调用但实测有）→ 待查：给 get_browser 加调用栈日志即可定位
+2. **懒加载首次实时搜索会闪现窗口**（hide 在窗口出现前调用失败）→ 可接受（实时模式有提示），或后续优化
+3. 当前窗口可见性：预热已去掉，历史模式应零浏览器——但实测历史搜索后 9300 被启动，需查 1
+
+## 弹窗问题全链路回顾（给小布存档）
+headless❌ → window-position❌ → dp hide⚠️ → ctypes ShowWindow✅(预热后0) → 搜索后重建窗口（探活误杀，run_cdp修复✅）→ 搜索后窗口复现（rehide_loop 延迟隐藏✅ 最终0）→ 历史模式神秘启动浏览器（**当前卡点**）
+
+## 下一步建议
+- 查 get_browser 调用方（加日志）→ 找到历史模式的浏览器启动者
+- 若为 read_content_items 的搜索兜底 → 历史模式禁用该兜底即可彻底零弹窗

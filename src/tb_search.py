@@ -9,6 +9,7 @@
 # 3. 丰富字段：借鉴 iokNokarl/taobao_spider 的 models.py，提取品牌/服务标签/商品属性/地区/天猫标识
 # 4. 搜索页 URL：用 uland.taobao.com/sem/tbsearch（ShilongLee/Crawler 用的搜索入口）
 # 5. 翻页加载：滚动触发更多 API 请求（xiuyegege 的 get_shop_info 模式）
+from browser_pool import get_browser, rehide_loop
 
 import sys
 import threading
@@ -84,8 +85,6 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
         print('[tb] 未找到 Chrome/Edge')
         return []
 
-    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁，彻底无弹窗）
-    from browser_pool import get_browser
     browser = get_browser('tb')
     tab = browser.latest_tab
 
@@ -103,8 +102,7 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
     finally:
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
-            from browser_pool import rehide_later
-            rehide_later('tb')
+            rehide_loop('tb')
         except Exception:
             pass
 

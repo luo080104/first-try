@@ -126,13 +126,35 @@ def rehide(platform: str):
             pass
 
 
-def rehide_later(platform: str, delay: float = 2.0):
-    """延迟隐藏：导航异步加载完成后窗口可能复现，延迟再补一刀"""
-    threading.Timer(delay, rehide, args=[platform]).start()
+_rehiding = set()  # 防抖：同平台不重复启动隐藏循环
+
+
+def rehide_loop(platform: str, rounds: int = 6, interval: float = 4.0):
+    """循环隐藏：导航/详情页加载全程每 4s 补一刀（覆盖窗口复现；防抖防重复线程）"""
+    if platform in _rehiding:
+        return
+    _rehiding.add(platform)
+
+    def _r():
+        try:
+            for _ in range(rounds):
+                rehide(platform)
+                time.sleep(interval)
+        finally:
+            _rehiding.discard(platform)
+    threading.Thread(target=_r, daemon=True).start()
+
+
+_WARMED = False  # 防双 init（uvicorn reload 场景）
 
 
 def warmup():
     """服务启动时预热 4 个浏览器（后台线程调用，不阻塞启动）"""
+    global _WARMED
+    if _WARMED:
+        return
+    _WARMED = True
+
     def _w():
         for plat in PROFILES:
             try:

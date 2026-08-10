@@ -7,6 +7,7 @@ import threading
 import os
 import time
 import re
+from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -50,8 +51,6 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         print('❌ 未找到 Chrome/Edge')
         return []
 
-    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁，彻底无弹窗）
-    from browser_pool import get_browser
     browser = get_browser('jd')
     tab = browser.latest_tab
 
@@ -149,8 +148,7 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
     finally:
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
-            from browser_pool import rehide_later
-            rehide_later('jd')
+            rehide_loop('jd')
         except Exception:
             pass
 

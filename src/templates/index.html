@@ -82,8 +82,8 @@
                 <div class="cat" data-cat="数码家电">💻 数码家电</div>
             </div>
             <div class="mode-pick" id="mode-pick">
-                <label class="sel" onclick="pickMode('live', this)"><input type="radio" name="mode" value="live" checked>⚡ 实时报告<small>（现场抓取，最新）</small></label>
-                <label onclick="pickMode('history', this)"><input type="radio" name="mode" value="history">📚 看以往数据<small>（读库秒出，零成本）</small></label>
+                <label class="sel" onclick="pickMode('history', this)"><input type="radio" name="mode" value="history" checked>📚 看以往数据<small>（读库秒出，零弹窗）</small></label>
+                <label onclick="pickMode('live', this)"><input type="radio" name="mode" value="live">⚡ 实时报告<small>（现场抓取最新，会启动后台浏览器）</small></label>
             </div>
             <div class="mode-tip" id="mode-tip">⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多</div>
             <div id="hot-words" style="margin-top:10px;font-size:13px;color:#b2bec3;min-height:20px"></div>
@@ -491,7 +491,7 @@
             document.querySelectorAll('#mode-pick label').forEach(function(l) { l.classList.remove('sel'); });
             el.classList.add('sel');
             var tip = document.getElementById('mode-tip');
-            tip.innerText = mode === 'live' ? '⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多' : '📚 历史模式：只读商品库，秒出（不爬取）';
+            tip.innerText = mode === 'live' ? '⚡ 实时模式：现场抓取最新价（后台浏览器，约 30-60 秒）' : '📚 历史模式：只读商品库，秒出（不爬取，零弹窗）';
         }
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();

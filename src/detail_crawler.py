@@ -5,6 +5,7 @@ import sys
 import time
 import re
 import random
+from browser_pool import get_browser, rehide_loop
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -31,8 +32,6 @@ def _rate_limit():
 
 
 def _browser(platform):
-    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁）
-    from browser_pool import get_browser
     return get_browser(platform)
 
 
@@ -110,8 +109,7 @@ def crawl_tb_detail(item_id: str) -> dict:
         return {}
     finally:
         try:
-            from browser_pool import rehide_later
-            rehide_later('tb')
+            rehide_loop('tb')
         except Exception:
             pass
 
@@ -144,8 +142,7 @@ def crawl_jd_detail(item_id: str) -> dict:
         return {}
     finally:
         try:
-            from browser_pool import rehide_later
-            rehide_later('jd')
+            rehide_loop('jd')
         except Exception:
             pass
 

@@ -7,6 +7,7 @@ import os
 import time
 import re
 import random
+from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -45,8 +46,6 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
         print('❌ 未找到 Chrome/Edge')
         return []
 
-    # 2026-08-10 WorkBuddy 方案：浏览器常驻池（不新建不销毁，彻底无弹窗）
-    from browser_pool import get_browser
     browser = get_browser('vip')
     tab = browser.latest_tab
 
@@ -123,8 +122,7 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
     finally:
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
-            from browser_pool import rehide_later
-            rehide_later('vip')
+            rehide_loop('vip')
         except Exception:
             pass
 
