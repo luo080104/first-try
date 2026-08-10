@@ -231,3 +231,27 @@ CREATE TABLE IF NOT EXISTS push_log (
     platform TEXT,
     pushed_at TEXT DEFAULT (datetime('now','localtime'))
 );
+
+-- ========== v7 陪你出发（AI 购物向导）==========
+-- 聊天会话表（多轮状态：历史 + 需求卡）
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL UNIQUE,     -- 会话 ID
+    user_name TEXT DEFAULT '',           -- 角色名（嘉铭/妈妈）
+    history TEXT DEFAULT '[]',           -- 对话历史 JSON
+    need_card TEXT DEFAULT '{}',         -- 需求卡 JSON（预算/用途/品牌/排除）
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+
+-- 购物画像表（跨会话，MindPeek 购物版简化：持续进化的偏好）
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_name TEXT NOT NULL UNIQUE,      -- 角色名
+    budget_tier TEXT DEFAULT '',         -- 预算档位（低/中/高）
+    price_sensitive INTEGER DEFAULT 0,   -- 价格敏感度
+    brands TEXT DEFAULT '[]',            -- 品牌倾向 JSON
+    concerns TEXT DEFAULT '[]',          -- 在意点（售后/正品/性价比/性能）
+    categories TEXT DEFAULT '[]',        -- 关注品类
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+);

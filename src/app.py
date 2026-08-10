@@ -392,7 +392,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     yield sse({'type': 'progress', 'msg': f'🔕 已按你的偏好排除：{"、".join(excluded)}'})
             all_items = tb_items + pdd_items + vip_items
 
-            # 慢通道自动补搜：快通道结果少（<5 条）→ 自动跑淘宝全量 + 京东 + 唯品会 + 拼多多（用户要求：默认所有，不分平台）
+            # 慢通道自动补搜：快通道结果少（<5 条）→ 全网补搜；或拼多多 API 被限（返回空）→ 拼多多浏览器兜底
             slow_items = []
             if len(all_items) < 5:
                 yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会+拼多多）...'})
@@ -403,6 +403,10 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     asyncio.to_thread(search_pdd_full, keyword),
                 )
                 slow_items = tb_full + jd_full + vip_full + pdd_full
+            elif not pdd_items:
+                # 拼多多 API 被限流/失败 → 浏览器通道兜底（2026-08-10 实测 duoId 被限）
+                yield sse({'type': 'progress', 'msg': '拼多多 API 暂时受限，改用浏览器补拼多多...'})
+                slow_items = await asyncio.to_thread(search_pdd_full, keyword)
                 all_items = tb_items + pdd_items + vip_items + slow_items
                 yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
             else:
@@ -611,6 +615,24 @@ async def api_resume_tasks():
     from db import resume_crawl_tasks
     n = resume_crawl_tasks()
     return {'ok': True, 'msg': f'已恢复 {n} 个暂停任务'}
+
+# ========== v7 陪你出发（AI 购物向导）==========
+
+@app.get('/guide', response_class=HTMLResponse)
+def guide_page(request: Request):
+    """陪你出发：聊天式购物向导"""
+    return templates.TemplateResponse(request, 'guide.html', {'categories': CATEGORIES})
+
+@app.post('/api/chat')
+async def api_chat(session_id: str = Form(''), user_name: str = Form(''), message: str = Form('')):
+    """陪你出发：一轮聊天"""
+    import uuid
+    from guide import chat
+    sid = session_id.strip() or str(uuid.uuid4())
+    if not message.strip():
+        return {'ok': False, 'msg': '说点什么吧'}
+    result = await asyncio.to_thread(chat, sid, message.strip(), user_name.strip())
+    return {'ok': True, 'session_id': sid, **result}
 
 # ========== v5 采集引擎接口 ==========
 

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>陪你出发 - Go购</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { background: #f8f9fa; }
+        .chat-box { max-width: 720px; margin: 0 auto; padding: 16px 14px 90px; }
+        .msg { display: flex; margin-bottom: 14px; align-items: flex-start; }
+        .msg .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+                       display: flex; align-items: center; justify-content: center; font-size: 17px; }
+        .msg.ai .avatar { background: #ff6b35; color: #fff; }
+        .msg.me .avatar { background: #0984e3; color: #fff; }
+        .msg .bubble { max-width: 78%; margin-left: 10px; padding: 11px 14px; border-radius: 14px;
+                       font-size: 15px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+        .msg.ai .bubble { background: #fff; border: 1px solid #eee; border-top-left-radius: 4px; }
+        .msg.me { flex-direction: row-reverse; }
+        .msg.me .bubble { background: #0984e3; color: #fff; margin-left: 0; margin-right: 10px; border-top-right-radius: 4px; }
+        /* 推荐卡片 */
+        .rec-card { background: #fff; border: 1.5px solid #dfe6e9; border-radius: 12px;
+                    padding: 10px 14px; margin: 8px 0 8px 44px; font-size: 14px; }
+        .rec-card .r-title { font-weight: 600; color: #2d3436; }
+        .rec-card .r-meta { color: #636e72; font-size: 13px; margin-top: 3px; }
+        .rec-card .r-price { color: #ff6b35; font-weight: 700; font-size: 16px; }
+        .rec-card .r-btn { display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 14px;
+                           background: #eaf2fb; color: #0984e3; font-size: 13px; cursor: pointer; text-decoration: none; }
+        /* 输入区 */
+        .input-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+                     border-top: 1px solid #eee; padding: 10px 14px; display: flex; gap: 8px;
+                     max-width: 720px; margin: 0 auto; }
+        .input-bar input { flex: 1; padding: 11px 14px; border: 2px solid #dfe6e9; border-radius: 22px;
+                           font-size: 15px; outline: none; }
+        .input-bar button { padding: 11px 22px; border: none; border-radius: 22px; background: #ff6b35;
+                            color: #fff; font-size: 15px; cursor: pointer; }
+        .typing { color: #b2bec3; font-size: 13px; padding: 4px 0 4px 44px; }
+        .quick { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px 44px; }
+        .quick span { background: #fff; border: 1.5px solid #dfe6e9; border-radius: 16px; padding: 5px 12px;
+                      font-size: 13px; color: #636e72; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="chat-box" id="chat-box">
+        <div class="msg ai">
+            <div class="avatar">🤖</div>
+            <div class="bubble">你好呀！我是你的购物向导 🧭<br>不知道买什么、怕买错？跟我聊聊就行。<br>比如：「我想买台电脑」「想给妈妈买件羽绒服」</div>
+        </div>
+        <div class="quick" id="quick-bar">
+            <span onclick="quickSend('我想买台电脑')">💻 我想买台电脑</span>
+            <span onclick="quickSend('想给妈妈买件羽绒服')">🧥 给妈妈买羽绒服</span>
+            <span onclick="quickSend('想买点牛奶')">🥛 买点牛奶</span>
+        </div>
+        <div class="typing" id="typing" style="display:none">🤖 正在思考…</div>
+    </div>
+
+    <div class="input-bar">
+        <input type="text" id="msg" placeholder="说说你想买什么…" onkeydown="if(event.key==='Enter')send()">
+        <button onclick="send()">发送</button>
+    </div>
+
+    <script>
+        var SESSION = '';
+        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+        function curUser() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
+        function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会'}[p] || p; }
+
+        function addMsg(role, text) {
+            var box = document.getElementById('chat-box');
+            var div = document.createElement('div');
+            div.className = 'msg ' + role;
+            div.innerHTML = '<div class="avatar">' + (role === 'ai' ? '🤖' : '👤') + '</div>' +
+                '<div class="bubble">' + esc(text) + '</div>';
+            box.insertBefore(div, document.getElementById('typing'));
+            box.scrollTop = box.scrollHeight;
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+        function addRecs(items) {
+            var box = document.getElementById('chat-box');
+            items.forEach(function(it) {
+                var div = document.createElement('div');
+                div.className = 'rec-card';
+                div.innerHTML = '<div class="r-title">' + esc(it.title || '') + '</div>' +
+                    '<div class="r-meta">' + platName(it.platform) + ' ・ ' + esc(it.shopName || '') +
+                    (it.monthSales ? ' ・ 销量 ' + it.monthSales : '') + '</div>' +
+                    '<span class="r-price">¥' + it.actualPrice + '</span> ' +
+                    (it.originalPrice && it.originalPrice > it.actualPrice ? '<span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + it.originalPrice + '</span>' : '') +
+                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '">⚖️ 去比价 →</a>';
+                box.insertBefore(div, document.getElementById('typing'));
+            });
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function send() {
+            var input = document.getElementById('msg');
+            var text = input.value.trim();
+            if (!text) return;
+            input.value = '';
+            addMsg('me', text);
+            doChat(text);
+        }
+        function quickSend(t) { addMsg('me', t); doChat(t); }
+
+        function doChat(text) {
+            document.getElementById('typing').style.display = 'block';
+            var fd = new FormData();
+            fd.append('session_id', SESSION);
+            fd.append('user_name', curUser());
+            fd.append('message', text);
+            fetch('/api/chat', {method: 'POST', body: fd})
+                .then(r => r.json()).then(d => {
+                    document.getElementById('typing').style.display = 'none';
+                    if (!d.ok) { addMsg('ai', d.msg || '出错了'); return; }
+                    SESSION = d.session_id;
+                    addMsg('ai', d.reply || '…');
+                    if (d.items && d.items.length) addRecs(d.items);
+                })
+                .catch(() => { document.getElementById('typing').style.display = 'none'; addMsg('ai', '网络开小差了，再试一次？'); });
+        }
+    </script>
+</body>
+</html>

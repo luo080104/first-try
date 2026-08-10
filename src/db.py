@@ -27,6 +27,19 @@ def init_db():
     tcols = [r[1] for r in conn.execute('PRAGMA table_info(crawl_tasks)')]
     if 'fail_count' not in tcols:
         conn.execute('ALTER TABLE crawl_tasks ADD COLUMN fail_count INTEGER DEFAULT 0')
+    # 迁移：chat_sessions / user_profiles 表（v7 陪你出发，幂等）
+    conn.execute('''CREATE TABLE IF NOT EXISTS chat_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id TEXT NOT NULL UNIQUE, user_name TEXT DEFAULT '',
+        history TEXT DEFAULT '[]', need_card TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT (datetime('now','localtime')),
+        updated_at TEXT DEFAULT (datetime('now','localtime')))''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS user_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name TEXT NOT NULL UNIQUE, budget_tier TEXT DEFAULT '',
+        price_sensitive INTEGER DEFAULT 0, brands TEXT DEFAULT '[]',
+        concerns TEXT DEFAULT '[]', categories TEXT DEFAULT '[]',
+        updated_at TEXT DEFAULT (datetime('now','localtime')))''')
     # 迁移：watched_items 补 last_notified_at（盯价推送防重复）
     wcols = [r[1] for r in conn.execute('PRAGMA table_info(watched_items)')]
     if 'last_notified_at' not in wcols:
