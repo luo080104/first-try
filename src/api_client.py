@@ -264,6 +264,27 @@ def get_goods_details(goods_id: str) -> dict:
         return {}
 
 
+def get_pdd_details(goods_sign: str) -> dict:
+    """拼多多商品详情（dels/pdd/goods/detail，goodsSign=商品库 item_id）"""
+    try:
+        r = get('dels/pdd/goods/detail', {'goodsSign': str(goods_sign)})
+        d = r.get('data') or {}
+        if not isinstance(d, dict) or not d.get('goodsSign'):
+            return {}
+        return {
+            'title': d.get('goodsName') or '',
+            'shop': d.get('mallName') or '',
+            'dsr': None, 'service': None, 'ship': None,
+            'desc': (d.get('goodsDesc') or '')[:200],
+            'img': d.get('goodsImageUrl') or d.get('goodsThumbnailUrl') or '',
+            'sales': d.get('salesTip') or '',
+            'brand': d.get('brandName') or '',
+        }
+    except Exception as e:
+        print(f'⚠️ PDD详情失败: {str(e)[:60]}')
+        return {}
+
+
 def get_similar_goods(goods_id: str, size: int = 8) -> list:
     """大淘客相似商品（猜你喜欢，需大淘客商品 id）"""
     try:

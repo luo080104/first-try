@@ -781,6 +781,10 @@ def api_detail(platform: str = '', id: str = ''):
         from api_client import get_goods_details
         d = get_goods_details(id)
         return {'ok': True, **d} if d else {'ok': False, 'msg': '详情获取失败'}
+    if platform == 'pdd':
+        from api_client import get_pdd_details
+        d = get_pdd_details(id)
+        return {'ok': True, **d} if d else {'ok': False, 'msg': '详情获取失败'}
     # 其他平台：返回商品库已有信息
     conn = get_conn()
     row = conn.execute('SELECT title, shop_name, price, sales, url, img FROM product_items WHERE item_id=? LIMIT 1', (id,)).fetchone()
