@@ -58,15 +58,16 @@ def get_profile(user_name: str) -> dict:
 
 
 def merge_profile(user_name: str, need_card: dict):
-    """把需求卡里的稳定特征合并进画像（MindPeek 思路：持续进化）"""
+    """把需求卡里的稳定特征合并进画像（MindPeek 思路：持续进化）
+    预算改口以最新表达为准（用户说 3000 又说 8000 → 更新为高档）"""
     if not user_name:
         return
     from db import get_conn
     p = get_profile(user_name)
     if need_card.get('budget'):
+        # 改口覆盖：最新预算档为准（MindPeek 置信度更新思路）
         tier = '低' if need_card['budget'] == '3000' else ('中' if need_card['budget'] == '8000' else '高')
-        if not p['budget_tier']:
-            p['budget_tier'] = tier
+        p['budget_tier'] = tier
     if need_card.get('brand') and need_card['brand'] not in p['brands']:
         p['brands'].append(need_card['brand'])
     if need_card.get('purpose'):
