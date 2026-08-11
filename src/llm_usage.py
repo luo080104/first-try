@@ -13,14 +13,22 @@ PRICING = {
 DEFAULT = {'input': 1.0, 'output': 3.0}
 
 
-def record_usage(model: str, input_tokens: int, output_tokens: int, scene: str = ''):
-    """记录一次 LLM 调用费用（幂等写库，失败不影响主流程）"""
+def record_usage(model: str, input_tokens: int, output_tokens: int, scene: str = '',
+                 cache_hit: int = 0, cache_miss: int = 0):
+    """记录一次 LLM 调用费用（幂等写库，失败不影响主流程）
+    2026-08-11 Reasonix 启发：记录缓存命中/未命中 token（DeepSeek 缓存价差 50-120 倍）"""
     try:
         p = PRICING.get(model, DEFAULT)
-        cost = (input_tokens / 1e6) * p['input'] + (output_tokens / 1e6) * p['output']
+        # 缓存命中按 1/50 计（V4-Flash 0.02 vs 1；V4-Pro 0.025 vs 3——近似取输入价的 2%）
+        hit = int(cache_hit or 0)
+        miss = int(cache_miss or 0)
+        eff_input = miss + hit * 0.02
+        cost = (eff_input / 1e6) * p['input'] + (int(output_tokens or 0) / 1e6) * p['output']
         conn = sqlite3.connect(DB_PATH)
-        conn.execute('INSERT INTO ai_usage (model, input_tokens, output_tokens, cost, scene) VALUES (?,?,?,?,?)',
-                     (model, int(input_tokens or 0), int(output_tokens or 0), round(cost, 5), scene or ''))
+        conn.execute('''INSERT INTO ai_usage (model, input_tokens, output_tokens, cost, scene, cache_hit, cache_miss)
+            VALUES (?,?,?,?,?,?,?)''',
+                     (model, int(input_tokens or 0), int(output_tokens or 0), round(cost, 5), scene or '',
+                      hit, miss))
         conn.commit()
         conn.close()
     except Exception:

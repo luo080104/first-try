@@ -108,7 +108,8 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
         # v7 费用统计
         try:
             from llm_usage import record_usage
-            record_usage('deepseek-v4-flash', usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0), '意图解析')
+            record_usage('deepseek-v4-flash', usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0), '意图解析',
+                           usage.get('prompt_cache_hit_tokens', 0), usage.get('prompt_cache_miss_tokens', 0))
         except Exception:
             pass
         return result
@@ -169,7 +170,8 @@ def generate_options(keyword: str, groups: list, history_txt: str = '') -> list:
         try:
             from llm_usage import record_usage
             u = data.get('usage', {})
-            record_usage('deepseek-v4-pro', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项')
+            record_usage('deepseek-v4-pro', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项',
+                           u.get('prompt_cache_hit_tokens', 0), u.get('prompt_cache_miss_tokens', 0))
         except Exception:
             pass
         content = data['choices'][0]['message']['content'].strip()

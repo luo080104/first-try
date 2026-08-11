@@ -146,7 +146,8 @@ def _call_llm(messages: list, max_tokens: int = 800, retries: int = 2) -> str:
                 try:
                     from llm_usage import record_usage
                     u = data.get('usage', {})
-                    record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '陪你出发')
+                    record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '陪你出发',
+                        u.get('prompt_cache_hit_tokens', 0), u.get('prompt_cache_miss_tokens', 0))
                 except Exception:
                     pass
                 return content
