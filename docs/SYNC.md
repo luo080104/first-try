@@ -7727,3 +7727,30 @@ pi install npm:pi-lens npm:pi-simplify npm:pi-subagents npm:context-mode npm:pi-
 ## 待办
 - Superpowers 的 using-superpowers skill 实测（强制规则：1% 适用必须用）
 - 完整 spec 流程跑一次（下次大功能试炼）
+
+---
+
+# 📤 GitHub 案例链接完整核对清单（2026-08-11 下午，防遗漏）
+
+## 全部 17 个链接状态
+| 仓库 | 状态 | 说明 |
+|---|---|---|
+| obra/superpowers | ✅ 克隆+装Pi | superpowers_ref + pi install |
+| github/spec-kit | ✅ 克隆+skill | spec_kit_ref + spec-driven skill |
+| multica-ai/andrej-karpathy-skills | ✅ 克隆+skill | karpathy_ref + karpathy-rules skill |
+| affaan-m/ECC | ✅ 克隆 | ecc_ref（参考，不装） |
+| addyosmani/agent-skills | ✅ 克隆 | agent_skills2_ref（agents角色+spec/test工作流精选源） |
+| anthropics/skills | ✅ 克隆 | agent_skills_ref（webapp-testing 已装 Pi） |
+| agno-agi/agno | 📌 未克隆 | 金融项目底座（开工时再拉） |
+| pydantic/pydantic-ai | 📌 未克隆 | 金融项目（同 Agnò 一起） |
+| crewAIInc/crewAI | 📌 未克隆 | 金融多角色参考 |
+| vstorm-co/full-stack-ai-agent-template | 📌 未克隆 | 小说项目底座 |
+| thedotmack/claude-mem | 📌 未克隆 | 选型"参考不装" |
+| stablyai/orca / rowboatlabs/rowboat / volcengine/OpenViking | 📌 未克隆 | Agent 基建参考 |
+| Fission-AI/OpenSpec | 📌 未克隆 | 选型排除（Spec Kit 更合适） |
+| narumiruna/pi-extensions / ogulcancelik/pi-extensions / share-skills/pi | 📌 未克隆 | Pi 扩展参考（官方市场已覆盖） |
+
+## 补充动作（本次补漏）
+- ✅ Karpathy 四条金律 → Pi skill（karpathy-rules，含本项目前车之鉴）
+- ✅ addyosmani/agent-skills 确认（agents=代码审查/安全/测试角色；commands 含 spec/test/planning）
+- 📌 待做：addyosmani spec/test 工作流精选 → 补充 spec-driven skill
