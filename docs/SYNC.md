@@ -7707,3 +7707,23 @@ pi install npm:pi-lens npm:pi-simplify npm:pi-subagents npm:context-mode npm:pi-
 ## 后续
 - 实测各包能力（lens 反馈/subagents 拆任务/memory 跨会话）
 - 若 pi-lens+pi-simplify 够用 → 手工代码审查角色可退役
+
+---
+
+# 📤 增强 Pi 工具链落地（2026-08-11 下午，小布 5 选 3 完成）
+
+## 安装状态
+| 项目 | 状态 |
+|---|---|
+| Superpowers | ✅ pi install git:github.com/obra/superpowers（Pi 原生挂载） |
+| Spec Kit | ✅ 已克隆 ~/spec_kit_ref + **做成 Pi skill**（~/.pi/agent/skills/spec-driven/SKILL.md：四步流程=需求澄清→写spec→定验收→实现验证） |
+| Agent Skills | ✅ 已克隆 ~/agent_skills_ref + **精选 webapp-testing**（~/.pi/agent/skills/webapp-testing/：Playwright 网页测试） |
+
+## 生效
+- 下次 pi 会话自动发现（~/.pi/agent/skills/）
+- spec-driven 治"跳过方案直接莽"（弹窗 9 轮前车之鉴）
+- webapp-testing 补浏览器级验证（9 页面 JS 扫描工具化）
+
+## 待办
+- Superpowers 的 using-superpowers skill 实测（强制规则：1% 适用必须用）
+- 完整 spec 流程跑一次（下次大功能试炼）
