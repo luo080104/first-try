@@ -441,7 +441,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             keyword, category = search_kw, search_cat
             # 快通道：API 并行（v5.2 加唯品会）
             yield step('搜索淘宝/拼多多/唯品会', 'running')
-            yield sse({'type': 'progress', 'msg': f'⏳ 正在并行搜索淘宝 + 拼多多 + 唯品会（实时抓取）...'})
+            yield sse({'type': 'progress', 'msg': f'🔍 帮你搜下淘宝、拼多多、唯品会～'})
             from api_client import search_vip
             tb_items, pdd_items, vip_items = await asyncio.gather(
                 asyncio.to_thread(search_goods, keyword, category or None, 1, 20, False),
@@ -464,7 +464,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             # 慢通道自动补搜：快通道结果少（<5 条）→ 全网补搜；或拼多多 API 被限（返回空）→ 拼多多浏览器兜底
             slow_items = []
             if len(all_items) < 5:
-                yield sse({'type': 'progress', 'msg': f'快通道结果少（{len(all_items)} 条），正在全网补搜（淘宝全量+京东+唯品会+拼多多）...'})
+                yield sse({'type': 'progress', 'msg': f'这波没搜到啥合适的，我再帮你把淘宝、京东、唯品会、拼多多都翻一遍…'})
                 tb_full, jd_full, vip_full, pdd_full = await asyncio.gather(
                     asyncio.to_thread(search_taobao_full, keyword, 15),
                     asyncio.to_thread(search_jd_full, keyword, 15),
@@ -481,13 +481,16 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                              if not any(k in (it.get('title') or '') for k in service_kw)]
                 if len(all_items) != before:
                     yield sse({'type': 'progress', 'msg': f'🧹 已过滤 {before-len(all_items)} 条服务/租赁类商品'})
-                yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
+                # 2026-08-11 平台透明（省柴柴借鉴）：哪家找到多少明说
+                _plat_n = [f'{p} {n} 条' for p, n in (('淘宝', len(tb_full)), ('京东', len(jd_full)),
+                                                     ('唯品会', len(vip_full)), ('拼多多', len(pdd_full))) if n]
+                yield sse({'type': 'progress', 'msg': f'✅ 翻完了！找到 {len(slow_items)} 条（' + '、'.join(_plat_n) + '），正在给你挑…'})
             elif not pdd_items:
                 # 拼多多 API 被限流/失败 → 浏览器通道兜底（2026-08-10 实测 duoId 被限）
                 yield sse({'type': 'progress', 'msg': '拼多多 API 暂时受限，改用浏览器补拼多多...'})
                 slow_items = await asyncio.to_thread(search_pdd_full, keyword)
                 all_items = tb_items + pdd_items + vip_items + slow_items
-                yield sse({'type': 'progress', 'msg': f'✅ 全网补搜完成（+{len(slow_items)} 条），正在合并比价...'})
+                yield sse({'type': 'progress', 'msg': f'✅ 翻完了！找到 {len(slow_items)} 条，正在给你挑…'})
             else:
                 yield sse({'type': 'progress', 'msg': f'✅ 淘宝 {len(tb_items)} 条 + 拼多多 {len(pdd_items)} 条 + 唯品会 {len(vip_items)} 条，正在 SKU 分组...'})
 
@@ -557,7 +560,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             if (guide_round < 1 and len(groups) > 3 and len(all_items) >= 8
                     and prices and max(prices) / max(min(prices), 1) > 2.0
                     and not has_model_num):
-                yield sse({'type': 'progress', 'msg': '📋 结果较多，正在生成导购选项...'})
+                yield sse({'type': 'progress', 'msg': '🤔 帮你挑几个靠谱的～'})
                 # 2026-08-11 小布：对话历史拼 prompt（LLM 看完整上下文）
                 history_txt = ''
                 if session_id:

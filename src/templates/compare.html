@@ -48,8 +48,8 @@
         .price-cell .pprice { font-size: 20px; font-weight: 700; color: #d63031; margin: 4px 0; }
         .price-cell .pmeta { font-size: 11px; color: #b2bec3; line-height: 1.6; }
         .price-cell.best .pprice { color: #27ae60; }
-        .best-tag { font-size: 10px; background: #27ae60; color: #fff; border-radius: 4px;
-                    padding: 1px 5px; margin-left: 4px; }
+        .best-tag { font-size: 10px; background: #ffc107; color: #856404; border-radius: 4px;
+                    padding: 1px 5px; margin-left: 4px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
         .content-bar { background: #f0f7ff; border: 1px solid #b3d4f5; border-radius: 12px;
                        padding: 12px 14px; margin-top: 10px; font-size: 13px; color: #2c6fbb; line-height: 1.7; }
         .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
@@ -194,7 +194,7 @@
                 g.platforms.forEach(function(it) {
                     var isBest = it === best;
                     html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
-                        '<div class="pname">' + platBadge(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
+                        '<div class="pname">' + platBadge(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">🏆 最低</span>' : '') + '</div>' +
                         '<div class="pprice">¥' + it.price + '</div>' +
                         (it.unit_price ? '<div class="pmeta" style="color:#27ae60">≈¥' + it.unit_price + '/百毫升</div>' : '') +
                         '<div class="pmeta">' + esc(it.shop || '') +
