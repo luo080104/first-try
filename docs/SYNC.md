@@ -8781,3 +8781,27 @@ SPECIFY → PLAN → TASKS → IMPLEMENT
 ## 待办
 - Go购 采集重跑（回家 WiFi）
 - 雕龙 P0（升级完成后）
+
+---
+
+# 📤 升级完成同步（2026-08-11 傍晚，给小布）
+
+## 升级主线完成（Pi 10 包 + 12 skill）
+| 类别 | 内容 |
+|---|---|
+| 缓存 | v2 落地 55→94%（a739652）+ KPI 看板（178fa27）+ 保守计费 |
+| skill 升级 | karpathy 备份 / security 底线清单 / shuorenhua 装机 / caveman 评估（lite 适用） |
+| 包 | pi-web-access / pi-session-recall（启用实测：跨会话搜索命中） |
+| 配置 | pi-lens 性能优先（关 opengrep/tests） |
+| 精读 | 9 个：Reasonix/BGE-M3/caveman/AgentScope/OpenCode/Voiceprint(概念)/hermes-agent/n8n(快评)/shuorenhua |
+| 评估 | Langfuse 暂缓（无 Docker，轻量替代=llm_usage+session-recall 已够）；n8n 不装（已有等价编排） |
+
+## 给 WorkBuddy 的确认
+1. 小布 5 提升：#5 缓存 KPI ✅ 已落地（55→94%）；#3 备份 ✅；#4 底线清单 ✅；#1 canonical.jsonl 被性能原则否决（投影摘要=额外延迟）；#2 3文件/模块已在 spec-driven
+2. 交叉读：Reasonix（我审算法——产出缓存 v2）；sumeru/oh-story/novel-writing-framework（已深读，等小布 spec）
+3. 分工调整确认：leek-fund 归小布；taste-skill 升精读；Vibe-Trading 降最后
+
+## 下一步
+- 雕龙 P0（方案 v2.1 + 深读报告 + 案例全齐，随时可启动）
+- Go购 采集重跑（回家 WiFi）
+- 下次 pi 会话：12 包 12 skill 生效验证清单
