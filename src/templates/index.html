@@ -94,7 +94,7 @@
         <div id="recent-searches"></div>
         <div class="subtitle" style="font-size:17px;color:#ff6b35;font-weight:600">购物就是一场旅行，让我们Go购 ✈️</div>
         <div class="subtitle" style="margin-top:2px">淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网</div>
-        <div class="search-box">
+        <div class="search-box" id="search-box" style="display:none">  <!-- 2026-08-11 主界面=卡片导航，搜索框由「搜全网」展开 -->
             <input type="text" id="kw" placeholder="说人话也行：帮我看石头岛的外套">
             <input type="hidden" id="cat" value="">
             <div class="cats">
@@ -130,7 +130,7 @@
         </div>
         <!-- v2.0 游戏化：4 大地标卡片 -->
         <div class="landmarks">
-            <a class="landmark lm-shop" href="/"><span class="lm-icon">🏪</span>搜全网<span class="lm-sub">淘宝京东拼多多一键比</span></a>
+            <a class="landmark lm-shop" href="javascript:showSearch()"><span class="lm-icon">🏪</span>搜全网<span class="lm-sub">淘宝京东拼多多一键比</span></a>
             <a class="landmark lm-wander" href="/wander"><span class="lm-icon">🎡</span>逛一逛<span class="lm-sub">像刷小红书一样发现好物</span></a>
             <a class="landmark lm-watch" href="/watches"><span class="lm-icon">📋</span>设个心理价<span class="lm-sub">跌到我就叫你</span></a>
             <a class="landmark lm-card" href="/compare"><span class="lm-icon">🎁</span>出好价卡<span class="lm-sub">一键生成发给爸妈</span></a>
@@ -514,6 +514,19 @@
         }
         function hideLoading() {
             document.getElementById('loading-overlay').style.display = 'none';
+        }
+        function showSearch() {
+            var box = document.getElementById('search-box');
+            if (box) {
+                box.style.display = 'block';
+                box.scrollIntoView({behavior: 'smooth', block: 'center'});
+                var kw = document.getElementById('kw');
+                if (kw) setTimeout(function(){ kw.focus(); }, 400);
+            }
+        }
+        // 2026-08-11 从陪你出发「立刻出发」跳回 → 自动展开搜索框（带对话上下文）
+        if (location.search.indexOf('search=1') >= 0) {
+            window.addEventListener('load', function(){ setTimeout(showSearch, 300); });
         }
         function pickMode(mode, el) {
             document.querySelectorAll('#mode-pick label').forEach(function(l) { l.classList.remove('sel'); });
