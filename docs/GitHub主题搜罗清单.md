@@ -219,3 +219,29 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 - shuorenhua 深读（雕龙 P1）
 - Langfuse（等服务器/轻量替代）
 - pi-lens/simplify 实测（下次 pi 会话）
+
+---
+
+## 十一、n8n 快评 + shuorenhua 装机 + pi-lens 配置（2026-08-11 傍晚）
+
+### n8n（200k★）→ 📌 不装
+- TypeScript 巨型 monorepo（26406 文件）——可视化工作流编排平台
+- 我们已有等价物：notify.py（定时）+ crawl.py（采集）+ app.py（服务）——编排内建在代码
+- 结论：参考思想（触发器→节点→状态传递），不装不读（架构不匹配）
+
+### shuorenhua（去 AI 味）→ ✅ 已装 Pi（雕龙 P1 直接引用）
+- **7 类 AI 腔变体归并**：调试腔/庸医问诊腔/暴力动作腔/主动出击腔/总结提示腔/心理判断腔/郑重预告
+- **Tier 1-3 短语表**：开场套话（值得注意的是/众所周知/随着……的不断发展…）+ 渲染性强调（深刻的/前所未有/发人深省…）
+- **12 结构反模式**：二元对比假戏剧/否定式列举/戏剧化碎句/反问式铺垫/虚假主语/被动语态/三件套/首先其次最后/总结式收尾/对称填充/无源引用
+- **Protected spans**（保留条件）+ scope 三档（structural/bounded/in-place）
+- 落地：~/.pi/agent/skills/shuorenhua/（SKILL.md + references 全量）
+
+### pi-lens 配置 → ✅ 性能优先
+- Python 支持确认（pyright/ruff-lint）
+- 性能配置：关 opengrep/tests（重件），留 lsp/format/autofix 核心
+- 延迟基准：辅助工具 399-682ms（可接受，重件已关）
+
+## Pi skills 最终清单（12 个）
+agents-best-practices / code-reviewer / council / karpathy-rules / planning-with-files /
+security-auditor / shuorenhua（新）/ spec-driven / test-driven / webapp-testing
++ 包内 superpowers/ponytail
