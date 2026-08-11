@@ -189,3 +189,33 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 - n8n（工作流编排）
 - shuorenhua 深读（已克隆）
 - Langfuse SDK（等服务器/或本地轻量替代）
+
+---
+
+## 十、hermes-agent 精读（记忆升级，2026-08-11 深夜）
+
+### 要点
+- **闭式学习循环**：Agent 策展记忆 + 周期性提醒 + 复杂任务后自主创建 skill + skill 自改进
+- **FTS5 会话搜索 + LLM 摘要跨会话回忆**（= pi-session-recall 已装 ✅）
+- Honcho 辩证用户建模（与用户画像同思想）
+- cron 自然语言定时任务（我们 notify.py 已类似）
+- 7 终端后端（Telegram/Discord/Slack/WhatsApp + CLI 统一网关）
+
+### 对 Pi 结论
+- hermes-memory（已装）= 它的核心记忆移植 ✅
+- session-recall（已装）= 它的跨会话搜索 ✅
+- **剩余价值低**（终端网关/后端多样我们不需求）——精读完成，不再深挖
+
+## 今晚升级战果汇总（性能优先原则确认）
+1. ✅ 缓存 v2：命中率 55%→94%（a739652）
+2. ✅ 命中率 KPI 看板（178fa27）：/api/usage hit_rate + 首页显示（实测 80.7%）
+3. ✅ karpathy 补备份 + security 补底线清单（小布提升 #3/#4）
+4. ✅ pi-web-access + pi-session-recall 装机（Pi 包 10 个）
+5. ✅ 精读 7 个：Reasonix/BGE-M3/caveman/AgentScope/OpenCode/Voiceprint(概念)/hermes-agent
+6. ✅ 保守计费修复（cache 缺失按全 miss）
+
+## 剩余队列
+- n8n（工作流编排——三 agent 未来）
+- shuorenhua 深读（雕龙 P1）
+- Langfuse（等服务器/轻量替代）
+- pi-lens/simplify 实测（下次 pi 会话）
