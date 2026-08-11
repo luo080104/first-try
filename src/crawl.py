@@ -121,7 +121,7 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
         if len(batch) < 8:
             break
         await asyncio.sleep(2)
-    for p in range(1, pages + 1):
+    for p in range(1, 6):  # 2026-08-11 小布斧1：PDD 独立翻 5 页（补浏览器通道短板）
         batch = await asyncio.to_thread(search_pdd_full, keyword, p, 8, True)
         pdd_full += batch
         if len(batch) < 8:

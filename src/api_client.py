@@ -145,8 +145,13 @@ def search_pdd(keywords: str, page: int = 1, size: int = 20, use_cache: bool = T
     params = {'keyword': keywords, 'page': str(page), 'pageSize': str(size)}
     result = get('dels/pdd/goods/search', params)
     if result.get('code') != 0:
-        print(f'⚠️ PDD API 错误: {result.get("msg")}')
-        return []
+        # 2026-08-11 小布斧3：限流降频重试一次（等 5s 再试，避免连打限流）
+        print(f'⚠️ PDD API 错误: {result.get("msg")}（5s 后重试一次）')
+        time.sleep(5)
+        result = get('dels/pdd/goods/search', params)
+        if result.get('code') != 0:
+            print(f'⚠️ PDD API 重试仍失败: {result.get("msg")}')
+            return []
     data = result.get('data', {})
     if isinstance(data, dict):
         lst = data.get('list', data.get('goodsList', []))
