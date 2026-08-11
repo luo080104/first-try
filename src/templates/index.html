@@ -95,7 +95,11 @@
         <div class="subtitle" style="font-size:17px;color:#ff6b35;font-weight:600">购物就是一场旅行，让我们Go购 ✈️</div>
         <div class="subtitle" style="margin-top:2px">淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网</div>
         <div class="search-box" id="search-box" style="display:none">  <!-- 2026-08-11 主界面=卡片导航，搜索框由「搜全网」展开 -->
-            <input type="text" id="kw" placeholder="说人话也行：帮我看石头岛的外套">
+            <div style="display:flex;gap:8px">
+                <input type="text" id="kw" placeholder="说人话也行：帮我看石头岛的外套" style="flex:1">
+                <button type="button" onclick="startVoice()" title="语音搜索" style="background:#fdf0e3;border:none;border-radius:10px;font-size:20px;cursor:pointer;padding:0 12px">🎤</button>
+                <button type="button" onclick="startPhoto()" title="拍照找同款" style="background:#eaf2fb;border:none;border-radius:10px;font-size:20px;cursor:pointer;padding:0 12px">📷</button>
+            </div>
             <input type="hidden" id="cat" value="">
             <div class="cats">
                 <div class="cat empty active" data-cat="">全部</div>
@@ -523,6 +527,43 @@
                 var kw = document.getElementById('kw');
                 if (kw) setTimeout(function(){ kw.focus(); }, 400);
             }
+        }
+        // 2026-08-11 语音搜索（Web Speech API，Chrome/手机Chrome支持）
+        function startVoice() {
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { alert('你的浏览器不支持语音识别，推荐用 Chrome'); return; }
+            var rec = new SR();
+            rec.lang = 'zh-CN';
+            rec.interimResults = false;
+            var btn = document.getElementById('voice-btn');
+            rec.onstart = function() { if (btn) btn.style.background = '#ff6b35'; };
+            rec.onend = function() { if (btn) btn.style.background = '#fdf0e3'; };
+            rec.onerror = function(e) { alert('语音识别失败：' + (e.error || '未知')); };
+            rec.onresult = function(e) {
+                var kw = e.results[0][0].transcript;
+                document.getElementById('kw').value = kw;
+                showSearch();
+                setTimeout(doSearch, 300);
+            };
+            rec.start();
+        }
+        // 2026-08-11 拍照辅助搜索（拍照→描述→搜；无图搜API，AI看图描述）
+        function startPhoto() {
+            var inp = document.createElement('input');
+            inp.type = 'file';
+            inp.accept = 'image/*';
+            inp.capture = 'environment';  // 手机直接调后置摄像头
+            inp.onchange = function() {
+                var f = inp.files[0];
+                if (!f) return;
+                var desc = prompt('拍到了！用一句话描述它（如：黑色运动鞋）：');
+                if (desc && desc.trim()) {
+                    document.getElementById('kw').value = desc.trim();
+                    showSearch();
+                    setTimeout(doSearch, 300);
+                }
+            };
+            inp.click();
         }
         // 2026-08-11 从陪你出发「立刻出发」跳回 → 自动展开搜索框（带对话上下文）
         if (location.search.indexOf('search=1') >= 0) {
