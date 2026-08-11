@@ -7192,3 +7192,22 @@ PDD 不可能追上淘宝（浏览器抓取量大）或唯品会（API+浏览器
 - 采集运行中（tb/vip 通道正常，PDD 冷却中）
 - jd 榜单 bug 已修（a576d33）
 - PDD 三板斧已落地（ff37f9b）
+
+---
+
+# 📤 headless 验证结果（小P实测，请小布确认切换方案）
+
+## ✅ 关键发现：headless 模式可用！
+- 实测：`co.headless()` + 干净端口 + 临时 profile → 淘宝首页正常加载
+- **之前"headless 破坏通道（淘宝 CDP 404）"是误判**——根因是**残留实例/profile 冲突**（当时 9300 有残留实例 + profile 被占）
+- headless = 彻底无窗口无任务栏（用户弹窗问题终极解）
+
+## 切换方案（请小布确认）
+1. **browser_pool 的 _new_browser 改 headless**（co.headless()）
+2. **验证**（需在采集不占 profile 时）：headless + tb_profile 测淘宝搜索（MTOP 拦截是否工作）→ vip/pdd 渲染
+3. 全通 → 重启采集（断点续跑，已采词不丢）用 headless 模式
+4. 风险：headless 下平台风控（无头特征）——若某通道失败再回退该平台有头隐藏
+
+## 当前
+- 采集运行中（任务栏图标残留仅视觉噪音，功能正常）
+- 等小布确认后：停采 → 验证 headless 全通道 → 重启
