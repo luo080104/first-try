@@ -13,11 +13,13 @@ if not os.path.exists(EDGE):
     EDGE = r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
 
 PROFILES = {
-    'tb': ('data/tb_profile', 9300),
+    # 2026-08-11 小布方案：淘宝切 headless（tb_profile_h 为 headless 专用副本，原目录与 headless 不兼容）
+    'tb': ('data/tb_profile_h', 9300),
     'jd': ('data/jd_profile', 9301),
     'vip': ('data/vip_profile', 9302),
     'pdd': ('data/pdd_profile', 9303),
 }
+HEADLESS = {'tb'}  # 已验证 headless 通的平台；其余保留有头隐藏（逐个验证逐个切）
 _pool = {}
 _lock = threading.Lock()
 _serial_locks = {p: threading.Lock() for p in PROFILES}  # 同平台搜索串行锁
@@ -71,20 +73,24 @@ def _hide_browser(b):
 
 
 def _new_browser(platform: str):
-    """新建浏览器并立即隐藏"""
+    """新建浏览器并立即隐藏；headless 平台无窗口无任务栏"""
     from DrissionPage import Chromium, ChromiumOptions
     prof, port = PROFILES[platform]
     co = ChromiumOptions()
     co.set_browser_path(EDGE)
     co.set_local_port(port)
     co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
-    # 终极组合：启动参数层面窗口就不可见（即使 ShowWindow 失效也不打扰）
-    co.set_argument('--window-position=-32000,-32000')
-    co.set_argument('--window-size=1,1')
-    co.set_argument('--disable-session-crashed-bubble')  # 禁恢复会话弹窗
-    co.set_argument('--no-first-run')
+    if platform in HEADLESS:
+        co.headless()  # 无窗口无任务栏（小布方案：逐个验证逐个切）
+    else:
+        # 有头隐藏：窗口移出屏幕 + 极小尺寸 + 禁会话恢复
+        co.set_argument('--window-position=-32000,-32000')
+        co.set_argument('--window-size=1,1')
+        co.set_argument('--disable-session-crashed-bubble')
+        co.set_argument('--no-first-run')
     b = Chromium(co)
-    _hide_browser(b)
+    if platform not in HEADLESS:
+        _hide_browser(b)
     return b
 
 
