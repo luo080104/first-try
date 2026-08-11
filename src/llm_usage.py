@@ -22,6 +22,9 @@ def record_usage(model: str, input_tokens: int, output_tokens: int, scene: str =
         # 缓存命中按 1/50 计（V4-Flash 0.02 vs 1；V4-Pro 0.025 vs 3——近似取输入价的 2%）
         hit = int(cache_hit or 0)
         miss = int(cache_miss or 0)
+        if hit == 0 and miss == 0:
+            # DeepSeek 高峰/并发时不返回 cache 统计 → 按全 miss 计费（保守，防假省钱）
+            miss = int(input_tokens or 0)
         eff_input = miss + hit * 0.02
         cost = (eff_input / 1e6) * p['input'] + (int(output_tokens or 0) / 1e6) * p['output']
         conn = sqlite3.connect(DB_PATH)
