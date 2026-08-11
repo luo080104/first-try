@@ -188,7 +188,7 @@
             }
             if (window.echarts) { paint(); return; }
             var s = document.createElement('script');
-            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
+            s.src = '/static/echarts.min.js';  // 本地化：不依赖外网 CDN（单位网络也能用）
             s.onload = paint; document.head.appendChild(s);
         }
         function watchIt(title, platform, itemId, price) {
@@ -274,8 +274,8 @@
         loadAnalysis();
         function loadAnalysis() {
             fetch('/api/analysis').then(r => r.json()).then(d => {
+                var render = function() {
                 var box = document.getElementById('analysis-box');
-                if (!window.echarts) { return; }
                 box.innerHTML = '';
                 // ① 价格分布直方图
                 var c1 = document.createElement('div');
@@ -344,6 +344,13 @@
                     series: [{type: 'scatter', data: d.scatter.map(s => [s.price, s.sales]),
                               itemStyle: {color: '#0984e3', opacity: 0.6}, symbolSize: 6}]
                 });
+                };
+                // 2026-08-11 修复：echarts 未加载时动态加载（原直接 return 看板永不显示）
+                if (window.echarts) { render(); return; }
+                var s = document.createElement('script');
+                s.src = '/static/echarts.min.js';
+                s.onload = render;
+                document.head.appendChild(s);
             });
         }
     </script>
