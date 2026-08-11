@@ -8665,3 +8665,92 @@ webapp-testing / caveman（新）/ + 包内 superpowers/ponytail
 - canonical.jsonl 评估（hermes-memory 覆盖度）
 - Langfuse 接入 Go购（追踪）
 - pi-lens/simplify 实测（下次会话生效后）
+
+
+## 小布工具层精读：Pi 的三个立即可用升级（2026-08-11 晚）
+
+### 一、Spec Kit（github/spec-kit）→ CONSTITUTION.md 锁死 Pi 行为
+
+在每个 Agent 仓库根目录放一个 `CONSTITUTION.md`，Pi 启动必读：
+
+```markdown
+# Go购 Constitution（示例）
+
+## Always
+- 改任何文件前先读文件
+- 修改后跑对应的测试
+- API 变更同步更新注释
+
+## Ask First
+- 数据库 schema 变更
+- 新增依赖包
+- 浏览器池行为变更
+
+## Never
+- 改 .vbs 启动脚本不通知
+- 硬编码 API key
+- 删除其他模块的代码
+```
+
+**治什么**：弹窗9轮 / v2.0炸JS / 改browser_pool忘了通知app.py——三类问题直接拦。
+
+### 二、Karpathy 四原则 → Pi system prompt 前置注入
+
+| 原则 | Pi 犯过的错 |
+|------|-----------|
+| 先想再写 | 弹窗修9轮——每次"试试这个" |
+| 越简单越好 | browser_pool 三层锁，200行变500行 |
+| 只改要改的 | v2.0顺手"优化"旧JS全炸 |
+| 目标驱动 | "修bug"没先写复现测试 |
+
+**落地**：四条嵌进 Pi 每轮 system prompt，作为前置规则不是建议。
+
+### 三、Agent Skills（addyosmani）SDD 四阶段
+
+```
+SPECIFY → PLAN → TASKS → IMPLEMENT
+   │        │       │         │
+   ▼        ▼       ▼         ▼
+  人审     人审    人审      人审
+```
+
+**最实用**："不确定就列出假设，等我纠正。" Pi 默默填坑的习惯——不问清楚就直接动手——这条直接治。
+
+### 行动清单（今天收工前）
+
+| # | 做什么 | 谁 |
+|---|--------|-----|
+| 1 | Go购 仓库加 CONSTITUTION.md | 小布写 |
+| 2 | 雕龙 仓库加 CONSTITUTION.md | 小布写 |
+| 3 | Karpathy 四条改写为 Pi 前置指令 | 小布写，Pi 确认 |
+| 4 | SDD 四阶段接入 Pi（复杂任务先出 spec） | 两人协作 |
+| 5 | pi-lens + pi-subagents + context-mode + hermes-memory 装好 | Pi |
+
+
+---
+
+# 📤 缓存命中率差距分析（2026-08-11 深夜，性能优先原则）
+
+## 实测数据
+- 同 session 连续调用：55%（修复前）→ **59-94%（修复后，均值 ~80%）**
+- 跨 session：sys 前缀命中（GUIDE_SYSTEM 固定 ~500 token），用户消息部分 miss
+
+## 与 Reasonix 99.82% 的差距根源（诚实）
+| 维度 | Reasonix | 我们 |
+|---|---|---|
+| 场景 | 单 Agent 长会话（自己的循环，前缀字节级稳定） | 多用户短对话（每 session 几轮就换） |
+| 前缀稳定性 | 连用户消息都稳定 | 用户消息每次不同（本质） |
+| 命中天花板 | 99.82% | 同 session 94%（已达） |
+
+**结论：94% 已是我们的模式天花板**——多用户短对话下，用户消息不同是本质，不是优化问题。
+
+## 性能优先原则下的取舍
+- ❌ 不做投影摘要（Reasonix canonical 思路）——额外 LLM 调用 = 延迟（用户：性能不能打折扣）
+- ✅ 接受每 12 轮一次截断 miss（影响小）
+- ✅ 保守计费修复（cache 缺失按全 miss）
+- 📌 Langfuse 接入 → 持续监控真实命中率 KPI
+
+## 下一步
+1. Langfuse 接入 Go购（追踪 + 命中率 KPI 可视化）
+2. pi-lens/simplify 实测（下次会话）
+3. canonical.jsonl 评估（低优先——投影摘要已被性能原则否决）
