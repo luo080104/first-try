@@ -8246,3 +8246,27 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 ## 待小骆决策
 - 启动雕龙 P0？（9 模块框架 + P0 链路 + 出 1-2 章验收）
 - 还是先歇（今天 Go购 v2.0 收官 + Pi 工具链 + 雕龙功课全完成）
+
+---
+
+# 📤 GitHub 主题搜罗进度同步（2026-08-11 晚）
+
+## 已完成
+1. ✅ 10 个主题搜罗（agent-skill/ai-agent/agent-framework/llm-agent/financial-agent/chinese-novel/coding-agent/multi-agent/awesome-llm/agent）——标记 19 个候选（docs/GitHub主题搜罗清单.md）
+2. ✅ 第一批深读完成（Pi 升级 + Agent 合作优先级）：
+   - planning-with-files（26k★ 三文件模式）→ 已装 Pi
+   - council-of-high-intelligence（3.9k★ 18评委辩论）→ 已装 Pi
+   - agents-best-practices（2.2k★ harness审计清单）→ 已装 Pi
+   - deer-flow（79k★ 字节 super harness）→ 参考
+3. ✅ Pi skills 11 个（spec/planning/karpathy/test/webapp/code-reviewer/security/agents-best/council + 包内 superpowers/ponytail）
+
+## 进行中
+- 第二批深读待做：karpathy-llm-wiki/compass-skills/hermes-agent/harness-sdk（Pi）、agents-towards-production 精选（评估/记忆/安全）、金融 3 个（zhengxi-views/daily_stock_analysis/Vibe-Trading）、雕龙 5 个（tianming×2/shuorenhua/taste-skill/awesome-novel-agent）
+
+## 优先级（小骆指示）
+提升 Pi/WorkBuddy > Agent 合作优化 > 三 agent（金融/雕龙/Go购）
+
+## 待办提醒
+- shuorenhua 克隆确认（雕龙⑤已引用）
+- 金融 5 蓝本 + 新发现 3 个的整合
+- 雕龙 P0 启动（方案 v2.1 已就绪）
