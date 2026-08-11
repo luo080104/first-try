@@ -534,6 +534,21 @@
             var tip = document.getElementById('mode-tip');
             tip.innerText = mode === 'live' ? '⚡ 实时模式：现场抓取最新价（后台浏览器，约 30-60 秒）' : '📚 历史模式：只读商品库，秒出（不爬取，零弹窗）';
         }
+        var _searchTimer = null;
+        function _startSearchTimer() {
+            _stopSearchTimer();
+            var t0 = Date.now();
+            _searchTimer = setInterval(function(){
+                var sec = Math.round((Date.now() - t0) / 1000);
+                var msg = document.getElementById('loading-msg');
+                if (msg && sec % 15 === 0) {
+                    msg.textContent = '⏳ 已搜索 ' + sec + ' 秒，实时抓取中（淘宝/京东/拼多多/唯品会）…';
+                }
+            }, 1000);
+        }
+        function _stopSearchTimer() {
+            if (_searchTimer) { clearInterval(_searchTimer); _searchTimer = null; }
+        }
         function doSearch() {
             var kw = document.getElementById('kw').value.trim();
             if (!kw) { alert('请输入商品名称'); return; }
@@ -544,6 +559,7 @@
             var btn = document.getElementById('search-btn');
             btn.disabled = true;
             showLoading();
+            _startSearchTimer();
             box.innerHTML = '';
             var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
             var uname = encodeURIComponent(getCurrent());
@@ -565,8 +581,9 @@
                                 else if (data.type === 'need') { renderNeed(data.q, data.options); }
                                 else if (data.type === 'step') { updateStep(data.step, data.status); }
                                 else if (data.type === 'progress') { advanceLoading(data.msg); }
-                                else if (data.type === 'error') { hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
+                                else if (data.type === 'error') { _stopSearchTimer(); hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
+                                    _stopSearchTimer();
                                     finishLoading();
                                     prog.style.display = 'none';
                                     renderResult(data, box);

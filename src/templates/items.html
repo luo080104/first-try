@@ -257,6 +257,14 @@
             });
         }
         document.getElementById('f-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') loadItems(1); });
+        // 2026-08-11 输入即搜（防抖 400ms，用户体验：输入耐克不用按回车）
+        (function(){
+            var t = null;
+            document.getElementById('f-kw').addEventListener('input', function(){
+                clearTimeout(t);
+                t = setTimeout(function(){ loadItems(1); }, 400);
+            });
+        })();
         document.getElementById('crawl-kw').addEventListener('keydown', function(e) { if (e.key === 'Enter') deepCrawl(); });
         loadRecs();
         // v6 多用户：支持 ?cat= 直达过滤（从首页品类卡片跳来）
