@@ -7830,3 +7830,26 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 ## 📌 长期路线
 - Superpowers using-superpowers skill 实测
 - 金融 Agent（Agno+Pydantic）/ 小说 Agent（template）——Go购 收官后
+
+---
+
+# 📤 v2.0 功能增强收官（2026-08-11 傍晚）
+
+## 本次完成（案例借鉴全部落地）
+| 功能 | 来源 | 状态 |
+|---|---|---|
+| 价格趋势图（详情近30天折线） | price_compare_tool | ✅ |
+| 仪表盘 5 图（平台分布/近7天入库/价格分布/品牌TOP8/散点） | ShopAgent-X | ✅ |
+| ECharts 本地化 | — | ✅（不依赖外网 CDN） |
+| 语音搜索/语音对话 | ShopAgent-X | ✅ |
+| 拍照辅助搜索 | ShopAgent-X | ✅（务实版） |
+| 修复：看板 echarts 未加载直接 return 隐藏 bug | — | ✅ |
+
+## 未完成（仅剩 3 项，均需条件）
+1. 采集重跑（回家 WiFi）
+2. 唯品会 ZTK 授权（平台操作）
+3. PDD 数据（等 API 恢复）
+
+## v2.0 状态：功能增强告一段落 ✅
+- 20+ 功能全绿（搜索/导购/漫游/盯价/好价卡/历史/语音/拍照/趋势图/仪表盘）
+- 用户演示已给老师看过
