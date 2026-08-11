@@ -45,3 +45,67 @@
 **Go购**：🔴 council-of-high-intelligence（辩论升级）+ 🔴 agents-best-practices
 **Pi 升级**：🟡 karpathy-llm-wiki / compass-skills / hermes-agent / harness-sdk
 **通用**：🔴 agents-towards-production（生产级教程）
+
+---
+
+## 五、第二轮搜罗（chinese-novel / coding-agent / financial-agent）
+
+### topic:chinese-novel（59 个，雕龙大丰收）
+| 候选 | ★ | 价值 | 标记 |
+|---|---|---|---|
+| zy-zmc/tianming-novel-ai-writer | 391 | **"天命"AI 小说创作系统：15维事实快照·12类变更声明** → 雕龙追踪系统直接参考 | 🔴 |
+| zy-zmc/tianming-skill | 124 | 天命协同创作 Skill（模块化提示词工程）→ 雕龙 prompt 体系参考 | 🔴 |
+| POf-L/Fanqie-novel-Downloader | 1550 | 番茄小说下载器 → 爬取参考 | 🟡 |
+| real-Elysia886/inkflow | 26 | 工业化长篇小说引擎 → 雕龙参考 | 🟡 |
+| mosonlab/open-novel-fanqie | 26 | 网文流水线 12 skill 包 → 雕龙参考 | 🟡 |
+| Narcooo/inkos | 8896 | 已克隆（inkos_ref）✅ | ✅ |
+
+### topic:coding-agent（3757 个）
+| 候选 | ★ | 价值 | 标记 |
+|---|---|---|---|
+| OthmanAdi/planning-with-files | 26093 | **持久文件化规划**（file-based planning for coding agents）→ Pi/三 agent 通用（planning 工具化） | 🔴 |
+| openinterpreter/openinterpreter | 67952 | 开源编码 agent → 通用参考 | 🟡 |
+| hesreallyhim/awesome-claude-code | 52099 | Claude Code 资源合集 → Pi 升级参考 | 🟡 |
+
+### topic:financial-agent（仅 8 个，均 <130★）——无高价值（我们已有更好来源）
+
+## 六、第三轮搜罗（multi-agent / awesome-llm / agent）
+
+| 候选 | ★ | 价值 | 标记 |
+|---|---|---|---|
+| bytedance/deer-flow | 79717 | **长时程 SuperAgent harness**（字节）→ 三 agent 通用架构参考 | 🔴 |
+| HKUDS/Vibe-Trading | 30567 | **个人交易 Agent** → 金融 agent 参考 | 🔴 |
+| Leonxlnx/taste-skill | 75220 | **"给 AI 好品味"**（去 AI 味/品味注入）→ 雕龙润色参考 | 🔴 |
+| wshobson/agents | 38703 | 多 harness agentic 插件市场 → Pi 参考 | 🟡 |
+| dair-ai/Prompt-Engineering-Guide | 77411 | 提示词工程指南 → 三 agent 通用 | 🟡 |
+| ruvnet/ruflo | 67613 | agent meta-harness → 通用参考 | ⚪ |
+| FoundationAgents/MetaGPT | 69768 | 多 agent 框架（SOP 思想）→ 通用参考 | 🟡 |
+
+## 七、最终汇总（按项目分，深读顺序）
+
+**金融 agent（5）**：
+1. 🔴 zhengxi-views（基金经理投研 skill）
+2. 🔴 daily_stock_analysis（LLM 股票分析系统）
+3. 🔴 council-of-high-intelligence（多视角辩论）
+4. 🔴 Vibe-Trading（个人交易 agent）
+5. 🔴 TradingAgents（已克隆 ✅ tradingagents_ref）
+
+**雕龙（6）**：
+1. 🔴 tianming-novel-ai-writer（15维事实快照/12类变更声明）
+2. 🔴 tianming-skill（模块化提示词）
+3. 🔴 shuorenhua（去 AI 味，确认克隆）
+4. 🔴 taste-skill（品味注入）
+5. 🔴 awesome-novel-agent（小说合集）
+6. 🟡 inkflow / open-novel-fanqie / Fanqie-Downloader
+
+**Go购（2）**：
+1. 🔴 council-of-high-intelligence（辩论升级）
+2. 🔴 agents-best-practices
+
+**Pi 升级（4）**：
+1. 🔴 planning-with-files（文件化规划）
+2. 🟡 karpathy-llm-wiki / compass-skills / hermes-agent / harness-sdk / awesome-claude-code
+
+**通用（2）**：
+1. 🔴 agents-towards-production（生产级教程）
+2. 🔴 deer-flow（长时程 harness）
