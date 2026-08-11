@@ -7880,3 +7880,226 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 - 回家 → 重跑采集
 - 或开第二个 Agent（小说 full-stack-template / 金融 Agno+Pydantic）
 - 或继续打磨（真·拍照图搜需要视觉模型/图搜API）
+
+
+# 📋 雕龙（第二 Agent）完整同步（2026-08-11，给小P）
+
+> Go购 之后进入雕龙开发。以下为完整上下文，包含定位、架构、9 模块详案、参考案例链接、四角色审查意见。
+
+---
+
+## 一、项目定位
+
+**名称**：雕龙（出自《文心雕龙》——"雕"=打磨，扣 9 模块的润色/审计/质检体系）
+**英文**：Diao-Long（或 Diaolong AI）
+**独立仓库**：小骆已建 `luo080104/diao-long`（Private）
+**首版对标作家**：滚开（起点，《极道天魔》《神秘之旅》《永恒剑主》）
+**目标平台**：同时支持起点 + 番茄
+**策略**：不搞"先 MVP 再迭代"——一步到位 9 模块全做，后续批次是改出来的不是预留出来的
+
+---
+
+## 二、系统架构（9 模块 + 内循环）
+
+```
+① 市场分析师 → ② 架构师 → ③ 角色工坊
+                              ↓
+          ┌─────────────────────────┐
+          │ ④ 写手池 ⇄ ⑤ 风格引擎 ⇄ ⑥ 量化质检 │ ← 内循环
+          │  写→润色→质检→不通过退回→重写（max 3次） │
+          └──────────────┬──────────┘
+                         ↓
+          ⑦ 追踪审查员 → ⑧ 诊断分析师 → ⑨ 出版师
+```
+
+### 关键设计决策
+
+1. **中式节拍引擎**替代西式 Save the Cat beatsheet：
+   - 黄金三章（前 6000 字：世界观+第一次爽点+阶段性成果）
+   - 阶段突破点（每 30-50 章战力升级节点）
+   - 面板更新频率（系统面板格式校验）
+   - 卷间转折点
+
+2. **角色 3 段动态弧线**：
+   - 初始自我欺骗 → 中点转折事件 → 终点状态
+
+3. **continuity_check**：并行写手（3章/Agent）写完必须交叉校验相邻章衔接
+
+4. **④⇄⑤⇄⑥ 内循环**：写手→风格引擎→质检，不通过退回重写，最多 3 次
+
+5. **叙事承诺追踪**：契诃夫的枪——"三天后决斗"自动登记，到期触发回收检查
+
+6. **每章 hook_statement**：章末钩子必须声明
+
+7. **声音保真度盲测**：生成章 vs 滚开原文并排对比（句长偏差≤15%、战斗占比偏差≤10%）
+
+8. **每阶段出口验证门**：不通过不得进入下一阶段
+
+---
+
+## 三、9 模块速览
+
+| # | 模块 | 输入 → 输出 | 核心技术 |
+|---|------|-----------|---------|
+| ① | 市场分析师 | 题材+平台 → 选题报告.md | browser_pool 爬榜单 + LLM分析 |
+| ② | 架构师 | 选题 → 设定集 + chapter-outlines.json | 中式节拍 + hook_statement |
+| ③ | 角色工坊 | 世界观 → 角色档案/ | 15维DNA + 3段弧线 + ECNU 人格 |
+| ④ | 写手池 | outlines → chapters/ | 子Agent并行(≤3章) + continuity_check |
+| ⑤ | 风格引擎 | 滚开原文 → 风格指纹 → 润色章节 | Voiceprint + nuwa + 六层润色 |
+| ⑥ | 量化质检 | 润色章 → 质检报告 | 13项硬性指标 + 三章一轮阻断 |
+| ⑦ | 追踪审查 | 通过质检章 → fix-plan + 审查报告 | O(1)追踪 + 叙事承诺 + 自动修复 |
+| ⑧ | 诊断分析 | 全本 → 诊断报告+可视化 | 情绪曲线 + 节奏曲线 + 人物图谱 |
+| ⑨ | 出版师 | 定稿 → publish/ | 敏感词检测 + 多平台格式导出 |
+
+---
+
+## 四、滚开模式专项
+
+### 爬取
+- 笔趣阁精校版前 200 章 + 《极道天魔》《神秘之旅》《永恒剑主》
+- 复用 Go购 browser_pool + FictionDown 站点解析规则
+
+### 风格指纹（Voiceprint + nuwa 联合）
+1. 功能词频率谱 2. 句长分布 3. 标点指纹 4. 战斗描写模式
+5. 系统面板模板 6. 爽点节奏（压制→蓄力→爆发） 7. 禁止词汇表
+
+### "算账叙事"模板
+```
+每章结构：
+1. 问题引入（反派等级×人数）
+2. 备战（主角获取新技能/等级提升）
+3. 算账（主角战力 vs 反派战力）
+4. 执行（战斗描写，占全章 ≥30%）
+5. 结算（面板更新 + 新威胁预告）
+```
+
+---
+
+## 五、技术栈
+
+- 后端：Python + FastAPI（复用 Go购）
+- 数据库：SQLite + Chroma 向量库
+- 浏览器池：DrissionPage（复用 Go购 browser_pool）
+- 模型：DeepSeek-V4-Pro（主推理）+ Claude（复杂审查）
+- 前端：PWA 网页（复用 Go购 架构）
+
+---
+
+## 六、四角色审查意见（已全部融入 v1.1 方案）
+
+| 角色 | 关键意见 | 状态 |
+|------|---------|------|
+| 叙事学家 | beatsheet 不适配网文 → 改中式节拍 | ✅ 已修改 |
+| 叙事学家 | 角色DNA静态 → 加3段动态弧线 | ✅ 已修改 |
+| 叙事学家 | 并行写手缺连续性校验 → continuity_check | ✅ 已修改 |
+| 叙事学家 | 缺叙事承诺追踪 → ⑦增加 | ✅ 已修改 |
+| 图书联合作者 | 缺钩子声明 → hook_statement | ✅ 已修改 |
+| 图书联合作者 | 缺声音保真度盲测 → 并排对比 | ✅ 已修改 |
+| Agent编排者 | 流程不是线性的 → 内循环（④⇄⑤⇄⑥） | ✅ 已修改 |
+| Agent编排者 | 缺全阶段验证门 → 每Agent出口验证 | ✅ 已修改 |
+| 叙事学家 | 滚开模式需"算账叙事"模板 | ✅ 已增加 |
+
+---
+
+## 七、全部参考案例链接
+
+### 核心架构参考
+- **webnovel-writer**（6.3k⭐）：https://github.com/lingfengQAQ/webnovel-writer
+  - Story System（合同→提交→状态链）、8 Skill命令、200万字连载一致性
+  - 学了：Story System 数据流 + 可视化面板
+  
+- **oh-story-claudecode**（5.3k⭐）：https://github.com/worldwonderer/oh-story-claudecode
+  - 13 Skill + 7 Agent、扫榜→拆文→写作→去AI味全流程、O(1)追踪系统、WorkBuddy 兼容！
+  - 学了：追踪系统（O(1)上下文 + 双时间线 + 显式退役）+ 写前守卫 + 7栏续写状态卡
+
+- **sumeru**（须弥写作）：https://github.com/xindoo/sumeru
+  - 7 Skill 全流程 + 子Agent并行(3章/Agent) + 三阶段审查 + 自动修复 + 断点续传
+  - 学了：章节细纲驱动 + 子Agent并行 + 自动修复(轻量直接改/重量fix-plan)
+
+### 模块化设计参考
+- **Chinese-WebNovel-Skill**：https://github.com/Tomsawyerhu/Chinese-WebNovel-Skill
+  - 主Skill路由 + 10专项模块 + 本地语料检索。每个模块：教程+运行规则+正反例
+  - 学了：模块化路由设计
+
+### 角色与风格参考
+- **Arboris-novel**：https://github.com/t59688/arboris-novel
+  - 8维角色DNA + 情绪节拍控制器 + 多版本对比 + 分层优化(对话/环境/心理/节奏)
+  - 学了：15维DNA基础 + 情绪引擎
+
+- **character-profile**（320⭐）：从故事文本自动提取角色小传（姓名/性格/背景/关系/故事定位）
+- **ECNU 人格框架**（334⭐）：MBTI/九型/大五/Socionics/霍格沃茨/道德阵营七套交叉分析
+
+### 风格与润色参考
+- **Voiceprint**：风格指纹提取（5种情绪样本→功能词频率/句长/标点）
+- **nuwa-skill**：风格蒸馏（喂作品→提取专属表达模式）
+- **shuorenhua（说人话）**：210+中文AI句式库
+- **humanizer-zh**：8位中文作者声音模式
+- **zhongwen-clarity-rewrite**：诊断→清理→重写四段工作流
+- **ai-flavor-remover**：结构腔/句式腔/词语腔/冗余腔分层清理
+- **De-AI-Prompt-Enhancer**：24项痕迹+段落谱系+标点预算
+
+### 质量与审查参考
+- **novel-writing-framework**：https://github.com/LAY-lgtm/novel-writing-framework
+  - 500+章实战提炼、13项硬性量化指标、三章一轮阻断、番茄/起点双平台分化
+  - 学了：13项指标 + 三章一轮 + 平台分化策略
+
+### 可视化诊断参考
+- **lapian-notes（拉片笔记）**：剧情泳道时间轴 + 结构树 + 情绪曲线可视化
+- **NovelIQ**：五阶段流水线 + 情感曲线/节奏曲线/人物关系图谱/伏笔追踪
+
+### 爬取参考
+- **FictionDown**：https://github.com/ma6254/FictionDown
+  - Go语言、起点+6盗版站爬取、支持导出txt/epub/md
+  - 学了：站点解析规则（翻译为Python）
+
+### 其他写作Agent（参考思路）
+- **qiaomu-novel-generator**：先讨论剧情钩子再写正文
+- **InkOS**：https://github.com/Narcooo/inkos — 10 Agent管线 + 37维审计
+- **AI_NovelGenerator**：https://github.com/YILING0013/AI_NovelGenerator — Python+向量检索
+  
+### 节拍分析
+- **beatsheet**：Save the Cat 15拍计算器
+
+---
+
+## 八、开发优先级
+
+| 阶段 | 内容 |
+|------|------|
+| P0 | ② 架构师 + ④ 写手（单章） + ⑥ 量化质检 + 内循环 |
+| P1 | ⑤ 风格引擎（滚开指纹 + 六层润色） |
+| P2 | ⑦ 追踪审查员 + ③ 角色工坊（动态弧线） |
+| P3 | ⑧ 诊断分析师 + ⑨ 出版师 |
+| P4 | ① 市场分析师 |
+
+---
+
+## 九、方案文档位置
+`docs/雕龙方案_v1.md`（完整版，以上为摘要）
+
+---
+
+## 十、Pi 你看完后的任务
+1. 审方案——有没有技术层面的盲区？
+2. 有没有你从这些案例链接里看到的不同启发？
+3. P0 启动——从 ② 架构师 + ④ 写手 + ⑥ 质检 开始，独立 repo `luo080104/diao-long`
+
+
+---
+
+# 📤 addyosmani/agent-skills 深度落地（2026-08-11 傍晚）
+
+## 已全部使用（4 agents + 8 commands 全覆盖评估）
+| 资源 | 落地 |
+|---|---|
+| code-reviewer | ✅ code-reviewer skill（五维审查） |
+| security-auditor | ✅ **新增 security-auditor skill**（输入/认证/密钥/依赖四块） |
+| test-engineer | ✅ 要点补进 test-driven skill（边界用例/正确层级） |
+| web-performance-auditor | ❌ 不需要（家庭项目，Lighthouse 级性能审计过重） |
+| spec.toml | ✅ spec-driven skill |
+| test.toml | ✅ test-driven skill（TDD+Prove-It） |
+| planning.toml | ✅ **任务拆分补进 spec-driven**（垂直切片/验收/检查点） |
+| review/ship/build/code-simplify/webperf | ❌ 已被现有流程覆盖（review→code-reviewer；ship→commit前验证） |
+
+## Pi skills 最终清单（7 个）
+spec-driven / karpathy-rules / test-driven / code-reviewer / webapp-testing / security-auditor / (planning并入spec-driven)
