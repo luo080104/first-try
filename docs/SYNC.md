@@ -8202,3 +8202,25 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 - R2 成本：写手 V4-Flash + 质检 V4-Pro；写手 prompt 预置质检标准
 - R3 一步到位 vs P0：9 模块空壳 + P0 链路先通（出 1-2 章人工验收）
 - R4 状态一致性：文件锁 + continuity_check
+
+---
+
+# 📤 雕龙案例仓库全部克隆完成（2026-08-11 晚，P0 前功课）
+
+## 9 个写作案例（本地已克隆）
+| 案例 | 目录 | 对应模块 |
+|---|---|---|
+| webnovel-writer | ~/webnovel-writer_ref | 数据流/Story System |
+| oh-story-claudecode | ~/oh-story-claudecode_ref | 追踪（O(1)）+ 扫榜（含 demo/拆文库） |
+| sumeru | ~/sumeru_ref | 世界构建/并行写/润色/终稿（7 个 skill） |
+| arboris-novel | ~/arboris-novel_ref | 角色 DNA |
+| novel-writing-framework | ~/novel-writing-framework_ref | 13 项质检 |
+| FictionDown | ~/FictionDown_ref | 爬取站点解析 |
+| inkos | ~/inkos_ref | 写作系统 |
+| AI_NovelGenerator | ~/AI_NovelGenerator_ref | 生成器参考 |
+| Chinese-WebNovel-Skill | ~/Chinese-WebNovel-Skill_ref | 中文网文 skill |
+
+## 下一步（P0 启动前）
+1. 精读：oh-story 追踪（O(1) 核心）+ sumeru 7 skill（世界/写/润/审）+ novel-writing-framework 13 项
+2. 确认 diao_long 仓库 remote（luo080104/-）
+3. 9 模块空壳框架 + P0 链路
