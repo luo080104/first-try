@@ -61,6 +61,29 @@
         .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
                        border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
                        font-size: 14px; line-height: 1.9; box-shadow: 0 2px 10px rgba(255,107,53,0.3); }
+        /* ===== v2.0 游戏化：4 大地标卡片 ===== */
+        .landmarks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
+        .landmark { border-radius: 18px; padding: 20px 12px; text-align: center; cursor: pointer;
+                    text-decoration: none; color: #fff; font-size: 15px; font-weight: 700;
+                    box-shadow: 0 4px 14px rgba(0,0,0,0.10); transition: transform .15s, box-shadow .15s; }
+        .landmark:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+        .landmark .lm-icon { font-size: 36px; display: block; margin-bottom: 6px; }
+        .landmark .lm-sub { font-size: 12px; font-weight: 400; opacity: .88; display: block; margin-top: 3px; }
+        .lm-shop { background: linear-gradient(135deg,#ff6b35,#e74c3c); }
+        .lm-wander { background: linear-gradient(135deg,#00b894,#00a381); }
+        .lm-watch { background: linear-gradient(135deg,#0984e3,#0652DD); }
+        .lm-card { background: linear-gradient(135deg,#a55eea,#8854d0); }
+        .btn-guide { display: block; width: 100%; text-align: center; padding: 15px 0;
+                     background: linear-gradient(135deg,#2d3436,#636e72); color: #fff;
+                     border-radius: 16px; font-size: 16px; font-weight: 700;
+                     text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+                     transition: transform .15s; margin: 6px 0 14px; }
+        .btn-guide:hover { transform: translateY(-2px); }
+        .more-menu { margin: 4px 0 16px; text-align: center; font-size: 14px; }
+        .more-menu summary { cursor: pointer; color: #b2bec3; list-style: none; }
+        .more-menu summary::-webkit-details-marker { display: none; }
+        .more-menu .mm { display: inline-block; margin: 6px 8px; color: #636e72; text-decoration: none; }
+        .more-menu .mm:hover { color: #ff6b35; }
     </style>
 </head>
 <body>
@@ -103,16 +126,21 @@
             </div>
         </div>
         <div class="quick">
-            <a class="q1" href="/compare">⚖️ 帮我比</a>
             <a class="q1" href="/guide">🤖 陪你出发</a>
-            <a class="q1" href="/wander">🎡 购物漫游</a>
-            <a class="q1" href="/items">🛍️ 商品库</a>
-            <a class="q1" href="/crawl">📥 采集中心</a>
-            <a class="q2" href="/watches">🎯 盯价清单</a>
-            <a class="q2" href="javascript:openPrefs()">⚙️ 偏好</a>
-            <a class="q2" href="javascript:showUsage()">💰 AI费用</a>
-            <a class="q2" href="/submit">📝 录入好价</a>
         </div>
+        <!-- v2.0 游戏化：4 大地标卡片 -->
+        <div class="landmarks">
+            <a class="landmark lm-shop" href="/"><span class="lm-icon">🏪</span>商店 · 比价<span class="lm-sub">四平台一个词查全网</span></a>
+            <a class="landmark lm-wander" href="/wander"><span class="lm-icon">🎡</span>市集 · 漫游<span class="lm-sub">不知道买啥？随便逛逛</span></a>
+            <a class="landmark lm-watch" href="/watches"><span class="lm-icon">📋</span>委托 · 盯价<span class="lm-sub">降价自动提醒你</span></a>
+            <a class="landmark lm-card" href="/compare"><span class="lm-icon">🎁</span>战利品 · 好价卡<span class="lm-sub">六关拼图保存晒单</span></a>
+        </div>
+        <a class="btn-guide" href="/guide">🤖 陪你出发 — 拿不准买啥？跟我聊聊</a>
+        <details class="more-menu"><summary>⚙️ 更多功能</summary>
+            <a class="mm" href="/items">🛍️ 商品库</a><a class="mm" href="/crawl">📥 采集中心</a>
+            <a class="mm" href="javascript:openPrefs()">⚙️ 偏好</a><a class="mm" href="javascript:showUsage()">💰 AI费用</a>
+            <a class="mm" href="/submit">📝 录入好价</a><a class="mm" href="/history">🕘 搜索历史</a>
+        </details>
         {% if error %}<div class="error">{{ error }}</div>{% endif %}
         <div class="tips">提示：选品类比价更准（能按规格分组）<br><a href="/submit" style="color:#27ae60;font-size:14px;">📝 录入好价（补盲区）</a> ・ <a href="/watches" style="color:#0984e3;font-size:14px;">🎯 盯价清单</a></div>
     </div>
