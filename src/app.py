@@ -2,6 +2,13 @@ import re
 # app.py - Go购网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
 import sys
+import sys
+# 2026-08-11 小布①④：pythonw 下 stdout 默认 GBK，print emoji 崩（阻塞搜索+盯价500）——全局改 UTF-8
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
