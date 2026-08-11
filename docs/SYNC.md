@@ -4886,6 +4886,7 @@ pi 已提交 v5 代码（commit 078c376），与审核方案一致度极高，�
 # TODO: 折淘客唯品会 API 待联盟授权 SID（2026-08-09）
 # 当前回退浏览器通道 vip_search.py
 ```
+
 1. app.py 中唯品会 API 调用入口处：检查 SID 是否有效 → 无效则 fallthrough 到浏览器通道（已有逻辑？没有的话加一个 try/except → vip_search）
 2. 不需要单独标记表字段，注释级别就够
 
@@ -8060,29 +8061,34 @@ watches 页面直接 500。需查服务器日志定位。
 搜了 "agent skills" "spec-driven development" "agent memory" "coding agent" 四个方向，找到了前一轮遗漏的重磅项目：
 
 ### 🔥 claude-mem — 跨会话持久记忆（83k star）
+
 <https://github.com/thedotmack/claude-mem>
 
 - **解决什么**：Pi 每次新 session 都丢失昨天的上下文。claude-mem 在会话结束时压缩总结、存 SQLite+向量库、下个 session 自动注入。
 - **对我们**：Pi 的 session 目录已经有 6 个会话了——信息全在但跨 session 不可见。claude-mem 的思路可以直接套。
 
 ### 🔥 Spec Kit — GitHub 官方 SDD 工具（115k star）
+
 <https://github.com/github/spec-kit>
 
 - **解决什么**：Agent 跳过 spec 直接写代码 → 需求漂移、方案不可追溯。Spec Kit 强制七步流程：Constitution → Specify → Plan → Tasks → Implement。
 - **对我们**：直接治小P"跳过方案直接莽代码"的核心问题。Constitution 机制（项目宪法）可以固化我们的开发规范。
 
 ### 🔥 Agent Skills (Addy Osmani) — Google 级工程规范（76k star）
+
 <https://github.com/addyosmani/agent-skills>
 
 - **解决什么**：24 个生产级工程 workflow（spec → plan → build → test → review → ship），8 个 slash 命令触发。
 - **对我们**：比 Superpowers 更面向完整生命周期。spec-driven-development 技能直接嵌入到 Pi 的 /build 流程里。
 
 ### 🟡 pi-skills — Pi 专属技能包（2k star）
+
 <https://github.com/share-skills/pi>
 
 - Pi 原生 skills 集合，含编码/测试/产品/运维四个场景的场景路由
 
 ### 🟡 OpenSpec — 需求变更追溯（56k star）
+
 <https://github.com/Fission-AI/OpenSpec>
 
 - **定位**：增量式 spec 管理（适合已有项目），比 Spec Kit 轻量
@@ -8112,24 +8118,28 @@ watches 页面直接 500。需查服务器日志定位。
 搜了 "agent framework build scaffold"，找到了直接用于搭 Agent 的框架——不只是增强 Pi，而是帮我们从零起第二个 Agent。
 
 ### 🔥 Agno — 全栈 Agent 平台（40.6k⭐）
+
 <https://github.com/agno-agi/agno>
 
 - **定位**：Build / Run / Manage 一体的 Agent 平台。自带 Memory / Knowledge / Tools / Runtime。
 - **对我们**：第三个金融 Agent 用它做底座最合适。不用从零再搭一套 FastAPI+DB+缓存。
 
 ### 🔥 Pydantic AI — 类型安全 Agent（17.7k⭐）
+
 <https://github.com/pydantic/pydantic-ai>  
 
 - **定位**：Pydantic 团队出品，Agent 的输入输出全部类型验证。模型返回的不是自由文本而是 Pydantic Model。
 - **对我们**：Go购 已经用了 Pydantic，天然兼容。金融 Agent 的数据精度要求更高，类型安全是刚需。
 
 ### 🟡 full-stack-ai-agent-template — FastAPI 脚手架（614⭐）
+
 <https://github.com/vstorm-co/full-stack-ai-agent-template>
 
 - **定位**：一条命令生成 FastAPI + PostgreSQL + WebSocket + Next.js 的完整 Agent 项目
 - **对我们**：第二个小说 Agent 用它快速起项目。省掉搭后端+数据库+前端的重复劳动。
 
 ### 🟡 CrewAI — 多角色 Agent 协作（52.8k⭐）
+
 <https://github.com/crewAIInc/crewAI>
 
 - **定位**：一人写 Prompt、一人查资料、一人出报告——角色化协作
@@ -9533,13 +9543,12 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 1. 四扩展包装完 → ✅ 已装完（10 包全装）
 2. 缓存 v2 → ✅ 已做（94%）；BGE-M3 pipeline → 按需求今天启动（代码框架，模型下载单独）
 
-
 ## 小P进度纠正 + 最终状态（2026-08-11 傍晚）
 
 ### Pi 精读：12/13 完成（非之前误报的 2/13）
 
 | 项目 | 状态 |
-|------|------|
+| ------ | ------ |
 | DeepSeek-Reasonix | ✅ 缓存落地 |
 | BGE-M3 + Qdrant | ✅ 代码就绪，模型 2GB 待下载 |
 | FictionDown | ✅ |
@@ -9554,58 +9563,61 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 | shuorenhua | ✅ |
 
 ### 关键成果
+
 - **缓存 v2**：94% 命中率（从 55% 冲到 94%——距离 Reasonix 的 99.82% 只差一步）
 - **BGE-M3 pipeline**：代码就绪，2GB 模型等网络好时下载
 
 ### 全员最终进度
 
 | | 分配 | 完成 |
-|---|------|------|
+| --- | ------ | ------ |
 | 小布精读 | 15 | 14/15 |
 | Pi 精读 | 13 | 12/13 |
 | 小布升级文档 | 4 | CONSTITUTION.md + PI_RULES.md + PI_SDD.md ✅，雕龙 CONSTITUTION ⬜ |
 | 雕龙方案 | — | v1.3 完成（14→16条设计决策，7项目精读全融入） |
 
 ### 剩余
+
 - Pi：最后 1 个精读 + BGE-M3 模型下载
 - 小布：雕龙 CONSTITUTION.md + 方法论 6 篇摘要文档
-
-
 
 ## 小布信息差检查 + 补充同步（2026-08-11 傍晚）
 
 ### 小布已完成但 Pi 可能不知道的
 
 | 文件 | 位置 | Pi 需要做什么 |
-|------|------|-------------|
+| ------ | ------ | ------------- |
 | CONSTITUTION.md（Go购行为准则） | `shopping-agent/CONSTITUTION.md` | 下次 Pi 启动自动读，每次对话遵守 Always/Ask First/Never |
 | PI_RULES.md（Karpathy四原则） | `shopping-agent/docs/PI_RULES.md` | 注入 system prompt——每条带反面案例 |
 | PI_SDD.md（四阶段门禁） | `shopping-agent/docs/PI_SDD.md` | 超过30分钟任务先 spec 等人确认 |
 | 雕龙方案 v1.3 | `shopping-agent/docs/雕龙方案_v1.md` | 16条设计决策、7项目精读全融入 |
 
 ### 小布对 Pi 进度的纠正
+
 - 之前误报 Pi 为 2/13——实际 12/13 ✅
 - Pi 的缓存 v2 94% 是今天最大技术突破 ✅
 - 还有 1 个精读 + BGE-M3 2GB 模型下载待完成
 
 ### 确认无信息差的点
+
 - ✅ 精读分工和进度双方对齐
 - ✅ 雕龙方案 v1.3 已更新，Pi 可见
 - ✅ 升级文档已写，Pi 下次启动自动生效
 - ✅ 缓存架构两人交叉读已完成（sumeru + Reasonix）
 - ⬜ Pi 的第 13 个精读是什么？（小布计数为 12，请 Pi 确认）
 
-
 ---
 
 # 📤 小P 计数纠正（2026-08-11，给小布）
 
 ## 真相：小布清单 Pi 独读 = 11 项（非 13）
+
 "12/13" 是我的计数错误——把 `pi-lens+subagents+context-mode+hermes-memory`（1 项）拆成 4 个单算，多算了 3 个。
 
 ## 实际进度（按小布清单核对）
+
 | 项 | 状态 |
-|---|---|
+| --- | --- |
 | DeepSeek-Reasonix | ✅ 缓存 v2（55→94%） |
 | BGE-M3 + Qdrant | ✅ 代码就绪（dragon_embed.py，模型 2GB 下载待网络） |
 | FictionDown | ✅ 深读 |
@@ -9622,3 +9634,61 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 **交叉 4/5**：sumeru/oh-story/novel-writing-framework/Reasonix 已碰；Vibe-Trading 按约定降最后（观复启动前读）
 
 **结论：双方进度对齐（此前统计差异 = 我的计数错误，非工作缺口）**
+
+
+## 雕龙 v1.4 — P0 落地决策（2026-08-11 傍晚）
+
+### 定案
+
+| 决策 | 内容 |
+|------|------|
+| 风格样本 | 滚开经典三本：《神秘之旅》《极道天魔》《永恒剑主》，每本前 200 章 |
+| 验证集 | 《苟在武道世界成圣》——已被市场验证的模仿品，盲测风格引擎精度 |
+| P0 风格策略 | 静态规范文件（面板模板+禁用词+算账模板+原文摘录），不是完整 Voiceprint |
+| MVP | 3 章：②生成细纲 → ④写前三章 → ⑥质检全部通过 |
+| 平台 | 起点单平台，番茄分化押后到 P4 |
+| 前端 | CLI 先跑通，P5 再上 Web 界面 |
+| 仓库 | `diao-long`（小骆需从 `-` 改名） |
+
+### P0 验收标准
+输入题材+关键词 → 生成 3 章正文 → 8铁律+13指标全部通过 → 盲测接近《苟在武道世界成圣》水平
+
+### P0 启动清单（Pi 开工前确认）
+1. ⬜ 仓库改名 `-` → `diao-long`
+2. ⬜ 读取 `docs/雕龙方案_v1.md`（v1.4）了解完整架构
+3. ⬜ 阅读 `CONSTITUTION.md` + `PI_RULES.md` + `PI_SDD.md`
+4. ⬜ P0 模块：②架构师 → ④写手 → ⑥质检 + 内循环 + 静态风格规范
+
+### 方案版本演进
+v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，10条决策）→ v1.3（InkOS+Arboris+AI_NovelGenerator+ECC，16条决策）→ **v1.4（P0落地决策，MVP=3章）**
+
+
+---
+
+# 📤 雕龙 P0 完成同步（2026-08-11 晚）
+
+## 雕龙 P0 六阶段全部完成（独立仓库 luo080104/diao-long，559 行）
+| Phase | 内容 | 自测 |
+|---|---|---|
+| 1 | 仓库初始化（9模块框架+CONSTITUTION） | ✅ |
+| 2 | 追踪核心（单一权威事务/原子提交/跳章拒绝/check） | ✅ |
+| 3 | 架构师（中式节拍prompt+验证门：章数≥20/情节点≥3/hook100%） | ✅ |
+| 4 | 写手（V4-Flash+预置8铁律+写前守卫+front matter+自动备份） | ✅ |
+| 5 | 质检（8铁律+13指标确定性扫描，机检先行） | ✅ 拦截AI味7项 |
+| 6 | 主控流水线（架构师→写手→质检→内循环max3→追踪提交） | ✅ 端到端通过 |
+
+## 关键实现
+- `dragon/tracker.py`：oh-story 单一权威事务模型（原子提交/派生视图/容量限制）
+- `dragon/qc.py`：8铁律+13指标确定性正则扫描（AI句式/元话语/战斗占比/面板/钩子）
+- `dragon/llm.py`：DeepSeek 封装（缓存统计/费用记录/JSON容错/重试）
+- `dragon/writer.py`：写手 prompt 预置质检铁律（内循环省钱）
+
+## 下一步（真实生成 3 章验收）
+1. 配 DEEPSEEK_API_KEY（从 shopping-agent/.env 复制）
+2. 选题材（等小骆）
+3. 风格规范静态文件（P0 用人工整理版：面板模板/禁用词/算账模板——需从滚开原文提取，等爬取或小骆提供）
+
+## 待办
+- 爬滚开原文 200 章×3 本（风格指纹 + 风格规范.md）
+- P0 验收：3 章质检通过 + 盲测阈值 + 小骆人工读感
+- 之后 P1（完整 Voiceprint 风格引擎）
