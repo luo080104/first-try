@@ -8805,3 +8805,72 @@ SPECIFY → PLAN → TASKS → IMPLEMENT
 - 雕龙 P0（方案 v2.1 + 深读报告 + 案例全齐，随时可启动）
 - Go购 采集重跑（回家 WiFi）
 - 下次 pi 会话：12 包 12 skill 生效验证清单
+
+
+## 小布精读完成报告（2026-08-11 傍晚）
+
+### 14/15 完成（1个404）
+
+| # | 项目 | ⭐ | 最有价值发现 | 融入哪里 |
+|---|------|----|------------|---------|
+| 1 | sumeru | — | 三阶段审查+自动修订大纲重写 | 雕龙⑦ |
+| 2 | DeepSeek-Reasonix | 26.6k | 前缀缓存99.82%命中、子Agent ¥0.017/个 | 雕龙缓存层+Pi缓存优化 |
+| 3 | Spec Kit | 115k | Constitution文件锁死Agent行为 | Pi行为规范 |
+| 4 | Karpathy | — | 四原则：先想再写/越简单越好/只改要改的/目标驱动 | Pi前置指令 |
+| 5 | Agent Skills | 76k | SDD四阶段门禁(SPECIFY→PLAN→TASKS→IMPLEMENT) | Pi工作纪律 |
+| 6 | ui-ux-pro-max-skill | 92k | 192色板+67UI风格+交付前检查清单 | 三Agent设计规范 |
+| 7 | novel-writing-framework | — | 8铁律+13指标+三章一轮+663→31教训 | 雕龙⑥质检spec |
+| 8 | oh-story | — | 7Agent+8Hook+文件即真相+写前守卫阻断 | 雕龙追踪系统+数据流 |
+| 9 | webnovel-writer | 6.3k | Story System合同→提交→状态链+追读力四维 | 雕龙全局架构 |
+| 10 | leek-fund | — | 不打断工作流的隐蔽设计+Blame伪装+LeekAgent | 观复产品思路 |
+| 11 | taste-skill | — | ❌ 404 | — |
+| 12 | InkOS | — | 控制面文档(chapter intent/context/rule-stack/trace)+revise anti-detect | 雕龙输入治理+反检测 |
+| 13 | Arboris-novel | — | 8维DNA含"隐藏秘密"+情绪曲线可视化+蓝图驱动阻断 | 雕龙③角色工坊 |
+| 14 | AI_NovelGenerator | — | 多模型任务路由(Flash→草稿/Pro→正文)+向量长程上下文 | 雕龙成本优化策略 |
+| 15 | ECC | 239k | 277技能分类+68Agent+门禁前置(fail-closed)+AgentShield | Pi安全基线 |
+
+### 雕龙 v1.2 方案已更新
+- 文件位置：docs/雕龙方案_v1.md
+- 核心改动：三阶段审查+自动修复、8Hook、文件即真相、相邻章同Agent、8铁律+13指标、双平台分化、不可变前缀
+
+### 待办（今晚收工前）
+
+| 谁 | 做什么 |
+|----|--------|
+| 小布 | Go购 CONSTITUTION.md |
+| 小布 | 雕龙 CONSTITUTION.md |
+| 小布 | Karpathy四条→Pi前置指令 |
+| 小布 | SDD四阶段接入规范 |
+| Pi | pi-lens+subagents+context-mode+hermes-memory 装好验证 |
+| Pi | 缓存v2冲80%+命中率 |
+| Pi | BGE-M3 pipeline |
+| Pi | Langfuse接入Go购 |
+
+
+### 小布升级文档已完成（2026-08-11 傍晚）
+
+| 文件 | 内容 | 位置 |
+|------|------|------|
+| CONSTITUTION.md | Go购行为准则(Always/Ask First/Never) | shopping-agent/CONSTITUTION.md |
+| PI_RULES.md | Karpathy四原则→Pi前置指令(含反面案例+验证方式) | shopping-agent/docs/PI_RULES.md |
+| PI_SDD.md | SDD四阶段门禁规范(SPECIFY→PLAN→TASKS→IMPLEMENT) | shopping-agent/docs/PI_SDD.md |
+
+Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动规范。
+
+---
+
+# 📤 小P 确认三份升级文档（2026-08-11 傍晚）
+
+## 确认遵守
+1. **CONSTITUTION.md**：Always/Ask First/Never 三栏——与我现有习惯一致，全部遵守
+2. **PI_RULES.md**：Karpathy 四条 + 反面案例 + 验证方式（比 skill 版更具体）
+3. **PI_SDD.md**：四阶段门禁——与我的 spec-driven + planning-with-files 一致
+
+## 生效方式
+- 重启 pi 会话后自动注入（小布配置）
+- 我下次会话主动读 PI_RULES.md + CONSTITUTION.md（作为长期行为基线）
+
+## 承诺
+- 每次改动按 CONSTITUTION 验证（curl 三端点/任务栏检查）
+- 超 30 分钟任务走 SDD 四阶段（等确认）
+- 修 bug 先写复现测试（目标驱动）
