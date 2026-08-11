@@ -130,6 +130,11 @@
             setTimeout(function() { document.getElementById('loading-overlay').style.display = 'none'; }, 400);
         }
         function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会', dy:'抖音'}[p] || p; }
+        // 2026-08-11 平台偏见展示：平台名带品牌色（一眼识别来源）
+        function platBadge(p) {
+            var C = {tb:'#ff5000', jd:'#e1251b', pdd:'#e02e24', vip:'#f10180', dy:'#000'};
+            return '<span style="color:' + (C[p] || '#636e72') + ';font-weight:700">' + platName(p) + '</span>';
+        }
 
         function doCompare() {
             var kw = document.getElementById('kw').value.trim();
@@ -172,6 +177,13 @@
                 html += '<div class="cmp-card"><div class="card-head">' +
                     '<span class="card-title">📦 ' + esc(g.key) + '</span>' +
                     '<span style="font-size:12px;color:#b2bec3">' + g.platforms.length + ' 平台</span>';
+                // 2026-08-11 电商运营专家：同型号跨平台摘要（一眼看到各平台价）
+                if (g.platforms.length >= 2) {
+                    html += '<div style="font-size:12px;color:#636e72;margin-top:4px">' +
+                        g.platforms.slice().sort(function(a, b) { return a.price - b.price; }).map(function(p) {
+                            return platName(p.platform) + ' ¥' + p.price;
+                        }).join(' · ') + '</div>';
+                }
                 if (g.genuine) {
                     html += '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' + platName(g.genuine.platform) + ' ¥' + g.genuine.price + '</span>';
                 }
@@ -182,7 +194,7 @@
                 g.platforms.forEach(function(it) {
                     var isBest = it === best;
                     html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
-                        '<div class="pname">' + platName(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
+                        '<div class="pname">' + platBadge(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">最低</span>' : '') + '</div>' +
                         '<div class="pprice">¥' + it.price + '</div>' +
                         (it.unit_price ? '<div class="pmeta" style="color:#27ae60">≈¥' + it.unit_price + '/百毫升</div>' : '') +
                         '<div class="pmeta">' + esc(it.shop || '') +
