@@ -53,7 +53,9 @@ def search_book(model, book_dir: str, query: str, top: int = 5):
         print('未索引，先运行 index'); return
     q = model.encode_queries([query], return_dense=True)['dense_vecs'][0]
     try:
-        hits = client.search('chapters', query_vector=q.tolist(), limit=top)
+        # qdrant-client 新版 API：query_points（旧 search 已移除）
+        res = client.query_points('chapters', query=q.tolist(), limit=top)
+        hits = res.points
     except Exception as e:
         print(f'检索失败: {e}')
         return
