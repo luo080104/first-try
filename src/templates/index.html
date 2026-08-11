@@ -584,6 +584,7 @@
                                 else if (data.type === 'error') { _stopSearchTimer(); hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
                                 else if (data.type === 'done') {
                                     _stopSearchTimer();
+                                    btn.disabled = false;  // 2026-08-11 搜索完成恢复按钮（历史模式搜完可切实时）
                                     finishLoading();
                                     prog.style.display = 'none';
                                     renderResult(data, box);
