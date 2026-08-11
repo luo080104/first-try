@@ -152,3 +152,40 @@ code-reviewer / council / karpathy-rules / planning-with-files / security-audito
 - 🔴 agents-towards-production 教程精选（评估/记忆/安全三篇）
 - 金融：zhengxi-views / daily_stock_analysis / Vibe-Trading
 - 雕龙：tianming-novel-ai-writer / tianming-skill / shuorenhua / taste-skill / awesome-novel-agent
+
+---
+
+## 九、第二批深读完成（Pi 升级，2026-08-11 深夜）
+
+### 1. pi-web-access + pi-session-recall → ✅ 已装 Pi
+- web-access：搜索/抓取/PDF（本地 unpdf 免费；搜索 API 需 key——我们暂不配，浏览器通道已够）
+- session-recall：跨会话索引/回忆（`/recall setup` → `index` → `search`）——"上次弹窗怎么改的"直接搜
+
+### 2. 缓存命中率 KPI 看板 → ✅ 落地（178fa27）
+- /api/usage 加 hit_rate + cache_saved；首页 💰 弹窗显示
+- 实测：80.7% 命中率（同 session 94%），月费 ¥0.0786
+
+### 3. AgentScope 2.0（阿里 22k★）→ 📌 观复底座备选
+- 生产级框架：模型覆盖（DeepSeek/OpenAI/DashScope + TTS）、事件系统（多模态流式）、Agentic Memory、多模态 RAG、MCP/Skill Hub、飞书/Discord 频道、K8s/Daytona 沙箱
+- 中文适配 ✅（阿里出品）——观复底座候选（与 Agno 二选一）
+
+### 4. OpenCode（sst）→ 📌 Plan→Build 参考
+- build（全权限）/ plan（只读分析，默认拒编辑+bash 需权限）双 Agent Tab 切换
+- 对 Pi：plan 模式思路（只读分析）——spec-driven 已覆盖大部分；低优先
+
+### 5. Voiceprint → 📌 概念确认（非仓库）
+- 搜索验证：Voiceprint 是**声纹识别**仓库（语音生物识别）——方案里是**借喻**（文字风格指纹）
+- 实现参考：novel-writing-framework（句长/标点/功能词统计已有）+ 雕龙方案 7 维指纹规格（P1 写 style_profile.py）
+
+### 6. 性能优先原则确认（小骆）
+- 所有优化零延迟（缓存优化纯成本侧）；投影摘要不做（额外 LLM 调用=延迟）
+- 小成本接受（miss 部分）
+
+## Pi 包最终清单（10 个）
+lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-web-access/pi-session-recall
+
+## 剩余精读队列
+- hermes-agent（记忆——进行中）
+- n8n（工作流编排）
+- shuorenhua 深读（已克隆）
+- Langfuse SDK（等服务器/或本地轻量替代）
