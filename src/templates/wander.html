@@ -74,7 +74,7 @@
                             '<div class="acts">' +
                             '<button class="b-fav" onclick="fav(\'' + c.item_id + '\', this)">❤️ 收藏</button>' +
                             '<button class="b-no" onclick="dislike(\'' + c.item_id + '\', this)">👎 不感兴趣</button>' +
-                            (c.url ? '<button class="b-go" onclick="window.open(\'' + esc(c.url) + '\')">去看看 ↗</button>' : '') +
+                            '<button class="b-go" onclick="window.open(\'' + esc(c.url || searchUrl(c)) + '\')">去看看 ↗</button>' +
                             '</div></div></div>';
                     }).join('');
                 })
@@ -97,6 +97,13 @@
                 btn.innerText = '✅ 已收藏';
                 btn.disabled = true;
             }
+        }
+        function searchUrl(c) {
+            // 2026-08-11 ③：无商品链接时生成平台搜索兜底链接
+            var t = encodeURIComponent(c.title || '');
+            return {tb: 'https://s.taobao.com/search?q=' + t, jd: 'https://search.jd.com/Search?keyword=' + t + '&enc=utf-8',
+                    pdd: 'https://mobile.yangkeduo.com/search_result.html?search_key=' + t,
+                    vip: 'https://category.vip.com/suggest.php?keyword=' + t + '&ff=235%7C12%7C1%7C1'}[c.platform] || 'https://www.taobao.com/';
         }
         function dislike(id, btn) { feedback(id, 'dislike', btn); }
         function fav(id, btn) { feedback(id, 'fav', btn); }
