@@ -88,7 +88,7 @@
                     '<span class="r-price">¥' + it.actualPrice + '</span> ' +
                     (it.originalPrice && it.originalPrice > it.actualPrice ? '<span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + it.originalPrice + '</span>' : '') +
                     ' <span style="color:' + mc + ';font-size:13px;font-weight:600">🎯 匹配度 ' + (it.match || '?') + '%</span>' +
-                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '" onclick="trackAdopt('guide', this)">⚖️ 去比价 →</a>';
+                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '" onclick="trackAdopt(\'guide\', this)">⚖️ 去比价 →</a>';
                 box.insertBefore(div, document.getElementById('typing'));
             });
             window.scrollTo(0, document.body.scrollHeight);

@@ -191,9 +191,9 @@
                         (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
                 });
                 html += '</div>';
-                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, '' + esc(g.key).replace(/'/g, '') + '')">🔍 相似款</button>' +
-                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare('' + esc(g.key).replace(/'/g, '') + '')">⚙️ 参数对比</button>' +
-                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openDetail(this, '' + esc(g.key).replace(/'/g, '') + '')">📄 详情</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
+                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, \'' + esc(g.key) + '\')">🔍 相似款</button>' +
+                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare(\'' + esc(g.key) + '\')">⚙️ 参数对比</button>' +
+                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openDetail(this, \'' + esc(g.key) + '\')">📄 详情</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
                 if (g.low_price_warning) {
                     html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
                 }
@@ -345,8 +345,7 @@
             fd.append('group_key', g.key);
             fetch('/api/advice', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
                 var el = document.getElementById('card-advice');
-                if (d.advice) el.innerHTML = '🤖 ' + d.advice.split('
-').map(esc).join('<br>');
+                if (d.advice) el.innerHTML = '🤖 ' + d.advice.split('\n').map(esc).join('<br>');
             }).catch(() => { document.getElementById('card-advice').innerHTML = '🤖 AI 建议暂不可用'; });
         }
         function saveCard() {
@@ -384,7 +383,7 @@
             fetch('/api/detail?platform=' + it.platform + '&id=' + encodeURIComponent(it.goodsId)).then(r => r.json()).then(d => {
                 if (!d.ok) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">' + esc(d.msg) + '</div>'; return; }
                 var html = '<div style="display:flex;gap:12px;margin-bottom:10px">' +
-                    (d.img ? '<img src="' + esc(d.img) + '" style="width:90px;height:90px;border-radius:10px;object-fit:cover" onerror="this.style.display='none'">' : '') +
+                    (d.img ? '<img src="' + esc(d.img) + '" style="width:90px;height:90px;border-radius:10px;object-fit:cover" onerror="this.style.display=\'none\'">' : '') +
                     '<div style="flex:1"><div style="font-size:15px;font-weight:700">' + esc(d.title || '') + '</div>' +
                     '<div style="font-size:12px;color:#636e72;margin-top:4px">🏪 ' + esc(d.shop || '') +
                     (d.sales ? ' ・ 销量 ' + d.sales : '') + '</div></div></div>';
