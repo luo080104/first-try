@@ -14,7 +14,19 @@ API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
 # ========== 会话存取 ==========
 
+def _gc_sessions():
+    """会话清理：删除超过 24h 的会话（审查员建议：防 chat_sessions 无限增长）"""
+    try:
+        from db import get_conn
+        conn = get_conn()
+        conn.execute("DELETE FROM chat_sessions WHERE updated_at < datetime('now','localtime','-1 day')")
+        conn.commit(); conn.close()
+    except Exception:
+        pass
+
+
 def get_session(session_id: str) -> dict:
+    _gc_sessions()  # 2026-08-11 TTL：每次读会话顺带清 24h 过期
     from db import get_conn
     conn = get_conn()
     row = conn.execute('SELECT * FROM chat_sessions WHERE session_id=?', (session_id,)).fetchone()
