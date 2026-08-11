@@ -9635,13 +9635,12 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 
 **结论：双方进度对齐（此前统计差异 = 我的计数错误，非工作缺口）**
 
-
 ## 雕龙 v1.4 — P0 落地决策（2026-08-11 傍晚）
 
 ### 定案
 
 | 决策 | 内容 |
-|------|------|
+| ------ | ------ |
 | 风格样本 | 滚开经典三本：《神秘之旅》《极道天魔》《永恒剑主》，每本前 200 章 |
 | 验证集 | 《苟在武道世界成圣》——已被市场验证的模仿品，盲测风格引擎精度 |
 | P0 风格策略 | 静态规范文件（面板模板+禁用词+算账模板+原文摘录），不是完整 Voiceprint |
@@ -9651,25 +9650,28 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 | 仓库 | `diao-long`（小骆需从 `-` 改名） |
 
 ### P0 验收标准
+
 输入题材+关键词 → 生成 3 章正文 → 8铁律+13指标全部通过 → 盲测接近《苟在武道世界成圣》水平
 
 ### P0 启动清单（Pi 开工前确认）
+
 1. ⬜ 仓库改名 `-` → `diao-long`
 2. ⬜ 读取 `docs/雕龙方案_v1.md`（v1.4）了解完整架构
 3. ⬜ 阅读 `CONSTITUTION.md` + `PI_RULES.md` + `PI_SDD.md`
 4. ⬜ P0 模块：②架构师 → ④写手 → ⑥质检 + 内循环 + 静态风格规范
 
 ### 方案版本演进
-v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，10条决策）→ v1.3（InkOS+Arboris+AI_NovelGenerator+ECC，16条决策）→ **v1.4（P0落地决策，MVP=3章）**
 
+v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，10条决策）→ v1.3（InkOS+Arboris+AI_NovelGenerator+ECC，16条决策）→ **v1.4（P0落地决策，MVP=3章）**
 
 ---
 
 # 📤 雕龙 P0 完成同步（2026-08-11 晚）
 
 ## 雕龙 P0 六阶段全部完成（独立仓库 luo080104/diao-long，559 行）
+
 | Phase | 内容 | 自测 |
-|---|---|---|
+| --- | --- | --- |
 | 1 | 仓库初始化（9模块框架+CONSTITUTION） | ✅ |
 | 2 | 追踪核心（单一权威事务/原子提交/跳章拒绝/check） | ✅ |
 | 3 | 架构师（中式节拍prompt+验证门：章数≥20/情节点≥3/hook100%） | ✅ |
@@ -9678,17 +9680,183 @@ v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，1
 | 6 | 主控流水线（架构师→写手→质检→内循环max3→追踪提交） | ✅ 端到端通过 |
 
 ## 关键实现
+
 - `dragon/tracker.py`：oh-story 单一权威事务模型（原子提交/派生视图/容量限制）
 - `dragon/qc.py`：8铁律+13指标确定性正则扫描（AI句式/元话语/战斗占比/面板/钩子）
 - `dragon/llm.py`：DeepSeek 封装（缓存统计/费用记录/JSON容错/重试）
 - `dragon/writer.py`：写手 prompt 预置质检铁律（内循环省钱）
 
 ## 下一步（真实生成 3 章验收）
+
 1. 配 DEEPSEEK_API_KEY（从 shopping-agent/.env 复制）
 2. 选题材（等小骆）
 3. 风格规范静态文件（P0 用人工整理版：面板模板/禁用词/算账模板——需从滚开原文提取，等爬取或小骆提供）
 
 ## 待办
+
 - 爬滚开原文 200 章×3 本（风格指纹 + 风格规范.md）
 - P0 验收：3 章质检通过 + 盲测阈值 + 小骆人工读感
 - 之后 P1（完整 Voiceprint 风格引擎）
+
+
+## 小布同步：雕龙前置工作 + 方向细化（2026-08-11 晚）
+
+### Pi P0 框架已完成 ✅
+- 559 行代码，6 阶段端到端通过
+- 质检拦截了 7 项 AI 味
+- 待真实生成 3 章验收
+
+### 爬虫前置——P0 的前置条件（优先级调整）
+
+**原计划**：P0 后 P1 才上爬虫
+**修正后**：爬虫是第〇步——没数据就没风格分析
+
+```
+第〇步：爬虫管线（Pi 搭建）
+  ├── 复用 Go购 browser_pool（DrissionPage）
+  ├── 参考 FictionDown 的笔趣阁解析规则
+  ├── 三站交叉校验：笔趣阁 + 顶点小说 + 88读书网/全本小说网
+  └── 校验逻辑：同章三源对比 → 取字符数最长的 → 偏差>10%标记人工
+
+第〇·五步：拆节拍写规范文件（小布）
+  └── 等极道天魔前三章 txt → 拆出真实节拍写静态风格规范
+
+第一步：P0 真实生成 3 章
+```
+
+### 风格方向：诡异系统流（新发现）
+
+纯系统流（滚开）和市场最新潮之间有个交叉地带——**诡异+系统**：
+- 有面板和数值成长（滚开骨架）
+- 世界观是"黑潮降临后万物皆诡异"（差异化）
+- 每次战斗：推理诡异弱点 + 面板数值验证
+- 参考：《解构诡异》《苟在武道世界成圣》《我的诡异人生》
+
+### 风格规范选型：B 方案（中等）
+
+| 规范文件内容 | 来源 |
+|------------|------|
+| 滚开面板模板 | 经典三本 |
+| 禁用词表 | novel-writing-framework 8铁律 |
+| 算账叙事模板 | 滚开章节结构分析 |
+| 前三章节拍拆解（金手指激活时机/首次战斗面板数/首次路人惊呼位置） | 需极道天魔原文 |
+| 滚开特有句式库（拟声词/路人反应/数值展示节奏） | 需原文 |
+
+C 方案（+webnovel-writer题材模板+oh-story写作契约）等 P1 再用——前三章用不上。
+
+### 待办
+
+| 谁 | 做什么 | 依赖 |
+|----|--------|------|
+| 小骆 | 从笔趣阁搞《极道天魔》前三章 txt | — |
+| 小布 | 拆节拍 → 静态风格规范文件 | 等原文 |
+| Pi | 三站爬虫搭建 | Go购 browser_pool |
+| Pi | 爬滚开三本+解构诡异各 200 章 | 爬虫就绪 |
+| Pi | 配 DEEPSEEK_API_KEY + 选题材 | 等小骆定 |
+
+
+
+## 纠正：爬虫由 Pi 搭建，不需要小骆手动找原文（2026-08-11 晚）
+
+### 修正后的前置流程
+
+```
+Pi 搭爬虫（复用 Go购 browser_pool + FictionDown 解析规则）
+    ↓
+三站交叉校验爬《极道天魔》前三章（几分钟出结果）
+    ↓
+小布读原文拆节拍 → 静态风格规范文件
+    ↓
+Pi 继续爬剩余：滚开三本各 200 章 + 解构诡异 200 章 + 苟在武道 200 章
+    ↓
+P0 真实生成 3 章
+```
+
+### Pi 当前任务
+1. 在 diao-long 仓库搭爬虫（`dragon/crawler.py`）
+2. 复用 Go购 `src/browser_pool.py` 的 DrissionPage 浏览器池
+3. 实现三站交叉校验：笔趣阁 / 顶点小说 / 88读书网
+4. 先爬极道天魔前三章 → 小布立即开始拆节拍
+
+
+
+## 爬虫专题：三轮搜索 + 精读报告（2026-08-11 晚）
+
+### 为什么需要爬虫
+雕龙 P0 依赖风格数据。滚开三本+解构诡异+苟在武道共6本、每本全文，需三站交叉校验。
+
+### 三轮搜索汇总
+
+| 轮次 | 方向 | 关键发现 |
+|------|------|---------|
+| 第一轮 | 通用小说爬虫 | lightnovel-crawler 2530⭐、so-novel、NovelClaw 340⭐、FictionDown |
+| 第二轮 | deep-dive | lightnovel-crawler 不支持中文（已验证 SOURCES.md）、so-novel 是 Java、NovelClaw 是写作工具非爬虫 |
+| 第三轮 | 中文爬虫 + Agent主题 | FictionDown 覆盖7个中文站、Firecrawl 142k⭐但不适合小说、lightnovel-crawler的zh/目录已存在且AGENTS.md给AI用 |
+
+### 精读完成
+
+| 项目 | ⭐ | 语言 | 精读深度 | 关键结论 |
+|------|----|------|---------|---------|
+| **lightnovel-crawler** | 2530 | Python | README + AGENTS.md + CONTRIBUTING + SOURCES | 🔥 **定案引擎**。zh/目录已存在、加源=10行、361源446爬虫、FastAPI+SQLite、内置bot检测、浏览器渲染 |
+| FictionDown | — | Go | README + Pi已拆源码 | 7中文站(笔趣阁/顶点/全本/书迷楼等)、起点正版样本+盗版校对、Chromedp |
+| NovelClaw | 340 | Python | full README | 不是纯爬虫——完整写作工具(Portal+MultiAgent+写作工作空间)、动态记忆系统、AGENT_API.md可被外部Agent调用 |
+| Firecrawl | 142k | TS | full README | AGPL-3.0、云API Key、未确认中文/GBK支持——Pass |
+| so-novel | — | Java | README | TUI+WebUI+CLI、Java——Pass |
+| novel-downloader | — | JS | 浅 | 浏览器用户脚本——Pass |
+
+### 执行方案：lightnovel-crawler Fork
+
+```
+Pi 做的事：
+  1. git clone https://github.com/lncrawl/lightnovel-crawler
+  2. cd lightnovel-crawler && make install
+  3. 在 sources/zh/ 下加三个源：
+     - biquge.py（笔趣阁，SoupTemplate，~10行）
+     - ddxs.py（顶点小说）
+     - qb5.py（全本小说网）
+  4. 验证：uv run python -m lncrawl dev check-sources
+  5. 实测：uv run python -m lncrawl crawl "URL" --first 3 -f txt
+  6. 全量爬取6本书
+
+优点：
+  - 断点续传/失败重试/并发控制/反爬延迟 全内置
+  - GBK/UTF-8编码自动处理
+  - AGENTS.md让Pi直接理解代码库架构
+  - 可直接输出txt，无需Calibre依赖
+```
+
+### FictionDown 的校对策略（可借鉴）
+起点正版免费章作样本 → 盗版站VIP章作内容 → 比对校对。我们不需要起点对接，但"正版前三章 vs 盗版全本"的交叉验证思路可以用——确保下载的数据在关键章节没有乱码。
+
+
+---
+
+# 📤 小P 爬虫同步（2026-08-11 晚，对齐小布定案）
+
+## 我的四轮搜索 + 4 精读（补充小布定案）
+| 发现 | 与小布方案的关系 |
+|---|---|
+| camofox-browser（8499★，C++级指纹伪装） | 🔧 **兜底**：lightnovel-crawler 的源若被 b520 类拦截 → camofox 反检测 |
+| novel-architect（12 信号三轨制） | 🧠 **质检升级**：P1 给雕龙 qc.py 加"模型信号层"（heuristic+model+strictest merge） |
+| Jack-Cherish python-spider（GBK/移动UA） | 📖 加源时的编码/UA 经验参考 |
+| 404-novel-downloader（站点规则模板化） | 📐 思路：加源=选择器配置（与 lncrawl SoupTemplate 同思想） |
+
+## 接受小布执行方案：lightnovel-crawler Fork
+```
+Pi 立即做：
+1. clone https://github.com/lncrawl/lightnovel-crawler
+2. sources/zh/ 加三源：biquge.py（~10行 SoupTemplate）/ ddxs.py / qb5.py
+3. dev check-sources 验证
+4. 实测爬前三章 → 小布拆节拍
+5. 全量 6 本
+```
+
+## 分歧点确认
+- 小布精读结论：novel-downloader Pass（浏览器用户脚本——与我一致 ✅）
+- 我的补充：NovelClaw 是写作工具（非爬虫）——与雕龙无关，不深读
+- 一致：Firecrawl Pass（云 Key/AGPL/未确认中文）
+
+## 下一步（我执行）
+1. clone lightnovel-crawler + 加三源
+2. 实测爬极道天魔前三章 → 交付小布拆节拍
+3. 爬虫跑通后：P0 真实 3 章生成
