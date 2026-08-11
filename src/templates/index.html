@@ -340,7 +340,8 @@
         function showUsage() {
             fetch('/api/usage').then(r => r.json()).then(d => {
                 var lines = (d.by_scene || []).map(function(s) { return s.scene + '：' + s.n + ' 次 ¥' + s.cost.toFixed(3); }).join('\n');
-                alert('🤖 本月 AI 费用：¥' + d.month_cost.toFixed(3) + '（' + d.calls + ' 次调用）\n\n' + (lines || '暂无记录'));
+                var cacheLine = '⚡ 缓存命中率：' + (d.hit_rate || 0) + '%（省约 ¥' + (d.cache_saved || 0).toFixed(3) + '）';
+                alert('🤖 本月 AI 费用：¥' + d.month_cost.toFixed(3) + '（' + d.calls + ' 次调用）\n' + cacheLine + '\n\n' + (lines || '暂无记录'));
             });
         }
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }

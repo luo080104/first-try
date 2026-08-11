@@ -46,8 +46,15 @@ def month_cost() -> dict:
         total = conn.execute("SELECT COALESCE(SUM(cost),0) c FROM ai_usage WHERE created_at >= date('now','localtime','start of month')").fetchone()['c']
         calls = conn.execute("SELECT COUNT(*) n FROM ai_usage WHERE created_at >= date('now','localtime','start of month')").fetchone()['n']
         by_scene = conn.execute("SELECT scene, COUNT(*) n, COALESCE(SUM(cost),0) c FROM ai_usage GROUP BY scene ORDER BY c DESC").fetchall()
+        # 2026-08-11 缓存命中率 KPI（Reasonix：命中率是核心指标）
+        cache = conn.execute("SELECT COALESCE(SUM(cache_hit),0) h, COALESCE(SUM(cache_miss),0) m FROM ai_usage").fetchone()
         conn.close()
+        hit, miss = cache['h'], cache['m']
+        hit_rate = round(hit / (hit + miss) * 100, 1) if (hit + miss) else 0
+        saved = round((miss + hit) * 0.98 / 1e6 * 1.0, 4)  # 估算省的钱（按 1 元/M 输入价）
         return {'month_cost': round(total, 4), 'calls': calls,
+                'cache_hit': hit, 'cache_miss': miss, 'hit_rate': hit_rate,
+                'cache_saved': saved,
                 'by_scene': [{'scene': r['scene'] or '其他', 'n': r['n'], 'cost': round(r['c'], 4)} for r in by_scene]}
     except Exception:
         return {'month_cost': 0, 'calls': 0, 'by_scene': []}
