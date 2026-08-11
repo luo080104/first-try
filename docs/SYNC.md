@@ -8122,3 +8122,24 @@ spec-driven / karpathy-rules / test-driven / code-reviewer / webapp-testing / se
 
 ## Pi 包最终清单（7 个）
 pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpowers / ponytail
+
+---
+
+# 📤 RTK（Rust Token Killer）安装（2026-08-11 傍晚）
+
+## 是什么
+高吞吐 CLI 代理：**压缩 bash 输出最高 90%**（ls→树形+文件数、日志→只留关键行），Rust 单二进制 <10ms。省 token = 省上下文/省钱。
+
+## 安装
+- ✅ rtk.exe 0.45.0 → ~/.local/bin（Windows 原生）
+- ✅ `rtk init -g --agent pi` → Pi 扩展（~/.pi/agent/extensions/rtk.ts，下次会话自动加载）
+- ✅ 用户 PATH 已加 C:\Users\luoji\.local\bin
+
+## 效果（下次 pi 会话生效）
+- 我的 bash 输出自动压缩（ls/grep/cat 等 100+ 命令）
+- 解决"输出 50KB 截断"痛点 + 省 token 费用
+- 与 context-mode（上下文压缩）互补
+
+## 验证
+- rtk --version ✅ 0.45.0
+- 压缩演示：ls 输出树形+文件大小 ✅
