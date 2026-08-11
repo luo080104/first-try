@@ -8754,3 +8754,30 @@ SPECIFY → PLAN → TASKS → IMPLEMENT
 1. Langfuse 接入 Go购（追踪 + 命中率 KPI 可视化）
 2. pi-lens/simplify 实测（下次会话）
 3. canonical.jsonl 评估（低优先——投影摘要已被性能原则否决）
+
+---
+
+# 📤 升级持续战报（2026-08-11 傍晚）
+
+## 新增落地
+1. ✅ **pi-session-recall 启用**：setup + index 完成（10 会话全量索引），实测搜"缓存"命中历史——**跨会话记忆正式可用**（"上次那个问题怎么改的"能搜到）
+2. ✅ **shuorenhua 装 Pi**（7 类腔调 + Tier 短语表 + 12 结构反模式——雕龙 P1 直接引用）
+3. ✅ **pi-lens 性能配置**（关 opengrep/tests，留 lsp/format——性能优先）
+4. ✅ **n8n 快评**：不装（我们已有 notify/crawl 等价编排）
+
+## Langfuse 评估结论（暂缓）
+- 无 Docker/云账号 → 无法部署
+- **轻量替代已够用**：llm_usage 表（cost/hit_rate 已可视化）+ session-recall（对话级检索）
+- 记录：有 Docker 或云账号时再接（Langfuse 追踪工具调用链路）
+
+## 下次 pi 会话验证清单（12 包 12 skill 生效确认）
+- pi-lens（实时代码反馈）/ simplify / subagents / context-mode / hermes-memory / RTK（bash 压缩）/ ponytail / council / planning-with-files / agents-best-practices / shuorenhua / session-recall
+- 验证重点：lens 延迟是否可接受（性能优先——慢就关更多）
+
+## Pi 最终状态
+- 包 10 个 + skill 12 个（全装）
+- 缓存 94% / 命中率 KPI 看板 / 保守计费
+
+## 待办
+- Go购 采集重跑（回家 WiFi）
+- 雕龙 P0（升级完成后）
