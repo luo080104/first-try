@@ -58,6 +58,7 @@
 
     <div class="input-bar">
         <input type="text" id="msg" placeholder="说说你想买什么…" onkeydown="if(event.key==='Enter')send()">
+        <button onclick="startVoiceChat()" title="语音输入" style="background:none;border:none;font-size:20px;cursor:pointer;padding:0 6px">🎤</button>
         <button onclick="send()">发送</button>
         <button onclick="location.href='/?search=1'" style="background:linear-gradient(135deg,#ff6b35,#e74c3c);color:#fff;border:none;border-radius:10px;padding:8px 14px;margin-left:8px;font-size:14px;cursor:pointer" title="回到搜全网，带对话上下文比价">🚀 立刻出发</button>
     </div>
@@ -97,6 +98,20 @@
             window.scrollTo(0, document.body.scrollHeight);
         }
 
+        function startVoiceChat() {
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { alert('你的浏览器不支持语音识别，推荐用 Chrome'); return; }
+            var rec = new SR();
+            rec.lang = 'zh-CN';
+            rec.interimResults = false;
+            rec.onerror = function(e) { alert('语音识别失败：' + (e.error || '未知')); };
+            rec.onresult = function(e) {
+                var msg = document.getElementById('msg');
+                msg.value = e.results[0][0].transcript;
+                send();
+            };
+            rec.start();
+        }
         function send() {
             var input = document.getElementById('msg');
             var text = input.value.trim();
