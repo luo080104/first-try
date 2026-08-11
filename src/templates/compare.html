@@ -406,10 +406,62 @@
                 if (d.desc) {
                     html += '<div style="font-size:12px;color:#636e72;background:#f8f9fa;border-radius:8px;padding:8px;margin-top:6px">📝 ' + esc(d.desc) + '</div>';
                 }
+                // 2026-08-11 价格趋势图（price_compare_tool 借鉴）：近 30 天走势
+                html += '<div style="margin-top:10px;font-size:13px;font-weight:700">📈 价格走势（近 30 天）</div>' +
+                    '<canvas id="trend-canvas" style="width:100%;height:120px;background:#f8f9fa;border-radius:8px;margin-top:6px"></canvas>' +
+                    '<div id="trend-note" style="font-size:11px;color:#b2bec3;margin-top:4px"></div>';
                 box.innerHTML = html;
+                // 拉取趋势数据画图
+                fetch('/api/price_trend?sku_id=' + encodeURIComponent(it.goodsId) + '&platform=' + it.platform)
+                    .then(r => r.json()).then(t => {
+                        if (!t.ok || !t.points || t.points.length < 2) {
+                            document.getElementById('trend-note').textContent = '暂无足够价格历史（多搜索几次自动积累）';
+                            return;
+                        }
+                        drawTrend(t.points);
+                    }).catch(function(){});
             }).catch(() => { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">详情加载失败</div>'; });
         }
         function closeDetail() { document.getElementById('detail-modal').style.display = 'none'; }
+        // 2026-08-11 价格趋势折线图（纯 Canvas 轻量实现）
+        function drawTrend(points) {
+            var c = document.getElementById('trend-canvas');
+            if (!c) return;
+            var w = c.clientWidth, h = c.clientHeight;
+            c.width = w * 2; c.height = h * 2;  // 2x 高清
+            var ctx = c.getContext('2d');
+            ctx.scale(2, 2);
+            var prices = points.map(function(p){ return p.price; });
+            var min = Math.min.apply(null, prices), max = Math.max.apply(null, prices);
+            var pad = 18, span = (max - min) || 1;
+            var xs = function(i) { return pad + i * (w - pad * 2) / (points.length - 1); };
+            var ys = function(v) { return h - pad - (v - min) / span * (h - pad * 2); };
+            // 网格线
+            ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+            for (var g = 0; g < 3; g++) {
+                var gy = pad + g * (h - pad * 2) / 2;
+                ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(w - pad, gy); ctx.stroke();
+            }
+            // 折线（首尾同色，中间色阶）
+            var first = prices[0], last = prices[prices.length - 1];
+            var color = last <= first ? '#27ae60' : '#d63031';  // 跌绿涨红
+            ctx.strokeStyle = color; ctx.lineWidth = 2;
+            ctx.beginPath();
+            points.forEach(function(p, i) { var x = xs(i), y = ys(p.price); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+            ctx.stroke();
+            // 点 + 首末价标注
+            ctx.fillStyle = color;
+            [0, points.length - 1].forEach(function(i) {
+                ctx.beginPath(); ctx.arc(xs(i), ys(prices[i]), 3, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = '#636e72';
+            ctx.fillText('¥' + first + ' (' + points[0].date.slice(5) + ')', pad, h - 4);
+            ctx.fillText('¥' + last + ' (' + points[points.length - 1].date.slice(5) + ')', w - pad - 110, h - 4);
+            var note = document.getElementById('trend-note');
+            if (note) note.textContent = '从 ' + points[0].date + ' 到 ' + points[points.length - 1].date +
+                '：' + (last <= first ? '跌了 ¥' + (first - last).toFixed(1) : '涨了 ¥' + (last - first).toFixed(1)) + '，现在 ¥' + last;
+        }
         function openSpecCompare(groupKey) {
             // 调后端解析同组商品参数 → 弹窗并排表
             var fd = new FormData();

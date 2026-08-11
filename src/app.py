@@ -214,6 +214,21 @@ def hist_page(request: Request):
     return templates.TemplateResponse(request, 'hist.html', {})
 
 
+@app.get('/api/price_trend')
+def api_price_trend(sku_id: str = '', platform: str = '', days: int = 30):
+    """价格趋势（近 N 天，按天聚合取最后价）——price_compare_tool 借鉴"""
+    conn = get_conn()
+    rows = conn.execute('''SELECT date(queried_at) d, price FROM price_history
+        WHERE item_id=? AND platform=? AND queried_at >= datetime('now','localtime', ?)
+        ORDER BY queried_at''', (sku_id, platform, f'-{days} days')).fetchall()
+    conn.close()
+    daily = {}
+    for r in rows:
+        daily[r['d']] = r['price']
+    pts = [{'date': d, 'price': p} for d, p in sorted(daily.items())]
+    return {'ok': True, 'points': pts}
+
+
 @app.get('/api/search_history')
 def api_search_history(user_name: str = ''):
     conn = get_conn()
