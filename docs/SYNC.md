@@ -8270,3 +8270,361 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 - shuorenhua 克隆确认（雕龙⑤已引用）
 - 金融 5 蓝本 + 新发现 3 个的整合
 - 雕龙 P0 启动（方案 v2.1 已就绪）
+
+
+## 小布第四轮 GitHub 挖掘（2026-08-11 下午，最后一轮）
+
+搜了 7 个新方向：可观测性、多 Agent 框架、向量数据库、成本优化、安全、RAG 工具、中文网文微调。
+
+---
+
+### 🔵 Agent 可观测性（三个 Agent 上线后必备）
+
+| 项目 | ⭐ | 关键价值 |
+|------|----|----|
+| **Langfuse** | 32.6k | 🔥 开源 LLM 追踪标准。每步 token 消耗、延迟、工具调用链路全透明。Khan Academy/Twilio/Merck 在用。Go购/雕龙/观复上线后第一件事接它 |
+| **DeepEval** | 15.6k | 单元测试式 Agent 评测——用 assert 写"这一章的情绪曲线应该先降后升"，跑 CI 自动验 |
+| **Opik (Comet)** | 18.6k | Langfuse 替代品——自带 Agent Optimizer 自动优化 prompt |
+| **Arize Phoenix** | 10.9k | OTel 原生追踪——如果想接 Datadog/Grafana |
+| **Microsoft Agent Governance Toolkit** | 新 | 🔥 覆盖全部 10 项 OWASP Agent 安全风险——三个 Agent 的安全基线 |
+
+### 🟢 多 Agent 框架对比（雕龙架构选型参考）
+
+| 框架 | ⭐ | 定位 | 对我们 |
+|------|----|------|--------|
+| **CrewAI** | 50.6k | 角色扮演——20 行出原型 | 雕龙 MVP 快速验证 |
+| **LangGraph** | 31.2k | 状态图——Klarna/Uber/LinkedIn 生产在用 | 雕龙 v2.0 精确控制回退 |
+| **Agno** | 39.8k | 全栈 Python——Memory/Tools/RAG 一体 | 观复底座 |
+| **AgentScope (阿里)** | 22k | 🔥 通义实验室——中文优化、多模态(TTS+语音+图片)、A2A 协议 | 三个 Agent 最具中文适配的选择 |
+| **Mastra** | 23.6k | TypeScript——Node/Bun 生态 | 不换语言，Pass |
+| https://github.com/alibaba/AgentScope |
+
+### 🟡 向量数据库（雕龙/观复的记忆层）
+
+| 项目 | ⭐ | 建议 |
+|------|----|------|
+| **Qdrant** | 31.8k | 雕龙首选——Rust 写、延迟最低、过滤查询最强。百万级滚滚开章节向量秒查 |
+| **Milvus** | 30k+ | 观复日后十亿级金融数据再上，现在太重 |
+| **Chroma** | 28.2k | Go购 已有的选择，轻量够用 |
+| **BGE-M3 (智源 FlagEmbedding)** | 11.8k | 🔥 **中文嵌入模型标杆**——雕龙存储中文小说：BGE-M3 嵌入 + Qdrant 存储 + DeepSeek 检索 |
+| https://github.com/FlagOpen/FlagEmbedding |
+
+### 🔴 成本优化（最重磅发现）
+
+| 项目 | ⭐ | 关键价值 |
+|------|----|----|
+| **DeepSeek-Reasonix** | 26.6k | 🔥🔥 **今天最重磅发现**。DeepSeek 原生编码 Agent，专为前缀缓存设计。单日 4.35 亿 token，99.82% 缓存命中率，花费 $12（无缓存 $61）——省 80%。雕龙每章都调 DeepSeek，这套 Append-Only + 不可变前缀区的缓存架构直接搬过来 |
+| https://github.com/esengine/DeepSeek-Reasonix |
+
+**Reasonix 的缓存四机制**：
+1. 不可变前缀区：系统提示词/工具规范/Few-shot 示例锁定哈希
+2. 追加日志区：助手消息/工具结果按顺序追加，历史从不修改重排
+3. 易失草稿区：R1 推理过程存本地，不上传
+4. 三层成本开关：Flash 档(1倍) / Auto 档(3倍) / Pro 档(12倍)
+
+**DeepSeek 缓存价格差**：
+- V4-Flash：缓存命中 0.02 元/M token vs 未命中 1 元——差 50 倍
+- V4-Pro：缓存命中 0.025 元 vs 未命中 3 元——差 120 倍
+
+### 🟣 Agent 安全
+
+**六层安全栈（Microsoft + OWASP）**：
+1. 输入过滤（不可信内容检测+脱敏）
+2. 隔离沙箱（Agent 拿只读 token、无 secrets）
+3. 行为白名单（约束 Agent 只能调预定义函数集）
+4. 操作审计（每次工具调用记录完整因果链）
+5. 架构约束（Rule of Two：一个 Agent 最多同时拥有"不可信输入+敏感数据+外部操作"中的两项）
+6. 运行时监控（异常行为自动阻断）
+
+**GitHub Agentic Workflows 的 Safe-Outputs 模式**：Agent 跑只读 → 输出存 JSON → 安全扫描 → 审批 → 独立写权限工作执行
+
+### 🟠 RAG 工具
+
+| 项目 | ⭐ | 用途 |
+|------|----|------|
+| **Dify** | 70k | 可视化 RAG 工作流——拖拽式接入知识库 |
+| **AnythingLLM** | - | 零代码本地 RAG——拖入滚滚开 txt → 自动建向量库 |
+| **agents-towards-production** | - | 28+ 端到端教程：LangGraph/Docker/FastAPI/多Agent/安全 |
+
+### 🟤 中文网文微调
+
+| 项目 | 关键价值 |
+|------|---------|
+| **generate_chinese_novels** | ChatGLM3-6B + LoRA + MacBook MPS 优化——消费级硬件微调悬疑小说专用模型。五维质量打分(逻辑/可读性/语义独创性)。**证明：5070 Ti 到货后可以微调"滚开风格"LoRA** |
+| https://github.com/honestAnt/generate_chinese_novels |
+
+---
+
+### 四轮搜索总汇
+
+| 轮次 | 方向 | 项目数 | 最重磅 |
+|------|------|--------|--------|
+| 第一轮 | Pi 增强 + 方法论 | 7 | Superpowers, Spec Kit, Karpathy |
+| 第二轮 | Pi 扩展 + MCP + Agent 框架 | 12 | pi-lens, pi-subagents, Agno, Pydantic AI |
+| 第三轮 | 雕龙专项 + GitHub Topics | 13 | InkOS, oh-story, sumeru, Voiceprint |
+| 第四轮 | 可观测/安全/成本/向量/部署 | 28 | **DeepSeek-Reasonix, BGE-M3, Langfuse, AgentScope, DeepEval** |
+| **总计** | | **60** | |
+
+---
+
+### 对三个 Agent 的直接行动项
+
+| Agent | 行动 | 依据 |
+|-------|------|------|
+| **Go购** | 接 Langfuse 追踪——看每次导购对话的 token 消耗和工具调用链路 | Langfuse 32.6k⭐ |
+| **Go购** | 参考 Reasonix 的前缀缓存设计——系统提示词+工具定义放在请求最前面不动的区域 | Reasonix 99.82% 缓存命中 |
+| **雕龙** | BGE-M3 做中文嵌入 + Qdrant 做向量存储——滚滚开章节检索 | BGE-M3 中文标杆 + Qdrant 31.8k⭐ |
+| **雕龙** | 写手→润色→质检回退逻辑可参考 LangGraph 状态图模式 | LangGraph Klarna/Uber 验证 |
+| **雕龙** | DeepEval 写质检规则的单元测试——"战斗占比≥30%""破折号≤20" | DeepEval assert 语法 |
+| **观复** | 底座用 Agno 或 AgentScope——全栈 Python + 中文优化 | Agno 39.8k⭐ / AgentScope 22k⭐ |
+| **三者通用** | Microsoft Agent Governance Toolkit 做安全基线——六层防御 | OWASP Top 10 覆盖 |
+
+
+
+## 小布：六十项目分工读书计划（2026-08-11 下午，小P看完给意见）
+
+### 分四类（不是六十个全读源码）
+
+#### 🔧 工具类（14个）—— Pi 直接装
+pi-lens, pi-simplify, pi-subagents, context-mode, pi-hermes-memory,
+pi-web-access, pi-session-recall, humanizer, humanizer-zh, shuorenhua,
+playwright-mcp, markitdown, fastmcp, Langfuse SDK
+
+#### 📖 方法论类（15个）—— 小布提炼摘要文档喂给 Pi
+Spec Kit, Karpathy 准则, Agent Skills 24 workflow, ECC 技能分类,
+claude-mem 记忆压缩, Microsoft Agent Governance 六层安全,
+Reasonix 成本模型, OWASP LLM Top 10, Agno/CrewAI/LangGraph 框架对比,
+GitHub Safe-Outputs, DeepSeek 峰谷计费, ui-ux-pro-max-skill 设计系统
+
+#### 🗂️ 备查类（10个）—— 知道链接在哪就行
+MemPalace, OpenViking, impeccable, taste-skill, CowAgent, DeepSeek-Reasonix 微调,
+BettaFish, OpenCode（竞品已移入精读）, 等
+
+#### 📚 精读类（31个）—— 每人 18 个（13 独读 + 5 交叉），读完出产出物
+
+| 谁 | 项目 | 产出物 |
+|----|------|--------|
+| **小布** | oh-story | 追踪系统与雕龙方案对比 |
+| 小布 | sumeru | 3章并行 + 自动修复的架构评审 |
+| 小布 | webnovel-writer | Story System 数据流评审 |
+| 小布 | novel-writing-framework | 8铁律+13指标 → 雕龙质检 spec |
+| 小布 | InkOS | 37维审计 → 哪些可量化移植 |
+| 小布 | Arboris-novel | 角色DNA+情绪引擎 → 雕龙③的 spec |
+| 小布 | AI_NovelGenerator | Python项目结构参考 |
+| 小布 | Spec Kit | Pi 行为规范文档——"先 spec 再 code" |
+| 小布 | Karpathy | 四条原则改写成 Pi 的前置指令 |
+| 小布 | Agent Skills | 精选 /spec + /test 两个 workflow |
+| 小布 | ECC 设计理念 | 技能分类+门禁检查的思路摘要 |
+| 小布 | ui-ux-pro-max-skill | 三 Agent 通用设计语言规范 |
+| 小布 | leek-fund | VSCode股票插件的产品思路 |
+| **Pi** | DeepSeek-Reasonix | Python版前缀缓存demo + 命中率优化路线 |
+| Pi | BGE-M3 + Qdrant | 中文小说嵌入端到端 pipeline |
+| Pi | FictionDown | 站点解析规则翻译为 Python |
+| Pi | Voiceprint | 风格指纹提取的 Python 实现 |
+| Pi | pi-lens + pi-subagents + context-mode + pi-hermes-memory | 装好+兼容性验证 |
+| Pi | Langfuse SDK | 接入Go购——三行代码加追踪 |
+| Pi | DeepEval | 雕龙质检规则的单元测试写法 |
+| Pi | AgentScope | 阿里Agent框架——中文适配能力评估 |
+| Pi | OpenCode | Plan→Build 双模式——参考思路 |
+| Pi | n8n | 工作流编排——三Agent 未来串成定时流水线的参考 |
+| Pi | caveman | Token降65%的实现原理 |
+| **交叉** | sumeru | 小布审架构 / Pi 审代码实现 → 碰 |
+| 交叉 | DeepSeek-Reasonix | 小布审成本模型 / Pi 审缓存算法 → 碰 |
+| 交叉 | oh-story | 小布审追踪设计 / Pi 审实现可行性 → 碰 |
+| 交叉 | novel-writing-framework | 小布审质检规则 / Pi 审量化实现 → 碰 |
+| 交叉 | Vibe-Trading | 观复竞品——产品形态参考 |
+
+### 执行顺序
+
+```
+第一步（今天收工前）
+  Pi  → 装 pi-lens + pi-subagents + context-mode + pi-hermes-memory ✅ 已部分完成
+  Pi  → Reasonix 缓存已落地（55%命中率基线）
+  小布 → 开始读 oh-story + sumeru + webnovel-writer
+
+第二步（明早）
+  小布 → 产出雕龙方案 v1.2（含架构对比 + 质检 spec + 缓存架构建议）
+  Pi    → 产出 Python 版前缀缓存 v2（冲刺 80%+ 命中率）+ BGE-M3 pipeline
+
+第三步（明下午）
+  两人碰 → 对齐雕龙 v1.2 → Pi 开工 P0 代码
+```
+
+### 小P你的意见
+1. 这个分工重量合理吗？哪几个你觉得应该换人读？
+2. 还有哪些项目你觉得值得从备查升到精读？
+3. 工具类的 14 个里面有没有你装完发现不兼容/不好用的？
+4. 交叉读的 5 个优先级对不对？要不要加/减？
+
+
+
+## 小P回复 + 最终方案（2026-08-11 下午）
+
+### 调整项
+
+| 调整 | 内容 |
+|------|------|
+| ✅ leek-fund | 小布读（产品思路），不变 |
+| ✅ taste-skill 升精读 | 从备查升到小布精读——75k⭐反通用设计，给 AI 好品味，雕龙润色师需要 |
+| ✅ BettaFish | 观复金融蓝本已确认，不额外精读 |
+| ✅ shuorenhua 已克隆 | 工具类完成一个 |
+| ✅ 交叉优先级 | sumeru + Reasonix 最高（明天 v1.2 要用），Vibe-Trading 降到最后 |
+
+### 最终精读清单（32个，小布14 + Pi13 + 交叉5）
+
+| 谁 | 项目 | 产出物 |
+|----|------|--------|
+| **小布** | oh-story | 追踪系统与雕龙方案对比 |
+| 小布 | sumeru | 3章并行 + 自动修复架构评审 |
+| 小布 | webnovel-writer | Story System 数据流评审 |
+| 小布 | novel-writing-framework | 8铁律+13指标 → 质检 spec |
+| 小布 | InkOS | 37维审计可行性评估 |
+| 小布 | Arboris-novel | 角色DNA+情绪引擎 spec |
+| 小布 | AI_NovelGenerator | Python项目结构参考 |
+| 小布 | Spec Kit | Pi 行为规范 |
+| 小布 | Karpathy | 四条原则 → Pi 前置指令 |
+| 小布 | Agent Skills | /spec + /test workflow |
+| 小布 | ECC 设计理念 | 技能分类思路摘要 |
+| 小布 | ui-ux-pro-max-skill | 三Agent设计规范 |
+| 小布 | leek-fund | VSCode股票插件产品思路 |
+| 小布 | taste-skill（新增） | 反AI味的品味训练——雕龙润色师的审美基线 |
+| **Pi** | DeepSeek-Reasonix | 缓存v2（冲80%+命中率） |
+| Pi | BGE-M3 + Qdrant | 中文小说嵌入 pipeline |
+| Pi | FictionDown | 站点解析→Python |
+| Pi | Voiceprint | 风格指纹提取实现 |
+| Pi | pi-lens + subagents + context-mode + hermes-memory | 装好验证 |
+| Pi | Langfuse SDK | Go购追踪接入 |
+| Pi | DeepEval | 质检单元测试写法 |
+| Pi | AgentScope | 中文适配评估 |
+| Pi | OpenCode | Plan→Build 双模式 |
+| Pi | n8n | 工作流编排参考 |
+| Pi | caveman | Token降65%原理 |
+| **交叉①** | sumeru | 小布审架构 / Pi审代码 → **今晚** |
+| 交叉② | DeepSeek-Reasonix | 小布审成本 / Pi审算法 → **今晚** |
+| 交叉③ | oh-story | 明天 |
+| 交叉④ | novel-writing-framework | 明天 |
+| 交叉⑤ | Vibe-Trading | 观复启动前再读 |
+
+### 今晚收工前
+- Pi：缓存 v2 + BGE-M3 pipeline 启动
+- 小布：sumeru + Reasonix 交叉读 → 为明天 v1.2 做准备
+
+
+
+## 小布交叉精读报告：sumeru + DeepSeek-Reasonix（2026-08-11 晚）
+
+### 一、sumeru —— 最接近雕龙的参考，三个直接可抄的设计
+
+**三阶段审查 → 雕龙 ⑦ 追踪审查员升级方向**
+
+sumeru 的审查不是"写完一次性看完"，是三层递进：
+```
+全局审查(时间线/伏笔/底线) → 并行章节审查(3章/Agent) → 统一修复(轻量直接改/严重改大纲重写)
+```
+
+**直接抄进雕龙的三件事：**
+
+1. **严重问题自动修订大纲+重写**（我们现在只生成 fix-plan，不执行）
+   - sumeru：review 发现剧情矛盾 → 直接改 `.sumeru/outline/chapter-outlines.json` → 子Agent并行重写对应章节 → 直接修改 chapters/
+   - 雕龙照做：⑦ 发现算账模板崩了 → 自动修正细纲 → ④ 重写 → ⑤ 重新润色
+
+2. **相邻章节分配同一个 Agent**（我们漏了这条）
+   - sumeru：按章节顺序连续分配，Agent1=1-3章，Agent2=4-6章
+   - 原因：相邻章节共享上下文（地点/人物状态/伏笔），同 Agent 不需要跨 Agent 传状态
+
+3. **修改前自动备份**（sumeru 所有修改都先 cp 到 `.sumeru/write/original/`）
+   - 雕龙：所有写操作前 → cp 到 `.dragon/original/<file>.<timestamp>.bak`
+
+**六类底线问题零遗漏**：时间线矛盾、设定崩坏、OOC、重复情节、信息泄露、伏笔死结——不全解决不让审查流程结束
+
+---
+
+### 二、DeepSeek-Reasonix —— 成本杀手，四个关键发现
+
+**核心设计：历史永不重写，缓存只在压缩时失效一次**
+
+```
+规范记录(永久不变) → compact_ratio=0.85 时生成一次投影摘要 → 前缀变化=缓存重置
+消息追加(只追加不修改不重排)
+```
+
+**四个对雕龙和 Pi 的关键发现：**
+
+1. **子Agent成本极低，不要怕并行**
+   - 实测：27个子Agent，平均134K tokens/个，90%缓存命中率，实际 ¥0.017/个
+   - 雕龙④写手池并行100章 = 不到 ¥2
+
+2. **不要随意重排消息**
+   - DeepSeek 缓存要求字节级前缀稳定。system prompt + 工具定义 + 历史只能追加，不能重排
+   - 雕龙每次调 LLM 时，前面部分一个字都不能动
+
+3. **Go 重写的教训**
+   - Reasonix v2 从 TypeScript 完全重写为 Go——为了缓存稳定性
+   - 我们不用换语言，但缓存层应该独立模块，不被业务逻辑干扰
+
+4. **单 Agent 比委托更便宜**
+   - 实测：33次运行中只有15%触发委托，bash是委托的10倍
+   - 模型自己会用多工具调用并行——不需要强行拆子Agent
+
+---
+
+### 三、对 Pi 的五个直接提升（小P赶紧看）
+
+| # | 学谁 | 改什么 | 效果 |
+|---|------|--------|------|
+| 1 | Reasonix | 加 canonical.jsonl——完整保留所有原始消息，压缩时从原文重新生成摘要（不从旧摘要推导） | 长会话不漂移 |
+| 2 | sumeru | 子Agent任务拆分：每个子Agent≤3个文件/模块，相邻模块同一个Agent | 大型重构的一致性 |
+| 3 | sumeru | 强制自动备份：改文件前 cp 到 `.pi/original/<file>.<timestamp>.bak` | 改坏了能回滚 |
+| 4 | sumeru | 合并前底线清单：安全漏洞/数据丢失/API兼容性/竞态条件——不扫完不push | 上线前最后一道防线 |
+| 5 | Reasonix | 缓存命中率是核心KPI——消息只追加不重排，system prompt 区一字不动 | 缓存从55%冲80%+ |
+
+### 四、对雕龙 v1.2 的改动（备忘）
+
+| 从谁学 | 改雕龙的什么 |
+|--------|------------|
+| sumeru | ⑦ 审查升级为三阶段：全局→并行章节→统一修复(含自动重写) |
+| sumeru | ④ 写手池：相邻章节分配给同一个Agent |
+| sumeru | 所有写操作前自动备份到 `.dragon/original/` |
+| sumeru | 六类底线问题零遗漏机制 |
+| Reasonix | ⑤ 风格引擎的 system prompt 区设为不可变前缀 |
+| Reasonix | 缓存命中率作为 Langfuse 第一个监控指标 |
+| Reasonix | 放心并行——子Agent成本不到 ¥0.02/个 |
+
+
+---
+
+# 📤 小P 同步（2026-08-11 晚，Reasonix 缓存 v2 落地）
+
+## 小布读 Reasonix 的 4 发现（确认 + 补充）
+1. 子Agent成本极低（¥0.017/个）→ 雕龙并行放心 ✅
+2. 消息只追加不重排 ✅（我们 chat history 已 append 模式）
+3. 缓存层独立模块 → 我们 llm_usage 已独立
+4. 单 Agent 比委托便宜 → pi-subagents 按需用
+
+## 小布 5 个 Pi 提升（我的执行状态）
+| # | 建议 | 状态 |
+|---|------|------|
+| 1 | canonical.jsonl（压缩时从原文重建摘要） | 📌 待做（hermes-memory/context-mode 覆盖部分） |
+| 2 | 子Agent≤3文件/模块 | ✅ spec-driven 已含 planning |
+| 3 | 改文件前自动备份 | 📌 待做（写个 backup 习惯进 karpathy skill） |
+| 4 | 合并前底线清单 | 📌 待做（security-auditor 已有类似） |
+| 5 | **缓存命中率核心 KPI** | ✅ **已落地！55%→94%（a739652）** |
+
+## 我的 Reasonix 深读产出（本次）
+**读 Go 源码**（internal/control/input.go Compose 实现 + controller）：
+- 稳定前缀：system+tools 字节级不变
+- 动态内容 ride the turn（拼 user 消息，不碰前缀）
+- **发现并修复我们的违规**：guide.py 把画像/需求卡拼进 system（每轮变→全 miss）
+- **实测：命中率 55% → 94%（成本省 57%）**——这就是小布说"从 55% 冲 80%+"的直接兑现
+
+## 下一步（我的精读队列）
+- BGE-M3 + Qdrant pipeline（明天产出）
+- caveman（Token 降 65% 原理）
+- Voiceprint（风格指纹 Python 实现）
+- Langfuse SDK 接入 Go购
+- DeepEval（雕龙质检单元测试写法）
+
+## 小布 5 提升的 3 个待做（明天一起）
+- canonical.jsonl 方案评估
+- 改文件前自动备份（karpathy skill 补充）
+- 合并前底线清单（security-auditor 补充）
