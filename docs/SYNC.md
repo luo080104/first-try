@@ -7485,3 +7485,225 @@ watches 页面直接 500。需查服务器日志定位。
 
 ## 数据偏好（用户最终）
 京东（API榜单）> 淘宝（headless）> 唯品会（浏览器，提优先级）> 拼多多（等API恢复）
+
+
+## 小布重大发现同步（2026-08-11 中午，给小P）
+
+今天扫了四个 Agent 增强相关的 GitHub 仓库，做了选型：
+
+### 🟢 Superpowers — Pi 原生技能框架
+**链接**：https://github.com/obra/superpowers
+**规模**：680 commits / v6.2.0 / 活跃维护
+**定位**：为 coding agent 提供标准化技能和 hooks 的"操作系统"
+**对我们**：**直接可用**。`.pi/extensions` 目录已适配 Pi。Skills 系统可替代我们手工装的代码审查员角色。Hooks 机制（SessionStart）自动引导 Pi 行为。
+
+### 🟢 Karpathy 编码准则 — 四条金律
+**链接**：https://github.com/multica-ai/andrej-karpathy-skills
+**规模**：28 commits / 单文件 CLAUDE.md
+**定位**：Andrej Karpathy 总结的 LLM 编码四大坑 + 解法
+**对我们**：**零成本即插即用**。四条原则精准打到小P的痛点：
+1. **Think Before Coding**（先想再写）→ 小P跳过方案直接莽代码
+2. **Simplicity First**（越简单越好）→ 弹窗修了 9 轮
+3. **Surgical Changes**（只改要改的）→ v2.0 把旧 JS 全炸了
+4. **Goal-Driven Execution**（目标驱动）→ 没有合并前验证
+
+### 🟡 ECC — 大型框架作蓝图参考
+**链接**：https://github.com/affaan-m/ECC
+**规模**：239k star / 2378 commits / 277 skills / 68 agents
+**定位**：企业级 Agent 增强平台（AgentShield 安全/持续学习/多Agent编排）
+**对我们**：太重，不装。但精选思路可学——技能分类体系、门禁检查、上下文管理。
+
+### ⚪ OpenCode / n8n — 不相关
+- OpenCode：Pi 的竞品（独立 IDE 应用）
+- n8n：工作流自动化平台（服务器应用，22k commits）
+
+### 行动计划
+第一优先：把 Superpowers + Karpathy 指令嵌到 Pi 的 system prompt 里（零性能成本）。
+第二优先：从 ECC 精选 3-5 条设计思路，作为后续架构参考。
+
+小P你对这几个仓库有什么不同发现？ECS的 AgentShield 安全模块值得细看吗？
+
+
+## 小布第二轮挖掘（2026-08-11，给小P）
+
+搜了 "agent skills" "spec-driven development" "agent memory" "coding agent" 四个方向，找到了前一轮遗漏的重磅项目：
+
+### 🔥 claude-mem — 跨会话持久记忆（83k star）
+https://github.com/thedotmack/claude-mem
+- **解决什么**：Pi 每次新 session 都丢失昨天的上下文。claude-mem 在会话结束时压缩总结、存 SQLite+向量库、下个 session 自动注入。
+- **对我们**：Pi 的 session 目录已经有 6 个会话了——信息全在但跨 session 不可见。claude-mem 的思路可以直接套。
+
+### 🔥 Spec Kit — GitHub 官方 SDD 工具（115k star）
+https://github.com/github/spec-kit
+- **解决什么**：Agent 跳过 spec 直接写代码 → 需求漂移、方案不可追溯。Spec Kit 强制七步流程：Constitution → Specify → Plan → Tasks → Implement。
+- **对我们**：直接治小P"跳过方案直接莽代码"的核心问题。Constitution 机制（项目宪法）可以固化我们的开发规范。
+
+### 🔥 Agent Skills (Addy Osmani) — Google 级工程规范（76k star）
+https://github.com/addyosmani/agent-skills
+- **解决什么**：24 个生产级工程 workflow（spec → plan → build → test → review → ship），8 个 slash 命令触发。
+- **对我们**：比 Superpowers 更面向完整生命周期。spec-driven-development 技能直接嵌入到 Pi 的 /build 流程里。
+
+### 🟡 pi-skills — Pi 专属技能包（2k star）
+https://github.com/share-skills/pi
+- Pi 原生 skills 集合，含编码/测试/产品/运维四个场景的场景路由
+
+### 🟡 OpenSpec — 需求变更追溯（56k star）
+https://github.com/Fission-AI/OpenSpec
+- **定位**：增量式 spec 管理（适合已有项目），比 Spec Kit 轻量
+
+---
+
+### 最终选型（5 选 3）
+
+| 项目 | 装不装 | 理由 |
+|------|--------|------|
+| Superpowers | ✅ 装 | Pi 原生，性能零成本 |
+| Spec Kit | ✅ 装 | GitHub 官方，治"跳过方案" |
+| claude-mem | ✅ 参考 | 先不装，等会话多了再上 |
+| Agent Skills | 🟡 参考 | 太重，精选 /spec /test 两个 workflow |
+| OpenSpec | ❌ | Spec Kit 更合适 |
+
+### 行动计划
+1. Superpowers → 拉代码，嵌到 Pi
+2. Spec Kit → 拉代码，把 /speckit.constitution + /speckit.specify 两个阶段融到 Pi 的启动指令里
+3. Agent Skills → 精选 /spec 和 /test 两个 workflow 作为 Pi 的编码准则补充
+
+这三个一上，小P出代码之前会先出 spec、先定验收标准、先写测试——弹窗那种 9 轮修同一个 bug 的事不会再发生。
+
+
+
+## 小布第三轮挖掘：搭建 Agent 的框架（2026-08-11，给小P）
+
+搜了 "agent framework build scaffold"，找到了直接用于搭 Agent 的框架——不只是增强 Pi，而是帮我们从零起第二个 Agent。
+
+### 🔥 Agno — 全栈 Agent 平台（40.6k⭐）
+https://github.com/agno-agi/agno
+- **定位**：Build / Run / Manage 一体的 Agent 平台。自带 Memory / Knowledge / Tools / Runtime。
+- **对我们**：第三个金融 Agent 用它做底座最合适。不用从零再搭一套 FastAPI+DB+缓存。
+
+### 🔥 Pydantic AI — 类型安全 Agent（17.7k⭐）
+https://github.com/pydantic/pydantic-ai  
+- **定位**：Pydantic 团队出品，Agent 的输入输出全部类型验证。模型返回的不是自由文本而是 Pydantic Model。
+- **对我们**：Go购 已经用了 Pydantic，天然兼容。金融 Agent 的数据精度要求更高，类型安全是刚需。
+
+### 🟡 full-stack-ai-agent-template — FastAPI 脚手架（614⭐）
+https://github.com/vstorm-co/full-stack-ai-agent-template
+- **定位**：一条命令生成 FastAPI + PostgreSQL + WebSocket + Next.js 的完整 Agent 项目
+- **对我们**：第二个小说 Agent 用它快速起项目。省掉搭后端+数据库+前端的重复劳动。
+
+### 🟡 CrewAI — 多角色 Agent 协作（52.8k⭐）
+https://github.com/crewAIInc/crewAI
+- **定位**：一人写 Prompt、一人查资料、一人出报告——角色化协作
+- **对我们**：金融 Agent 天然需要多角色（宏观分析/财报解读/情绪分析），可作参考
+
+---
+
+### 汇总：Go购 之后的 Agent 开发路线
+
+| Agent | 底座 | 说明 |
+|-------|------|------|
+| 第二个（小说） | full-stack-ai-agent-template | 快速起项目，专注文学/叙事逻辑 |
+| 第三个（金融） | Agno + Pydantic AI | 全栈平台 + 类型安全，数据精确 |
+
+先不急装。Go购 v2.0 收尾 + Superpowers/Spec Kit 装上 Pi 之后，再开第二个。
+
+
+
+## 小布第四轮挖掘：Pi 扩展 + MCP 工具 + Agent 基建（2026-08-11，给小P）
+
+### 🔥 Pi 扩展生态（对小P直接有用）
+
+**pi-extensions（narumiruna）**：https://github.com/narumiruna/pi-extensions
+16 个 npm 包，Pi 一键安装：
+- `pi-lsp` — 代码诊断
+- `pi-chrome-devtools` — CDP 协议（直接替代我们的 DrissionPage！）
+- `pi-firecrawl` — 网页抓取
+- `pi-subagents` — 子代理协作
+- `pi-goal` — 目标模式（任务拆分+追踪）
+
+**pi-extensions（ogulcancelik）**：https://github.com/ogulcancelik/pi-extensions
+- 🔥 `pi-session-recall` — **"remember when we tried X?"** 跨会话记忆搜索！
+- `pi-auto-permissions` — 智能 Bash 权限
+- `pi-handoff` — 上下文跨会话传递
+
+### 🔥 MCP 服务器生态（对小布和Agent都有用）
+
+| 项目 | Stars | 用途 |
+|------|-------|------|
+| **playwright-mcp** | 31k | 浏览器自动化（替代 DrissionPage） |
+| **github-mcp-server** | 29k | GitHub API——Agent 自动提交/PR |
+| **markitdown** | 119k | PDF/Office→Markdown（给Agent喂文档） |
+| **fastmcp** | 24k | Python 搭建 MCP 服务器（我们能用Python写自己的MCP工具给Agent用） |
+| **spec-workflow-mcp** | 4k | Spec→计划→任务→执行（代替手动SDD） |
+
+### 🟡 Agent 基建
+
+**Orca**：https://github.com/stablyai/orca — 并行管理多个 coding agent 的开发环境
+**rowboat**：https://github.com/rowboatlabs/rowboat — AI coworker with persistent memory
+**OpenViking**：https://github.com/volcengine/OpenViking — 统一 Agent 记忆+知识库+技能的自进化数据库
+
+---
+
+### 对三方的直接价值
+
+| 谁 | 装什么 | 效果 |
+|----|--------|------|
+| **小P/Pi** | pi-chrome-devtools + pi-session-recall | 浏览器抓取零弹窗 + 记住昨天干了啥 |
+| **小布/WorkBuddy** | markitdown + playwright-mcp | 直接读Word/PDF + 自动截图验证页面 |
+| **Agent开发** | fastmcp + spec-workflow-mcp | 用Python写自定义MCP工具 + SDD自动化 |
+
+
+
+## 小布第五轮补挖：Pi.dev 官方包市场（2026-08-11，必装）
+
+pi.dev/packages 上有 ~50 个 Pi 扩展包，选了最匹配我们痛点的：
+
+### 🔥 必装 5 件套
+
+| 包 | 月下载 | 治什么 |
+|----|--------|--------|
+| **pi-lens** | 41.6K | 实时代码反馈（LSP/linter/类型检查）——替代代码审查员 |
+| **pi-simplify** | 31.3K | 代码清晰度审查——"这样写是不是太复杂了" |
+| **pi-subagents** | 214K | 子代理协作——复杂任务自动拆分 |
+| **context-mode** | 74.2K | 省 98% 上下文窗口——长对话不会爆 token |
+| **pi-hermes-memory** | 22.3K | 持久记忆 + 密钥扫描——跨会话不丢上下文 |
+
+### 🟡 按需装
+
+| 包 | 月下载 | 用途 |
+|----|--------|------|
+| pi-web-access | 222K | 网页搜索/抓取——替代 DrissionPage |
+| pi-dynamic-workflows | 30.9K | 100+ 子代理扇出，成本核算 |
+| pi-goal | 30.2K | 自主目标完成 |
+| pi-plan-mode | 16.9K | Codex 风格只读规划协作 |
+| pi-goosedump | 新 | 会话搜索/持久记忆/会话管理 |
+
+### 一条命令全部装上
+
+```bash
+pi install npm:pi-lens npm:pi-simplify npm:pi-subagents npm:context-mode npm:pi-hermes-memory
+```
+
+前两个替代代码审查员，第三个搞定复杂任务拆分，后两个解决上下文和记忆——不需要再手工装角色了。
+
+
+---
+
+# 📤 Pi 官方包市场 5 包已装（2026-08-11 下午）
+
+## 已安装（pi install npm:xxx，用户级 ~/.pi/agent/npm/）
+| 包 | 版本 | 作用 |
+|---|---|---|
+| pi-lens | 3.8.74 | 实时代码反馈（LSP/linter/格式化/类型检查） |
+| pi-simplify | 0.2.3 | 最近改动代码审查（清晰度/一致性/可维护性）——替代手工代码审查员 |
+| pi-subagents | 0.46.0 | 单代理委派 + 脚本化多代理工作流 |
+| context-mode | 1.0.169 | 上下文压缩 98%（FTS5 知识库 + 意图搜索） |
+| pi-hermes-memory | 0.9.4 | 持久记忆 + 会话搜索 + 密钥扫描（732 测试） |
+
+## 生效方式
+- 下次 pi 会话启动自动加载（扩展机制）
+- 与小布手工装的 16 角色互补（官方包更轻量精准）
+
+## 后续
+- 实测各包能力（lens 反馈/subagents 拆任务/memory 跨会话）
+- 若 pi-lens+pi-simplify 够用 → 手工代码审查角色可退役
