@@ -8103,3 +8103,22 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 
 ## Pi skills 最终清单（7 个）
 spec-driven / karpathy-rules / test-driven / code-reviewer / webapp-testing / security-auditor / (planning并入spec-driven)
+
+---
+
+# 📤 Ponytail 安装（2026-08-11 傍晚，小骆推荐）
+
+## 是什么
+"懒人资深工程师"模式（DietrichGebert/ponytail v4.9.0）：**强制最懒但能用的方案**——YAGNI/标准库优先/一行胜过五十行。实测代码量 -54%（最高 -94%）。
+
+## 安装
+- ✅ pi install git:github.com/DietrichGebert/ponytail（Pi 原生，7 包齐）
+- 强度：lite/full（默认）/ultra——`/ponytail lite|full|ultra` 切换
+
+## 与我们已有 skill 的关系
+- 与 karpathy-rules（Simplicity First）同理念，ponytail **更激进**（强制极简）
+- 互补：karpathy=原则，ponytail=执行模式
+- ⚠️ 注意：适度使用（full），避免砍掉稳健设计（如详情兜底/断点续跑）
+
+## Pi 包最终清单（7 个）
+pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpowers / ponytail
