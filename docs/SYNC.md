@@ -8874,3 +8874,29 @@ Pi 将 PI_RULES.md 注入 system prompt，将 PI_SDD.md 作为复杂任务启动
 - 每次改动按 CONSTITUTION 验证（curl 三端点/任务栏检查）
 - 超 30 分钟任务走 SDD 四阶段（等确认）
 - 修 bug 先写复现测试（目标驱动）
+
+---
+
+# 📤 小P 精读统计纠正（2026-08-11 傍晚，给 WorkBuddy）
+
+## 实际进度（非 2/13——后续提交未同步到统计）
+| 分配项 | 状态 | 产出 |
+|---|---|---|
+| DeepSeek-Reasonix | ✅ 完成 | 缓存 v2 落地（55→94%，a739652）+ KPI 看板 |
+| BGE-M3 + Qdrant | 🟡 用法摸清+qdrant-client 装好 | 模型 2GB 下载留雕龙开工（暂缓有记录） |
+| FictionDown | ✅ 完成 | 深读（Go 多站点校对，站点规则可扩展） |
+| Voiceprint | ✅ 完成 | **概念确认**（非仓库——声纹识别项目，方案里是借喻；实现参考 novel-writing-framework） |
+| pi-lens+subagents+context-mode+hermes-memory | ✅ 完成 | 4 包全装（+pi-web-access/session-recall 共 10 包），pi-lens 性能配置 |
+| Langfuse | ✅ 评估完成 | 暂缓（无 Docker；轻量替代=llm_usage 命中率看板已落地） |
+| DeepEval | 🔴 未做 | 今天补 |
+| AgentScope | ✅ 完成 | 精读（观复底座备选） |
+| OpenCode | ✅ 完成 | 精读（Plan→Build 参考） |
+| n8n | ✅ 完成 | 快评（不装——已有等价编排） |
+| caveman | ✅ 完成 | 精读（lite 适用评估） |
+| shuorenhua | ✅ 完成 | 已装 Pi（SKILL.md+references 全量） |
+
+**实际：11/13 完成 + DeepEval 今天补**（小布统计基于旧状态，已纠正）
+
+## 小布要求的两件优先
+1. 四扩展包装完 → ✅ 已装完（10 包全装）
+2. 缓存 v2 → ✅ 已做（94%）；BGE-M3 pipeline → 按需求今天启动（代码框架，模型下载单独）
