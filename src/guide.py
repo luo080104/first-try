@@ -317,12 +317,14 @@ def chat(session_id: str, user_text: str, user_name: str = '') -> dict:
     # 只保留最近 12 轮（上下文控制）
     history = history[-24:]
 
-    # 组 LLM 消息：系统 + 画像 + 需求卡 + 历史
+    # 组 LLM 消息（Reasonix 缓存原则：system 必须字节级稳定，动态内容 ride the turn 拼 user 消息）
     profile = get_profile(user_name or sess['user_name'])
-    sys_msg = GUIDE_SYSTEM + f"\n用户画像：预算档={profile['budget_tier']} 品牌倾向={profile['brands']} 关注品类={profile['categories']}"
+    dyn = f"[用户画像：预算档={profile['budget_tier']} 品牌倾向={profile['brands']} 关注品类={profile['categories']}]"
     if need_card:
-        sys_msg += f"\n当前需求卡：{json.dumps(need_card, ensure_ascii=False)}"
-    messages = [{'role': 'system', 'content': sys_msg}] + history
+        dyn += f"[当前需求卡：{json.dumps(need_card, ensure_ascii=False)}]"
+    messages = [{'role': 'system', 'content': GUIDE_SYSTEM}]  # 稳定前缀：永不变化 → 缓存命中
+    messages += history[:-1]
+    messages.append({'role': 'user', 'content': dyn + '\n' + history[-1]['content']})  # 动态内容放最后 user 消息
 
     try:
         raw = _call_llm(messages)
