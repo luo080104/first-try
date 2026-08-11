@@ -245,3 +245,15 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 agents-best-practices / code-reviewer / council / karpathy-rules / planning-with-files /
 security-auditor / shuorenhua（新）/ spec-driven / test-driven / webapp-testing
 + 包内 superpowers/ponytail
+
+---
+
+## 十二、DeepEval 精读完成（雕龙质检测试写法）
+
+### 要点
+- **assert_test 语法**（pytest 风格）：LLMTestCase(input/actual_output/expected_output) + metric
+- 指标：G-Eval（LLM-as-judge 自定义标准）/ Task Completion / Tool Correctness 等
+- `deepeval test run` CLI 跑测试
+- **对雕龙**：硬指标用确定性脚本（CJK/破折号/正则——已有），语义类（情绪曲线/文风保真）用 LLM judge——互补
+
+## 精读进度：Pi 12/13 完成（剩 BGE-M3 pipeline 进行中）
