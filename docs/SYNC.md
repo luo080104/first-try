@@ -8224,3 +8224,25 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 1. 精读：oh-story 追踪（O(1) 核心）+ sumeru 7 skill（世界/写/润/审）+ novel-writing-framework 13 项
 2. 确认 diao_long 仓库 remote（luo080104/-）
 3. 9 模块空壳框架 + P0 链路
+
+---
+
+# 📤 雕龙 P0 前功课完成（2026-08-11 晚）
+
+## 已完成
+1. ✅ 9 个写作案例全部克隆（webnovel-writer/oh-story/sumeru/arboris/novel-writing-framework/FictionDown/inkos/AI_NovelGenerator/Chinese-WebNovel-Skill）
+2. ✅ **案例深读报告**（docs/雕龙案例深读报告.md，5a3d85b）：逐个完整读 README+代码+逻辑框架
+   - oh-story：单一权威事务模型（_tracking-state.json + tracking_commit.py 原子提交）
+   - sumeru：3章/Agent 并行 + 阶段检查点 + review 三阶段自动修复
+   - novel-writing-framework：8 铁律 + 硬指标正则 + AI 口水词 + 十维评分 + 平台差异
+   - webnovel-writer：Story Repo 规格（文件即真相/git原子提交/定稿只增不改/对话即编辑器）
+3. ✅ 7 条补充建议（存储改文件即真相/追踪单一权威/质检实战版/平台差异/作者友好报告/三章一轮/写手预置铁律）
+
+## 雕龙状态
+- 方案 v1.1 ✅ + 审查（4 风险点，R1 已解除）✅ + 案例深读 ✅
+- 仓库：luo080104/-（"智能写作"，空仓库）
+- **P0 启动包就绪**：9 模块空壳 + P0 链路（架构师→写手→质检→内循环）
+
+## 待小骆决策
+- 启动雕龙 P0？（9 模块框架 + P0 链路 + 出 1-2 章验收）
+- 还是先歇（今天 Go购 v2.0 收官 + Pi 工具链 + 雕龙功课全完成）
