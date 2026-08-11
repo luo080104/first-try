@@ -7853,3 +7853,30 @@ pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpo
 ## v2.0 状态：功能增强告一段落 ✅
 - 20+ 功能全绿（搜索/导购/漫游/盯价/好价卡/历史/语音/拍照/趋势图/仪表盘）
 - 用户演示已给老师看过
+
+---
+
+# 📤 最终同步（2026-08-11 傍晚，v2.0 收官）
+
+## 项目总览
+- **Go购 v2.0 功能增强收官**：20+ 功能全绿
+- 代码 10,189 行 / 270+ commits / 商品库 18,177 件 / 4 平台 / 24 表
+- 已给老师当面演示 ✅
+- GitHub 仓库 private（luo080104/first-try，如需老师远程看需设 public）
+
+## 全部功能清单（最终版）
+搜索（4平台/自然语言降级/语音/拍照/输入即搜）· 陪你出发（对话/语音/画像/三级推荐/品类维度/总结建议）· 漫游 · 盯价推送 · 好价卡 · 搜索历史（浏览器风格）· 商品库（看板5图/输入即搜）· 价格趋势图 · 参数对比 · 降价预测 · 相似款 · 多视角辩论 · 多用户/邀请码 · PWA · 采集引擎 · 店铺信誉 · 偏好记忆 · A-B实验 · 经验学习 · AI费用统计
+
+## 剩余待办（3 项，均需条件）
+1. 采集重跑（回家 WiFi，97 词未完成 + 唯品会 50 种子词）
+2. 唯品会 ZTK 授权（折淘客平台）
+3. PDD 数据（等 duoId 恢复/替代通道）
+
+## 技术线总结
+- pythonw 无窗口服务 / 淘宝 headless / 浏览器常驻池 / session_id 对话上下文 / ECharts 本地化
+- Pi 增强：5 官方包 + superpowers + 5 自定义 skill（spec-driven/karpathy/test-driven/code-reviewer/webapp-testing）
+
+## 下一步（小骆决定）
+- 回家 → 重跑采集
+- 或开第二个 Agent（小说 full-stack-template / 金融 Agno+Pydantic）
+- 或继续打磨（真·拍照图搜需要视觉模型/图搜API）
