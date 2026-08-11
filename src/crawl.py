@@ -174,7 +174,8 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 72000) -> dict:  # 
     max_seconds: 硬性时长上限（默认 8 小时），到点自动停止，未完成词保持 pending 下轮继续。
     进度含 avg_per_word/eta 精准预估（实测均值 × 剩余量）。"""
     from db import (ensure_crawl_tasks, get_pending_tasks,
-                    mark_crawl_task, add_auto_keywords, get_conn)
+                    mark_crawl_task, add_auto_keywords, get_conn,
+                    upsert_product_item)
 
     ensure_crawl_tasks()
     tasks = get_pending_tasks(500)  # 一轮取全部（310+ 词），避免 100 上限截断
