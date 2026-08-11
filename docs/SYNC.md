@@ -7305,3 +7305,98 @@ PDD 不可能追上淘宝（浏览器抓取量大）或唯品会（API+浏览器
 ## 环境
 - 用户在单位（手机热点，电脑评测界面：http://127.0.0.1:8001）
 - 小布已装 6 新角色（含代码审查员），作业进度 4/5
+
+
+## 小布确认（2026-08-11 上午）
+
+### headless 切换结果
+| 平台 | 方案 | 状态 |
+|------|------|------|
+| 淘宝 | headless | ✅ 已切，静默采集中 |
+| 唯品会 | 有头隐藏 | ✅ 扫码404，headless不可行，保留有头 |
+| 京东 | API 榜单 | ✅ 浏览器通道确认废弃，API 够用 |
+| 拼多多 | 等冷却 | 🟡 限流恢复后再跑 PDD 三板斧 |
+
+三个有结果、一个在等——不急，数据完整性没受损。
+
+### v2.0 首页
+4 大卡片布局的草稿有了吗？小布看一下给反馈。
+
+### 下一步
+拼多多冷却好了直接上三板斧（翻5页 + 50专属种子词 + API降频重试）。v2.0 首页和 PDD 可以并行推进。
+
+
+## 小布 bug 报告（2026-08-11 中午，紧急）
+
+### 已定位
+
+**① 搜索 GBK 编码错误**
+搜索"帮我看笔记本支架" → `'gbk' codec can't encode '\u2705'`
+根因：`pythonw.exe` Windows 控制台默认 GBK，SSE 消息中的 emoji（✅/📚/⚠️）编码失败。
+修复（app.py 顶部，import 之后加一行）：
+```python
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+```
+或 start_server.vbs 加环境变量 `PYTHONIOENCODING=utf-8`。
+
+**② 陪你出发 + ⑤ 战利品：点啥都无反应**
+前端 JS 事件绑定问题——v2.0 改版后新 DOM 结构导致旧事件绑定失效。
+
+**③ 购物漫游"去看看"**
+前端链接缺失，需要给每个商品卡片加目标 URL。
+
+**④ 盯价 Internal Server Error**
+watches 页面直接 500。需查服务器日志定位。
+
+### 紧急程度
+① 阻塞搜索 → 最高优先级，一行 fix
+② ⑤ 用户主路径不通 → 高
+④ 500 → 高
+③ 功能缺 → 中
+
+
+
+## 小布同步（2026-08-11 中午）
+
+### 已完成改动
+- ✅ **导购模型切 Pro**：`llm_parse.py` generate_options 从 `deepseek-v4-flash` → `deepseek-v4-pro`，费用统计同步更新
+- ✅ **陪你出发头像换新**：guide.html `msg.ai .avatar` 改 `background-image: url('/static/img/avatar.png')`，图片已存 `src/static/img/`
+- ✅ **小骆核心原则**：性能第一、成本其次（已记入用户记忆，以后新功能默认 Pro）
+
+### 代码审查结果（代码审查员）
+🟢 整体通过。3 个建议项：
+- `_sweep_hide` / `rehide` 对 headless 平台跳过（减少空跑系统调用）
+- `crawl.py` 自动扩展逻辑残余变量清理
+- `tb_profile` 旧目录保留说明
+
+### 待修 Bug（5 个已报告）
+① 🔴 GBK 编码：`sys.stdout.reconfigure(encoding='utf-8')`
+② 🟡 陪你出发无响应（DOM 事件绑定）
+③ 🟢 漫游缺"去看看"链接
+④ 🔴 盯价 500
+⑤ 🟡 战利品无响应（同②）
+
+### 下一个任务
+重启服务（pythonw 无法 reload）→ 修 5 个 bug → 重启 → 验证。
+
+
+---
+
+# 📤 5 bug 修复完成报告（2026-08-11 下午）
+
+## 全部修复 ✅
+| bug | 根因 | 修复 |
+|---|---|---|
+| ① 搜索 GBK 崩 | pythonw stdout 默认 GBK，print emoji 崩 | app.py reconfigure utf-8 + vbs PYTHONIOENCODING |
+| ②⑤ 陪你出发/战利品无反应 | **6 处引号嵌套/裸换行**（guide trackAdopt/compare loadSimilar+openSpecCompare+openDetail+advice换行+onerror）——脚本整块不执行 | 全修，9 页面浏览器级验证 0 错误 |
+| ③ 漫游缺链接 | 商品 url 填充率 81% | searchUrl 兜底（无 url 生成平台搜索链接） |
+| ④ 盯价 500 | 与①同根因（init_db print emoji） | 随①修复 |
+
+## 验证
+- 服务重启 ✅ 200
+- 9 页面浏览器级 JS 错误扫描全过 ✅
+- 采集后台运行中（淘宝 headless 静默）
+
+## 教训固化
+- 前端引号嵌套/裸换行已 3 次踩坑（index 热搜/v8 prompt/guide+compare×6）——**JS 改动后必须浏览器级扫描**（add_init_js 错误捕获 9 页面全检）
