@@ -208,6 +208,38 @@ def search_pdd_api(keyword: str = ''):
     items = pdd_search.search_pdd(keyword, max_items=10)
     return {'items': items}
 
+@app.get('/hist')
+def hist_page(request: Request):
+    """搜索历史页（浏览器风格：按天分组/点击即搜/单删/清空）"""
+    return templates.TemplateResponse(request, 'hist.html', {})
+
+
+@app.get('/api/search_history')
+def api_search_history(user_name: str = ''):
+    conn = get_conn()
+    rows = conn.execute('''SELECT keyword, category, MAX(searched_at) searched_at
+        FROM search_history WHERE user_name=? GROUP BY keyword
+        ORDER BY searched_at DESC LIMIT 200''', (user_name,)).fetchall()
+    conn.close()
+    return {'ok': True, 'items': [dict(r) for r in rows]}
+
+
+@app.post('/api/search_history_del')
+def api_search_history_del(keyword: str = Form(''), user_name: str = ''):
+    conn = get_conn()
+    conn.execute('DELETE FROM search_history WHERE keyword=? AND user_name=?', (keyword, user_name))
+    conn.commit(); conn.close()
+    return {'ok': True}
+
+
+@app.post('/api/search_history_clear')
+def api_search_history_clear(user_name: str = ''):
+    conn = get_conn()
+    conn.execute('DELETE FROM search_history WHERE user_name=?', (user_name,))
+    conn.commit(); conn.close()
+    return {'ok': True}
+
+
 @app.get('/history')
 def history(platform: str = 'tb', item_id: str = ''):
     import sqlite3
