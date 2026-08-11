@@ -130,10 +130,10 @@
         </div>
         <!-- v2.0 游戏化：4 大地标卡片 -->
         <div class="landmarks">
-            <a class="landmark lm-shop" href="/"><span class="lm-icon">🏪</span>商店 · 比价<span class="lm-sub">四平台一个词查全网</span></a>
-            <a class="landmark lm-wander" href="/wander"><span class="lm-icon">🎡</span>市集 · 漫游<span class="lm-sub">不知道买啥？随便逛逛</span></a>
-            <a class="landmark lm-watch" href="/watches"><span class="lm-icon">📋</span>委托 · 盯价<span class="lm-sub">降价自动提醒你</span></a>
-            <a class="landmark lm-card" href="/compare"><span class="lm-icon">🎁</span>战利品 · 好价卡<span class="lm-sub">六关拼图保存晒单</span></a>
+            <a class="landmark lm-shop" href="/"><span class="lm-icon">🏪</span>搜全网<span class="lm-sub">淘宝京东拼多多一键比</span></a>
+            <a class="landmark lm-wander" href="/wander"><span class="lm-icon">🎡</span>逛一逛<span class="lm-sub">像刷小红书一样发现好物</span></a>
+            <a class="landmark lm-watch" href="/watches"><span class="lm-icon">📋</span>设个心理价<span class="lm-sub">跌到我就叫你</span></a>
+            <a class="landmark lm-card" href="/compare"><span class="lm-icon">🎁</span>出好价卡<span class="lm-sub">一键生成发给爸妈</span></a>
         </div>
         <a class="btn-guide" href="/guide">🤖 陪你出发 — 拿不准买啥？跟我聊聊</a>
         <details class="more-menu"><summary>⚙️ 更多功能</summary>
@@ -534,7 +534,7 @@
             box.innerHTML = '';
             var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
             var uname = encodeURIComponent(getCurrent());
-            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname)
+            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname + '&session_id=' + encodeURIComponent(localStorage.getItem('gobuy_sid') || ''))
                 .then(resp => {
                     var reader = resp.body.getReader();
                     var decoder = new TextDecoder();

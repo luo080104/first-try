@@ -133,10 +133,13 @@ OPTIONS_SYSTEM = """你是Go购的导购助手。根据搜索结果标题，将�
 3. search_kw 不要带价格/配置/促销词，只保留品牌和型号系列
 4. price_hint 必须从输入数据中提取真实价格，严禁编造
 5. 最后一个选项固定为：{"label":"都不是，我自己描述","search_kw":"__custom__","price_hint":""}
+6. 如果前面对话有预算/用途/偏好，优先推荐匹配预算的选项，search_kw 带上对应价位档的型号
+7. 三级推荐：预算内主力款 + 稍超预算但更值的款（标注"多花X性能更好"）+ 省钱平替款（标注"更省X也够用"）
 只输出JSON数组，不要其他文字。"""
 
-def generate_options(keyword: str, groups: list) -> list:
-    """从搜索结果生成导购选项（V4-Flash，聚类/摘要任务不需要 Pro）"""
+def generate_options(keyword: str, groups: list, history_txt: str = '') -> list:
+    """从搜索结果生成导购选项（V4-Pro，小骆：性能第一）
+    2026-08-11 小布：对话历史拼进 prompt——LLM 看完整上下文再出选项"""
     lines = []
     for i, g in enumerate(groups[:15], 1):
         best = g.get('best') or g['platforms'][0]
@@ -144,9 +147,10 @@ def generate_options(keyword: str, groups: list) -> list:
         price = best.get('actualPrice', 0)
         lines.append(f"{i}. {title} ¥{price}")
 
-    user_msg = "关键词：" + keyword + chr(10) + "结果标题：" + chr(10) + chr(10).join(lines)
+    ctx = ('前面对话：' + chr(10) + history_txt + chr(10)) if history_txt else ''
+    user_msg = ctx + "用户当前想买的关键词：" + keyword + chr(10) + "结果标题：" + chr(10) + chr(10).join(lines)
     body = json.dumps({
-        'model': 'deepseek-v4-flash',
+        'model': 'deepseek-v4-pro',  # 小骆：性能第一，成本其次
         'messages': [
             {'role': 'system', 'content': OPTIONS_SYSTEM},
             {'role': 'user', 'content': user_msg},
@@ -165,7 +169,7 @@ def generate_options(keyword: str, groups: list) -> list:
         try:
             from llm_usage import record_usage
             u = data.get('usage', {})
-            record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项')
+            record_usage('deepseek-v4-pro', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项')
         except Exception:
             pass
         content = data['choices'][0]['message']['content'].strip()

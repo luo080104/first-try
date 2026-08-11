@@ -341,7 +341,7 @@ async def api_deep_crawl(keyword: str = Form(...), category: str = Form(''), pag
     return {'ok': True, 'msg': f'采集完成：淘宝 {len(results["tb"])} + 京东 {len(results["jd"])} + 唯品会 {len(results["vip"])} = {total} 条，入库 {added} 条'}
 
 @app.get('/search_sse')
-async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live', user_name: str = ''):
+async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0, mode: str = 'live', user_name: str = '', session_id: str = ''):
     """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）"""
     async def gen():
         nonlocal keyword, category
@@ -526,7 +526,25 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                     and prices and max(prices) / max(min(prices), 1) > 2.0
                     and not has_model_num):
                 yield sse({'type': 'progress', 'msg': '📋 结果较多，正在生成导购选项...'})
-                options = await asyncio.to_thread(generate_options, keyword, groups)
+                # 2026-08-11 小布：对话历史拼 prompt（LLM 看完整上下文）
+                history_txt = ''
+                if session_id:
+                    _c = None
+                    try:
+                        _c = get_conn()
+                        _row = _c.execute('SELECT history FROM chat_sessions WHERE session_id=? LIMIT 1', (session_id,)).fetchone()
+                        if _row:
+                            _hist = json.loads(_row['history'] or '[]')
+                            history_txt = chr(10).join(
+                                ('用户: ' if m.get('role') == 'user' else 'AI: ') + str(m.get('content', ''))[:120]
+                                for m in _hist[-8:])
+                    except Exception:
+                        pass
+                    finally:
+                        if _c:
+                            try: _c.close()
+                            except Exception: pass
+                options = await asyncio.to_thread(generate_options, keyword, groups, history_txt)
                 if options:
                     yield sse({'type': 'guide', 'options': options})
 

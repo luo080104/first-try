@@ -9,9 +9,11 @@
         body { background: #f8f9fa; }
         .chat-box { max-width: 720px; margin: 0 auto; padding: 16px 14px 90px; }
         .msg { display: flex; margin-bottom: 14px; align-items: flex-start; }
-        .msg .avatar { width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+        .msg .avatar { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+                       background-size: cover; background-position: center;
+                       background-color: #fffbe8; overflow: hidden;
                        display: flex; align-items: center; justify-content: center; font-size: 17px; }
-        .msg.ai .avatar { background: #ff6b35; color: #fff; }
+        .msg.ai .avatar { background-image: url('/static/img/avatar.png'); color: transparent; }
         .msg.me .avatar { background: #0984e3; color: #fff; }
         .msg .bubble { max-width: 78%; margin-left: 10px; padding: 11px 14px; border-radius: 14px;
                        font-size: 15px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
@@ -43,7 +45,7 @@
 <body>
     <div class="chat-box" id="chat-box">
         <div class="msg ai">
-            <div class="avatar">🤖</div>
+            <div class="avatar"></div>
             <div class="bubble">你好呀！我是你的购物向导 🧭<br>不知道买什么、怕买错？跟我聊聊就行。<br>比如：「我想买台电脑」「想给妈妈买件羽绒服」</div>
         </div>
         <div class="quick" id="quick-bar">
@@ -69,7 +71,7 @@
             var box = document.getElementById('chat-box');
             var div = document.createElement('div');
             div.className = 'msg ' + role;
-            div.innerHTML = '<div class="avatar">' + (role === 'ai' ? '🤖' : '👤') + '</div>' +
+            div.innerHTML = '<div class="avatar">' + (role === 'ai' ? '' : '👤') + '</div>' +
                 '<div class="bubble">' + esc(text) + '</div>';
             box.insertBefore(div, document.getElementById('typing'));
             box.scrollTop = box.scrollHeight;
@@ -88,7 +90,7 @@
                     '<span class="r-price">¥' + it.actualPrice + '</span> ' +
                     (it.originalPrice && it.originalPrice > it.actualPrice ? '<span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + it.originalPrice + '</span>' : '') +
                     ' <span style="color:' + mc + ';font-size:13px;font-weight:600">🎯 匹配度 ' + (it.match || '?') + '%</span>' +
-                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '" onclick="trackAdopt(\'guide\', this)">⚖️ 去比价 →</a>';
+                    '<a class="r-btn" href="/compare?keyword=' + encodeURIComponent(it.title || '') + '&sid=' + SESSION + '" onclick="trackAdopt(\'guide\', this)">⚖️ 去比价 →</a>';
                 box.insertBefore(div, document.getElementById('typing'));
             });
             window.scrollTo(0, document.body.scrollHeight);
@@ -124,6 +126,7 @@
                     document.getElementById('typing').style.display = 'none';
                     if (!d.ok) { addMsg('ai', d.msg || '出错了'); return; }
                     SESSION = d.session_id;
+                    try { localStorage.setItem('gobuy_sid', SESSION); } catch(e) {}
                     addMsg('ai', d.reply || '…');
                     if (d.items && d.items.length) addRecs(d.items);
                 })
