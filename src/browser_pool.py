@@ -13,7 +13,8 @@ if not os.path.exists(EDGE):
     EDGE = r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
 
 PROFILES = {
-    # 2026-08-11 小布方案：淘宝切 headless（tb_profile_h 为 headless 专用副本，原目录与 headless 不兼容）
+    # 2026-08-11 小布方案：淘宝切 headless。
+    # tb_profile_h = headless 专用副本（原 tb_profile 与 headless 不兼容——保留原目录做备份，回退有头时改回 data/tb_profile 即可）
     'tb': ('data/tb_profile_h', 9300),
     'jd': ('data/jd_profile', 9301),
     'vip': ('data/vip_profile', 9302),
@@ -114,8 +115,10 @@ def get_browser(platform: str):
 
 
 def _sweep_hide():
-    """预热后补一轮强制隐藏（等窗口全部创建后）"""
+    """预热后补一轮强制隐藏（等窗口全部创建后）；headless 跳过（审查员建议）"""
     for plat, b in list(_pool.items()):
+        if plat in HEADLESS:
+            continue
         try:
             _force_hide_windows(b.process_id)
         except Exception:
@@ -123,7 +126,9 @@ def _sweep_hide():
 
 
 def rehide(platform: str):
-    """搜索完成后强制隐藏兜底（小布方案）"""
+    """搜索完成后强制隐藏兜底（小布方案）；headless 无窗可藏直接跳过（审查员建议）"""
+    if platform in HEADLESS:
+        return
     b = _pool.get(platform)
     if b is not None:
         try:
