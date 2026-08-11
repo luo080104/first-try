@@ -1142,9 +1142,13 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
 
 @app.get('/api/analysis')
 def api_analysis():
-    """商品库分析：价格分布 + 品牌占比 + 价格销量散点（供看板图表）"""
+    """商品库分析：价格分布 + 品牌占比 + 价格销量散点 + 平台分布 + 入库趋势（供看板图表）"""
     from db import get_conn
     conn = get_conn()
+    # 2026-08-11 仪表盘增强：平台分布 + 近 7 天入库趋势
+    plat_dist = [dict(r) for r in conn.execute('''SELECT platform, COUNT(*) n FROM product_items GROUP BY platform ORDER BY n DESC''').fetchall()]
+    in_trend = [dict(r) for r in conn.execute('''SELECT date(first_seen) d, COUNT(*) n FROM product_items
+        WHERE first_seen >= date('now','localtime','-6 day') GROUP BY d ORDER BY d''').fetchall()]
     # 价格区间分布
     bins = [(0, 100), (100, 300), (300, 1000), (1000, 3000), (3000, 999999)]
     labels = ['0-100', '100-300', '300-1000', '1000-3000', '3000+']
@@ -1162,7 +1166,7 @@ def api_analysis():
         "SELECT price, sales FROM product_items WHERE price > 0 AND sales > 0 ORDER BY id DESC LIMIT 300")]
     conn.close()
     return {'price_hist': price_hist, 'brand_share': brand_share, 'brand_total': total,
-            'scatter': scatter, 'total': total}
+            'scatter': scatter, 'total': total, 'plat_dist': plat_dist, 'in_trend': in_trend}
 
 if __name__ == '__main__':
     import uvicorn

@@ -290,6 +290,36 @@
                     series: [{type: 'bar', data: d.price_hist.map(p => p.n),
                               itemStyle: {color: '#ff6b35'}, barWidth: '55%'}]
                 });
+                // 2026-08-11 仪表盘：平台分布 + 近7天入库趋势
+                if (d.plat_dist && d.plat_dist.length) {
+                    var c0 = document.createElement('div');
+                    c0.style.cssText = 'flex:1;min-width:260px;height:220px;background:#fff;border-radius:12px;padding:8px';
+                    box.appendChild(c0);
+                    var ch0 = echarts.init(c0);
+                    ch0.setOption({
+                        title: {text: '🛒 平台分布', textStyle: {fontSize: 13}},
+                        tooltip: {},
+                        xAxis: {type: 'category', data: d.plat_dist.map(p => p.platform)},
+                        yAxis: {type: 'value'},
+                        series: [{type: 'bar', data: d.plat_dist.map(p => p.n),
+                                  itemStyle: {color: '#0984e3'}, barWidth: '45%'}]
+                    });
+                }
+                if (d.in_trend && d.in_trend.length >= 2) {
+                    var c4 = document.createElement('div');
+                    c4.style.cssText = 'flex:1.3;min-width:280px;height:220px;background:#fff;border-radius:12px;padding:8px';
+                    box.appendChild(c4);
+                    var ch4 = echarts.init(c4);
+                    ch4.setOption({
+                        title: {text: '📅 近7天入库', textStyle: {fontSize: 13}},
+                        tooltip: {},
+                        xAxis: {type: 'category', data: d.in_trend.map(t => t.d.slice(5))},
+                        yAxis: {type: 'value'},
+                        series: [{type: 'line', data: d.in_trend.map(t => t.n), smooth: true,
+                                  itemStyle: {color: '#27ae60'}, lineStyle: {color: '#27ae60', width: 2},
+                                  areaStyle: {color: 'rgba(39,174,96,0.12)'}}]
+                    });
+                }
                 // ② 品牌 TOP8 饼图
                 var c2 = document.createElement('div');
                 c2.style.cssText = 'flex:1;min-width:240px;height:220px;background:#fff;border-radius:12px;padding:8px';

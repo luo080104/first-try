@@ -486,11 +486,15 @@ def stats_items() -> dict:
     by_brand = conn.execute('''
         SELECT brand, COUNT(*) n FROM product_items WHERE brand != '' GROUP BY brand ORDER BY n DESC LIMIT 10
     ''').fetchall()
+    # 2026-08-11 仪表盘：近 7 天入库趋势
+    trend = conn.execute('''SELECT date(first_seen) d, COUNT(*) n FROM product_items
+        WHERE first_seen >= date('now','localtime','-6 day') GROUP BY d ORDER BY d''').fetchall()
     conn.close()
     return {'total': total,
             'platforms': [dict(r) for r in by_platform],
             'categories': [dict(r) for r in by_category],
-            'brands': [dict(r) for r in by_brand]}
+            'brands': [dict(r) for r in by_brand],
+            'trend': [dict(r) for r in trend]}
 
 def save_recommendation(conn, product_name, platform, content_id, title, content_url, published_at='', is_ad=0):
     """博主推荐入库（按 platform+content_id+product_name 去重）"""
