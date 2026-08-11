@@ -8628,3 +8628,40 @@ sumeru 的审查不是"写完一次性看完"，是三层递进：
 - canonical.jsonl 方案评估
 - 改文件前自动备份（karpathy skill 补充）
 - 合并前底线清单（security-auditor 补充）
+
+---
+
+# 📤 小P 精读产出（2026-08-11 深夜，Pi 升级优先）
+
+## 优先级执行（小骆确认：Pi/WorkBuddy > Go购 > 雕龙）
+
+### 1. Reasonix 缓存 v2（交叉读）→ ✅ 落地（a739652）
+- 深读 Go 源码：稳定前缀 + 动态内容 ride the turn（Compose 实现）
+- **修复违规**：guide.py 画像/需求卡在 system（每轮变→miss）
+- **实测：命中率 55%→94%，成本省 57%**
+
+### 2. karpathy-rules 升级（小布提升 #3）→ ✅
+- 补"改文件前自动备份"：大改动前 cp 到 .pi/original/（sumeru 借鉴）
+
+### 3. security-auditor 升级（小布提升 #4）→ ✅
+- 补"合并前底线清单"：安全漏洞/数据丢失/API兼容/竞态——不扫完不 push
+
+### 4. caveman 精读 → 📌 评估完成
+- 原理：压缩**输出语言**（去 filler/客套/旁白），代码/错误/技术词字节级保留
+- 效果：prose -65%，agentic runs -8.5%；wenyan 文言模式中文 -80-90% 字符
+- **对 Pi 的适用**：回复默认 **lite**（去废话保留完整句）——但**对用户的解释保持大白话**（用户是小白，ultra/wenyan 牺牲可读性不适用）
+- 装：复制 SKILL.md 到 Pi skills（lite 默认），用户沟通场景手动关
+
+### 5. BGE-M3 + Qdrant（雕龙记忆层）→ ⏸ 暂缓（优先级调整）
+- 用法已摸清：BGEM3FlagModel（CPU 可跑）+ dense/sparse 双检索 + qdrant-client
+- 模型 2GB 下载（国内网络）+ torch 依赖——留到雕龙开工
+
+## Pi skills 最终清单（12 个）
+agents-best-practices / code-reviewer / council / karpathy-rules（含备份）/
+planning-with-files / security-auditor（含底线清单）/ spec-driven / test-driven /
+webapp-testing / caveman（新）/ + 包内 superpowers/ponytail
+
+## 下一步（Pi 升级队列）
+- canonical.jsonl 评估（hermes-memory 覆盖度）
+- Langfuse 接入 Go购（追踪）
+- pi-lens/simplify 实测（下次会话生效后）
