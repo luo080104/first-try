@@ -109,3 +109,46 @@
 **通用（2）**：
 1. 🔴 agents-towards-production（生产级教程）
 2. 🔴 deer-flow（长时程 harness）
+
+---
+
+## 八、第一批深读完成（Pi 升级 + Agent 合作，2026-08-11 晚）
+
+### 1. planning-with-files（26093★）→ ✅ 已装 Pi
+**三文件模式**：task_plan.md（阶段勾选）/ findings.md（研究）/ progress.md（会话日志）
+- 核心原则：Context Window=RAM（易失），Filesystem=Disk（持久）→ 重要写盘
+- 触发：3+ 步骤或 5+ 工具调用 → 先建三文件
+- hooks：UserPromptSubmit 每轮注入 + PostToolUse 提醒 + Stop gate + PreCompact（Pi 8 hooks）
+- 恢复：/clear 后 catchup 重读（读旧会话 + git diff 同步）
+- 价值：我的跨会话记忆工具化（与 hermes-memory 互补）
+
+### 2. council-of-high-intelligence（3920★）→ ✅ 已装 Pi
+**18 位历史人物评委**（苏格拉底/费曼/孙子/芒格/塔勒布/卡尼曼…）
+- 流程：独立首轮立场（不互影响）→ 强制直接交锋 → 主席裁决（保留未解问题/异议/击杀标准/下一步）
+- polarity pairs（对立组）：苏格拉底vs费曼 / 亚里士多德vs老子 / 孙子vs奥勒留 / 图灵vs马基雅维利
+- 模式：--full（18人）/--triad（3人）/--duo（辩证）/--quick/profile
+- 决策边界：有实质代价/竞争价值/不完整证据/不可逆选择才召集
+- 价值：Go购辩论升级（3派→结构化多评委）+ 金融评审团流程参考
+
+### 3. agents-best-practices（2205★）→ ✅ 已装 Pi
+**Harness 工程圣经**（provider 中立）
+- Canonical loop：模型提议 → harness 验证/授权/执行/记录/返回观察
+- 7 条循环不变量：工具调用必有结果/参数先验证/副作用前权限决策/结果有界/硬预算/答案基于观察/错误成结构化观察
+- MVP checklist（18 项：自治级别/权限矩阵/预算/记忆在 prompt 外/评估先行/影子模式）
+- 18 个 references（架构/记忆/压缩/安全/成本/编排）
+- 价值：三 agent 上线前审计清单直接可用
+
+### 4. deer-flow（字节 79717★）→ 参考
+**Super agent harness**（sub-agents+memory+sandbox+skills）
+- 4 执行模式：flash/standard/pro（规划）/ultra（sub-agents）
+- contracts 契约驱动（run_event_stream/subagent_status/skill_review）
+- 价值：执行模式分级（Pi 参考）+ 契约化（雕龙/金融数据契约思想印证）
+
+## Pi skills 最终清单（11 个）
+code-reviewer / council / karpathy-rules / planning-with-files / security-auditor / spec-driven / test-driven / webapp-testing / agents-best-practices / (superpowers/ponytail 包内)
+
+## 下一批深读（待做）
+- 🟡 karpathy-llm-wiki / compass-skills / hermes-agent / harness-sdk / awesome-claude-code（Pi）
+- 🔴 agents-towards-production 教程精选（评估/记忆/安全三篇）
+- 金融：zhengxi-views / daily_stock_analysis / Vibe-Trading
+- 雕龙：tianming-novel-ai-writer / tianming-skill / shuorenhua / taste-skill / awesome-novel-agent
