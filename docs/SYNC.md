@@ -7754,3 +7754,30 @@ pi install npm:pi-lens npm:pi-simplify npm:pi-subagents npm:context-mode npm:pi-
 - ✅ Karpathy 四条金律 → Pi skill（karpathy-rules，含本项目前车之鉴）
 - ✅ addyosmani/agent-skills 确认（agents=代码审查/安全/测试角色；commands 含 spec/test/planning）
 - 📌 待做：addyosmani spec/test 工作流精选 → 补充 spec-driven skill
+
+---
+
+# 📤 Pi 升级包全部落地（2026-08-11 下午，小P执行）
+
+## Pi skills（~/.pi/agent/skills/，5 个）
+| skill | 来源 | 作用 |
+|---|---|---|
+| spec-driven | github/spec-kit | 需求澄清→spec→验收→实现（补了测试策略 3.5） |
+| karpathy-rules | multica-ai | 四条金律（含本项目前车之鉴） |
+| test-driven | addyosmani | TDD + Prove-It（bug 复现测试模式） |
+| code-reviewer | addyosmani | 五维审查（正确/可读/架构/安全/性能） |
+| webapp-testing | anthropics | Playwright 网页测试 |
+
+## Pi 包（settings.json 已注册 6 个）
+pi-lens / pi-simplify / pi-subagents / context-mode / pi-hermes-memory / superpowers（git）
+
+## 效果（下次会话生效）
+- 出代码前：spec-driven（先想再写）
+- 写代码时：karpathy-rules（简单/外科手术式改动）
+- 改完：test-driven（验证）+ code-reviewer（五维审查）+ webapp-testing（浏览器级）
+- 记忆：hermes-memory（跨会话）+ context-mode（上下文压缩）
+- 复杂任务：subagents（自动拆分）
+
+## 待办
+- 下次大功能用完整流程试炼（spec→test→review 闭环）
+- 用户实测 Go购 问题汇总（回来后处理）
