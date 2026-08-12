@@ -10405,7 +10405,27 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 落实小布：browser-harness 架构笔记（2026-08-12 夜）
 
 ## 小布精读结论（收到）
+
 - browser-harness（16k+⭐，MIT）：极简 CDP 封装——不装（Windows 不明/Go购已稳定）
 - 两条架构笔记 → 已落雕龙方案附录 B：
   1. **Agent 自愈模式**（缺功能当场生成→持久化）→ 雕龙爬虫新站容错方案
   2. **Domain Skills 机制**（完成任务自动存选择器/流程）→ 站点技能库（与 skill-creator/darwin 同源哲学）
+
+---
+
+# 📤 Wardrobe 安装使用（2026-08-12 夜）
+
+## 安装完成
+- 位置：`C:/Users/luoji/wardrobe/`（npm install 142 包 ✅，服务 HTTP 200 ✅）
+- 桌面入口：`Wardrobe衣柜.bat`（双击 → 自动开浏览器 localhost:5173）
+- .env 已建：OPENAI_API_KEY 空——等用户注册 OpenAI 后填
+
+## 使用路径（用户待办）
+1. 注册 OpenAI 账号 + 充值（需海外支付）→ 创建 API Key → 填进 `C:/Users/luoji/wardrobe/.env`
+2. 放一张自己的 PNG 照片到 `data/model-reference.png`（做"模特上身图"用）
+3. 拍衣服照片 → 拖进网页 → 自动抠图入库
+4. 没有 Key 也能看界面（导入功能灰着）——核心功能等 Key
+
+## 依赖
+- OpenAI API（gpt-5.4-mini 识图 + gpt-image-2 抠图）——DeepSeek 不支持替代
+- Node 22 ✅（已装）
