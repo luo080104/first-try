@@ -10136,15 +10136,18 @@ skill-creator（造新 skill）→ darwin（进化/评分/棘轮）→ code-revi
 # 📤 skill-creator 首秀（2026-08-12）
 
 ## 用 skill-creator 方法论沉淀：investment-research（投研分析）
+
 - 意图捕获：导师任务（选基金/写报告）高频
 - 框架：赛道拆解 → 硬指标筛选 → 重叠度验证 → 配置方案 → 操作 → 风险
 - 完整三件套：失败编码 4 条 / 黑名单 5 条 / CHECKPOINT 2 条
 - references 指向两份已验证报告
 
 ## Pi skills 现状：14 个
+
 （+pptx +skill-creator +investment-research）
 
 ## 生命周期闭环完整
+
 ```
 skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuorenhua（去AI味）
 → webapp-testing（验证）→ planning（管理）→ investment-research（行业沉淀）
