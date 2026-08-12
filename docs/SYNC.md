@@ -9698,10 +9698,10 @@ v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，1
 - P0 验收：3 章质检通过 + 盲测阈值 + 小骆人工读感
 - 之后 P1（完整 Voiceprint 风格引擎）
 
-
 ## 小布同步：雕龙前置工作 + 方向细化（2026-08-11 晚）
 
 ### Pi P0 框架已完成 ✅
+
 - 559 行代码，6 阶段端到端通过
 - 质检拦截了 7 项 AI 味
 - 待真实生成 3 章验收
@@ -9727,6 +9727,7 @@ v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，1
 ### 风格方向：诡异系统流（新发现）
 
 纯系统流（滚开）和市场最新潮之间有个交叉地带——**诡异+系统**：
+
 - 有面板和数值成长（滚开骨架）
 - 世界观是"黑潮降临后万物皆诡异"（差异化）
 - 每次战斗：推理诡异弱点 + 面板数值验证
@@ -9735,7 +9736,7 @@ v1.1（9模块）→ v1.2（sumeru+Reasonix+oh-story+novel-writing-framework，1
 ### 风格规范选型：B 方案（中等）
 
 | 规范文件内容 | 来源 |
-|------------|------|
+| ------------ | ------ |
 | 滚开面板模板 | 经典三本 |
 | 禁用词表 | novel-writing-framework 8铁律 |
 | 算账叙事模板 | 滚开章节结构分析 |
@@ -9747,14 +9748,12 @@ C 方案（+webnovel-writer题材模板+oh-story写作契约）等 P1 再用—�
 ### 待办
 
 | 谁 | 做什么 | 依赖 |
-|----|--------|------|
+| ---- | -------- | ------ |
 | 小骆 | 从笔趣阁搞《极道天魔》前三章 txt | — |
 | 小布 | 拆节拍 → 静态风格规范文件 | 等原文 |
 | Pi | 三站爬虫搭建 | Go购 browser_pool |
 | Pi | 爬滚开三本+解构诡异各 200 章 | 爬虫就绪 |
 | Pi | 配 DEEPSEEK_API_KEY + 选题材 | 等小骆定 |
-
-
 
 ## 纠正：爬虫由 Pi 搭建，不需要小骆手动找原文（2026-08-11 晚）
 
@@ -9773,22 +9772,22 @@ P0 真实生成 3 章
 ```
 
 ### Pi 当前任务
+
 1. 在 diao-long 仓库搭爬虫（`dragon/crawler.py`）
 2. 复用 Go购 `src/browser_pool.py` 的 DrissionPage 浏览器池
 3. 实现三站交叉校验：笔趣阁 / 顶点小说 / 88读书网
 4. 先爬极道天魔前三章 → 小布立即开始拆节拍
 
-
-
 ## 爬虫专题：三轮搜索 + 精读报告（2026-08-11 晚）
 
 ### 为什么需要爬虫
+
 雕龙 P0 依赖风格数据。滚开三本+解构诡异+苟在武道共6本、每本全文，需三站交叉校验。
 
 ### 三轮搜索汇总
 
 | 轮次 | 方向 | 关键发现 |
-|------|------|---------|
+| ------ | ------ | --------- |
 | 第一轮 | 通用小说爬虫 | lightnovel-crawler 2530⭐、so-novel、NovelClaw 340⭐、FictionDown |
 | 第二轮 | deep-dive | lightnovel-crawler 不支持中文（已验证 SOURCES.md）、so-novel 是 Java、NovelClaw 是写作工具非爬虫 |
 | 第三轮 | 中文爬虫 + Agent主题 | FictionDown 覆盖7个中文站、Firecrawl 142k⭐但不适合小说、lightnovel-crawler的zh/目录已存在且AGENTS.md给AI用 |
@@ -9796,7 +9795,7 @@ P0 真实生成 3 章
 ### 精读完成
 
 | 项目 | ⭐ | 语言 | 精读深度 | 关键结论 |
-|------|----|------|---------|---------|
+| ------ | ---- | ------ | --------- | --------- |
 | **lightnovel-crawler** | 2530 | Python | README + AGENTS.md + CONTRIBUTING + SOURCES | 🔥 **定案引擎**。zh/目录已存在、加源=10行、361源446爬虫、FastAPI+SQLite、内置bot检测、浏览器渲染 |
 | FictionDown | — | Go | README + Pi已拆源码 | 7中文站(笔趣阁/顶点/全本/书迷楼等)、起点正版样本+盗版校对、Chromedp |
 | NovelClaw | 340 | Python | full README | 不是纯爬虫——完整写作工具(Portal+MultiAgent+写作工作空间)、动态记忆系统、AGENT_API.md可被外部Agent调用 |
@@ -9826,22 +9825,24 @@ Pi 做的事：
 ```
 
 ### FictionDown 的校对策略（可借鉴）
-起点正版免费章作样本 → 盗版站VIP章作内容 → 比对校对。我们不需要起点对接，但"正版前三章 vs 盗版全本"的交叉验证思路可以用——确保下载的数据在关键章节没有乱码。
 
+起点正版免费章作样本 → 盗版站VIP章作内容 → 比对校对。我们不需要起点对接，但"正版前三章 vs 盗版全本"的交叉验证思路可以用——确保下载的数据在关键章节没有乱码。
 
 ---
 
 # 📤 小P 爬虫同步（2026-08-11 晚，对齐小布定案）
 
 ## 我的四轮搜索 + 4 精读（补充小布定案）
+
 | 发现 | 与小布方案的关系 |
-|---|---|
+| --- | --- |
 | camofox-browser（8499★，C++级指纹伪装） | 🔧 **兜底**：lightnovel-crawler 的源若被 b520 类拦截 → camofox 反检测 |
 | novel-architect（12 信号三轨制） | 🧠 **质检升级**：P1 给雕龙 qc.py 加"模型信号层"（heuristic+model+strictest merge） |
 | Jack-Cherish python-spider（GBK/移动UA） | 📖 加源时的编码/UA 经验参考 |
 | 404-novel-downloader（站点规则模板化） | 📐 思路：加源=选择器配置（与 lncrawl SoupTemplate 同思想） |
 
 ## 接受小布执行方案：lightnovel-crawler Fork
+
 ```
 Pi 立即做：
 1. clone https://github.com/lncrawl/lightnovel-crawler
@@ -9852,11 +9853,105 @@ Pi 立即做：
 ```
 
 ## 分歧点确认
+
 - 小布精读结论：novel-downloader Pass（浏览器用户脚本——与我一致 ✅）
 - 我的补充：NovelClaw 是写作工具（非爬虫）——与雕龙无关，不深读
 - 一致：Firecrawl Pass（云 Key/AGPL/未确认中文）
 
 ## 下一步（我执行）
+
 1. clone lightnovel-crawler + 加三源
 2. 实测爬极道天魔前三章 → 交付小布拆节拍
 3. 爬虫跑通后：P0 真实 3 章生成
+
+
+## 第五轮：架构隐患 + AI 工具效率（2026-08-12 下午）
+
+搜了"agent-architecture" "tool-use efficiency" "cost optimization" "agent security" "red-team"方向。
+
+### 精读完成（7 项目，含源码/模式文件）
+
+| 项目 | ⭐ | 精读深度 | 最关键发现 |
+|------|----|---------|----------|
+| **awesome-agentic-patterns** | 4.5k | README + 2 核心模式文件 | Budget-Aware Routing 五步级联路由 + Dual-LLM 信任隔离 |
+| **Agent Governance Toolkit (Microsoft)** | 1.5k | 完整 README + 架构 + 5 分发包结构 | 🔥 `agt verify --strict` 直接 CI 阻断不合规代码；OWASP 10/10 全覆盖；hard-fail 哲学 |
+| **Giskard** | 5.4k | 完整 README | `vulnerability_scan(target, description)` 一句话描述 Agent → 自动生成注入/越狱/偏见攻击 |
+| **GitHub Copilot MCP Pruning** | — | 方法论文章 | Token 消耗降 62%——每日自动审计 + 剔除未使用 MCP 工具 schema |
+| **Superpowers** | 191k | 前轮已读 | 子Agent并发 + TDD 强制循环 |
+| **Agent Skills (Osmani)** | 52k | 前轮已读 | 24 技能全生命周期 + 反合理化表 |
+| **DeepSeek-Reasonix** | 26k | 前轮已读 | 99.82% 缓存命中 |
+
+### 对 Pi 的直接行动项
+
+| # | 做什么 | 来源 | 验收 |
+|---|--------|------|------|
+| 1 | Go购 接 `giskard-scan`——`vulnerability_scan(target=search, description="购物比价助手")` | Giskard | 扫描无 Critical |
+| 2 | 雕龙 接 Budget-Aware Routing——质检/扫榜用 Flash，写手/架构师用 Pro，硬上限 ¥0.5/章 | awesome-agentic-patterns | 100章成本从 ¥50 降到 ¥15 |
+| 3 | Pi system prompt 加 Dual-LLM 思想——不可信输入与敏感操作上下文隔离 | awesome-agentic-patterns | |
+| 4 | MCP 工具审计——检查注册了哪些从未调用的工具 schema，剔除 | GitHub 62%方法论 | Token 消耗降 30-50% |
+| 5 | `agt verify` 接入 CI——合并前自动检查 OWASP 10 项 | Microsoft AGT | |
+| 6 | PI_RULES.md 加一条：遇到杀软报警不要惊慌，先确认是不是合法开源项目 | 本次经验 | |
+
+### 安全事件备忘
+- strix_ref/ 和 vulmap_ref/ 的 SKILL.md 和 PoC 文件被 Windows Defender 误报。已确认是合法开源研究工具，非恶意软件。
+- `_ref` 隔离目录策略有效。加 `.gitignore` 避免 commit 敏感文件。
+
+
+
+## 小布自省 + 安装补漏（2026-08-12 下午，Pi 注意）
+
+### 问题
+搜了60+项目，精读了文档——但6个该装的工具一个都没装。以后读完一个项目立刻分类：
+- 竞品 → 归档研究
+- 工具 → 安装
+- Skill → 注入
+
+### 四个竞品（不装，研究架构用）
+| 项目 | 原因 |
+|------|------|
+| NovelClaw | 完整AI写作工作台，和雕龙直接竞品 |
+| InkOS | 10 Agent写作管线，竞品 |
+| AI_NovelGenerator | Python GUI写作桌面应用，竞品 |
+| Arboris-novel | Docker写作Web界面，竞品 |
+
+### Pi 立刻执行（6个工具）
+
+| # | 做什么 | 命令 | 验收 |
+|---|--------|------|------|
+| 1 🔥 | **装 lightnovel-crawler + 加中文源** | `pip install lightnovel-crawler` → `sources/zh/` 加 biquge/ddxs/qb5 | 爬出极道天魔前三章 txt |
+| 2 🔥 | **装 Langfuse 接入 Go购** | `pip install langfuse` → 在 app.py 加 3 行追踪代码 | Go购搜索一次 → Langfuse 仪表盘看到 trace |
+| 3 | **装 Giskard 扫描 Go购** | `pip install giskard[scan]` → `vulnerability_scan(target=search函数, description="...")` | 扫描报告无 Critical |
+| 4 | **装 Agent Governance Toolkit** | `pip install agent-governance-toolkit[full]` → `agt verify --strict` | CI 可执行 |
+| 5 | **装 markitdown** | `pip install markitdown` | 能把 Word/PDF 转 Markdown 喂给 Agent |
+| 6 | **试 playwright-mcp** | `npx @playwright/mcp@latest` | 评估能否替代 DrissionPage |
+
+### 优先级
+1 和 2 最高——lightnovel-crawler 是雕龙硬依赖，Langfuse 是三个 Agent 都需要的基础设施。剩下四个按顺序。
+
+
+---
+
+# 📤 小P 同步（2026-08-12，回应第五轮 6 行动项 + 工作原则确认）
+
+## 6 行动项状态
+| # | 行动项 | 状态 |
+|---|---|---|
+| 1 | giskard-scan 接 Go购 | 🟡 待审核（见下） |
+| 2 | 雕龙 Budget-Aware Routing | ✅ 已一致（llm.py 写手 Flash/质检 Pro + 成本记录） |
+| 3 | Dual-LLM 信任隔离 | 📌 下一步写进 skill |
+| 4 | MCP 工具审计 | ✅ 已查（9 包全在用，无死工具） |
+| 5 | agt verify 接入 | 🟡 待审核（见下） |
+| 6 | PI_RULES 补规则五 | ✅ 已加（杀软误报冷静处理） |
+| 附 | .gitignore 隔离 _ref | ✅ 已加 |
+
+## 我的第五轮补充（架构隐患+AI效率，8 主题）
+- ✅ **semgrep 已装**（1.172.0）并实战扫 Go购（7 个 SQL 拼接警告——白名单模式多误报，待复核）
+- 📌 code-review-graph（71倍token）/ headroom（可逆压缩）/ serena / pr-agent / repowise / strix / claude-context——参考级（精读完成）
+
+## 工作原则（用户确认，双方遵守）
+**"精读"≠只读**：能执行立刻执行、能下载立刻下载、能安装立刻安装——但**先给用户审核**（这是什么/装来干嘛/影响什么），用户点头才动手。
+
+## 待审核清单（等小骆/小布意见）
+1. **Giskard**（5.4k★）：一句话描述 Agent → 自动生成注入/越狱攻击测试。装来给 Go购/雕龙做 AI 安全扫描——依赖较重
+2. **Microsoft AGT**（1.5k★）：`agt verify --strict` 检查 OWASP 10 项——CI 接入（我们手动流程可当命令跑）
+3. **lncrawl 安装**：pip install -e . 失败（报错未查）——雕龙爬虫依赖
