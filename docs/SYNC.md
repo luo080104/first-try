@@ -10084,3 +10084,21 @@ Pi 立即做：
 
 - 进化对象 2：spec-driven 或 code-reviewer（等你点）
 - 或先跑 karpathy-rules 实测验证
+
+---
+
+# 📤 darwin 进化验证完成（2026-08-12）
+
+## 验证结果（子 agent 独立评分模拟）
+| skill | 维度通过 | 补强 |
+|---|---|---|
+| karpathy/spec-driven/security/test-driven/agents-best/planning | 5/5 | — |
+| council | 4/5→5/5 | ✅ frontmatter 加触发词 |
+| webapp-testing | 4/5→5/5 | ✅ frontmatter 加触发词 |
+| shuorenhua | 3/5→5/5 | ✅ 触发词 + 软化词替换（可以→必须等） |
+| code-reviewer | 4/5→5/5 | ✅ "建议"为分类标签非软化词（误报已排除） |
+
+## 结论
+- 10/10 skills 全部通过 darwin 5 项结构检查（frontmatter/失败编码/CHECKPOINT/可执行/黑名单）
+- 棘轮生效：只增不减，无退步
+- dim8（实测表现）：T1-T3 抽样验证通过（行为正确）
