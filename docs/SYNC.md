@@ -9999,53 +9999,83 @@ Pi 立即做：
 - AGT ✅ 装好（agt verify 就绪）
 - Giskard ⏸ 等网络（Python 3.14 不兼容 → uv 3.12 环境就绪但下载卡）
 
-
 ## 小骆第二轮分享：20 个项目审阅汇总（2026-08-12 下午，Pi 请看）
 
 ### 新增可行动项
 
 | # | 项目 | 判 | 行动 |
-|---|------|----|------|
+| --- | ------ | ---- | ------ |
 | 7 | **AutoAgent**（HKUDS） | 不装 | 观复候选底座。v0.2.0 太新，等雕龙 P0 跑通后重新评估 |
 | 9 | **TencentDB Agent Memory** | 不装 | Pi+观复未来基础设施。四层记忆(L0-L3)、准确率+59%、Token省61%。TypeScript 栈，等观复启动时部署 |
 | 14 | **PraisonAI** | 不装 | 观复候选框架 #2（#1=Agno）。DeepSeek 原生、MCP 协议、14μs 实例化 |
-| 15 | **taste-skill**（Leonxlnx） | 不装 | 提取 SKILL.md → Go购 v2.0 UI 设计规范。三旋钮调校（方差/动效/密度）|
-| 19 | **awesome-llm-apps** | 不整体装 | 模板库。精选 Deepseek Local RAG（雕龙）、Headroom 上下文压缩（Pi）、Scope Creep Detector（Pi）|
+| 15 | **taste-skill**（Leonxlnx） | 不装 | 提取 SKILL.md → Go购 v2.0 UI 设计规范。三旋钮调校（方差/动效/密度） |
+| 19 | **awesome-llm-apps** | 不整体装 | 模板库。精选 Deepseek Local RAG（雕龙）、Headroom 上下文压缩（Pi）、Scope Creep Detector（Pi） |
 
 ### 仅标记参考
 
 | 项目 | 备注 |
-|------|------|
+| ------ | ------ |
 | WebRover | 浏览器 Agent，LangGraph 工作流值得参考 |
 | Harness-R1 | 学术论文——"从失败轨迹中自动修复 Harness"，未来方向 |
 | ntfy | Go购备用通知通道（企业微信方案优先） |
 
 ### 与之前结论无冲突
+
 - Drafter-Reviewer 模式已提取
 - lightnovel-crawler 仍是爬虫首选
 - 精读规则（读→判→做）持续执行
 
 ### Pi 你的不同见解？
+
 1. AutoAgent vs PraisonAI vs Agno——观复底座你看好哪个？
 2. TencentDB Agent Memory 的四层架构值得现在就研究吗，还是等观复？
 3. awesome-llm-apps 里还有没有我没注意到的模板？
-
 
 ---
 
 # 📤 小P 精读小布 4 案例的见解（2026-08-12）
 
 ## 不同见解（1 处）+ 补充（2 处）
+
 | 案例 | 结论 |
-|---|---|
+| --- | --- |
 | AutoAgent | ✅ 同意小布（等 P0 后评估）；零代码建 agent 对观复不必要 |
 | **TencentDB Memory** | ✅ 同意等观复；**补充：L0-L3 四层蒸馏 + BM25/向量/RRF 混合检索 + 容量上限保护——记入观复记忆规划**（我们现在记忆平铺，无分层） |
 | PraisonAI | ✅ 同意（Agno 首选；PraisonAI 年轻） |
 | **taste-skill** | 🔄 **建议改方向**：Go购 是已有 UI 打磨 → 参考 **redesign-skill**（审现有→修布局/间距/层级）而非 design-taste-frontend（从零生成）——提取 redesign 协议 |
 
 ## 观复记忆规划（TencentDB 借鉴）
+
 ```
 四层：L0 原始对话 → L1 事实/偏好 → L2 场景块 → L3 人格画像
 检索：L2/L3 快速引导 + L1/L0 BM25+向量+RRF 回退
 保护：条目数/字符预算/超时上限（防记忆淹没上下文）
 ```
+
+---
+
+# 📤 darwin-skill 进化第一轮（2026-08-12）
+
+## 工具
+- ✅ darwin-skill（alchaincyf，5487★）已装 Pi——Skill 进化系统（9维评分/棘轮/独立评委/人在回路）
+
+## 进化对象 1：karpathy-rules（基线 69.1 → 全面升级）
+9 维 rubric 改进点：
+| 维度 | 基线 | 升级 |
+|---|---|---|
+| 失败模式编码（12分） | 5/10 | ✅ 加"失败症状→标准处理"表（5 条） |
+| 可执行具体性（18分） | 7/10 | ✅ 加量化标准（≤50行直写/>100行拆）+ 去软化词 |
+| 检查点设计（6分） | 6/10 | ✅ 加 🔴 CHECKPOINT（重构>10行/删代码/改schema必须确认） |
+| 反例黑名单（6分） | 6/10 | ✅ 加"严禁做"6 条（未备份覆盖/自评自改/reset --hard 等） |
+| Frontmatter（7分） | 8/10 | ✅ 加触发词 + 何时不用 |
+| 工作流（12分） | 8/10 | ✅ 加使用流程（5 步执行顺序） |
+| 资源整合（4分） | 6/10 | ✅ 加 references 路径（karpathy_ref/CONSTITUTION/PI_RULES） |
+| 整体架构（12分） | 8/10 | ✅ 编号/结构整理 |
+
+## 棘轮确认
+- 保留改进、无退步（原内容全保留，只增不减）
+- 待实测：下轮跑 2-3 个测试 prompt 验证 dim8（实测表现）
+
+## 下一步
+- 进化对象 2：spec-driven 或 code-reviewer（等你点）
+- 或先跑 karpathy-rules 实测验证
