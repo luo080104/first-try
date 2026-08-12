@@ -1,0 +1,81 @@
+2026-08-10 11:53:05.845: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:05.845: [INFO] Profiles total count: 1
+2026-08-10 11:53:05.845: [INFO] Profile: name=用户配置 1 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:05.799Z
+2026-08-10 11:53:05.845: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:05.845: [INFO] MostRecentlyActiveProfile: name=用户配置 1 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:05.799Z
+2026-08-10 11:53:05.845: [INFO] OnDoneLoading sync enabled: 0
+2026-08-10 11:53:05.845: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:53:05.845: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:53:05.845: [INFO] BookmarksSnapshot Startup total=5 bar=5 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:53:05.863: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-08-10 11:53:06.224: [INFO] VisibilityChanged: 0
+2026-08-10 11:53:06.680: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-08-10 11:53:06.683: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-08-10 11:53:06.685: [INFO] Primary account changed.
+2026-08-10 11:53:06.685: [INFO] OnPrimaryAccountChanged PrimaryAccountChangeEvent::Type::kSet
+2026-08-10 11:53:06.690: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-08-10 11:53:06.710: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 3
+2026-08-10 11:53:11.888: [INFO] BookmarkNodeAdded, ABU: 0
+2026-08-10 11:53:11.888: [INFO] BookmarkNodeAdded, ABU: 0
+2026-08-10 11:53:11.888: [INFO] BookmarkNodeAdded, ABU: 0
+2026-08-10 11:53:11.888: [INFO] BookmarkNodeAdded, ABU: 0
+2026-08-10 11:53:14.624: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:53:23.326: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:23.326: [INFO] Profiles total count: 1
+2026-08-10 11:53:23.326: [INFO] Profile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:23.281Z
+2026-08-10 11:53:23.326: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:23.326: [INFO] MostRecentlyActiveProfile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:23.281Z
+2026-08-10 11:53:23.326: [INFO] OnDoneLoading sync enabled: 1
+2026-08-10 11:53:23.326: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:53:23.326: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:53:23.327: [INFO] BookmarksSnapshot Startup total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:53:23.651: [INFO] VisibilityChanged: 0
+2026-08-10 11:53:31.859: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:53:51.266: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:51.266: [INFO] Profiles total count: 1
+2026-08-10 11:53:51.266: [INFO] Profile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:51.239Z
+2026-08-10 11:53:51.266: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:53:51.267: [INFO] MostRecentlyActiveProfile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:53:51.239Z
+2026-08-10 11:53:51.267: [INFO] OnDoneLoading sync enabled: 1
+2026-08-10 11:53:51.267: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:53:51.267: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:53:51.267: [INFO] BookmarksSnapshot Startup total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:53:51.497: [INFO] VisibilityChanged: 0
+2026-08-10 11:53:52.464: [INFO] Sync initialization duration: 918ms
+2026-08-10 11:54:00.772: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:54:07.585: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:54:07.585: [INFO] Profiles total count: 1
+2026-08-10 11:54:07.585: [INFO] Profile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:54:07.562Z
+2026-08-10 11:54:07.585: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:54:07.585: [INFO] MostRecentlyActiveProfile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:54:07.562Z
+2026-08-10 11:54:07.585: [INFO] OnDoneLoading sync enabled: 1
+2026-08-10 11:54:07.585: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:54:07.585: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:54:07.585: [INFO] BookmarksSnapshot Startup total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:54:07.884: [INFO] VisibilityChanged: 0
+2026-08-10 11:54:07.950: [INFO] Sync initialization duration: 18ms
+2026-08-10 11:54:13.156: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:54:27.652: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:54:27.652: [INFO] Profiles total count: 1
+2026-08-10 11:54:27.652: [INFO] Profile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:54:27.630Z
+2026-08-10 11:54:27.652: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:54:27.652: [INFO] MostRecentlyActiveProfile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:54:27.630Z
+2026-08-10 11:54:27.652: [INFO] OnDoneLoading sync enabled: 1
+2026-08-10 11:54:27.652: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:54:27.652: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:54:27.652: [INFO] BookmarksSnapshot Startup total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:54:27.852: [INFO] VisibilityChanged: 0
+2026-08-10 11:54:27.922: [INFO] Sync initialization duration: 15ms
+2026-08-10 11:54:36.103: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:55:22.113: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:55:22.113: [INFO] Profiles total count: 1
+2026-08-10 11:55:22.114: [INFO] Profile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:55:22.089Z
+2026-08-10 11:55:22.114: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default
+2026-08-10 11:55:22.114: [INFO] MostRecentlyActiveProfile: name=个人 path=C:\Users\luoji\shopping-agent\data\tb_test_mobile\Default lastActive=2026-08-10T11:55:22.089Z
+2026-08-10 11:55:22.114: [INFO] OnDoneLoading sync enabled: 1
+2026-08-10 11:55:22.114: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-10 11:55:22.114: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-10 11:55:22.114: [INFO] BookmarksSnapshot Startup total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-10 11:55:22.360: [INFO] VisibilityChanged: 0
+2026-08-10 11:55:22.438: [INFO] Sync initialization duration: 18ms
+2026-08-10 11:55:28.704: [INFO] BookmarksSnapshot Shutdown total=9 bar=9 other=0 mobile=0 showBar=0 showBarNTP=1

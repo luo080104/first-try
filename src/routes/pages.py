@@ -3,6 +3,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 from app_state import CATEGORIES, templates
+from db import check_watches, init_db, list_watches, save_manual_price, stats_items
 
 router = APIRouter()
 

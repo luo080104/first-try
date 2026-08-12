@@ -1,17 +1,16 @@
 # routes/api.py — API 路由（从 app.py 拆分，2026-08-12 路由拆分工程）
 import asyncio
-import json
 import os
-import random
-import time
-import urllib.parse
-import urllib.request
-from datetime import datetime
-from fastapi import APIRouter, Form, Request
 
-from app_state import _BACKGROUND_TASKS, CATEGORIES, templates
+from fastapi import APIRouter, Form
+
+from app_state import _BACKGROUND_TASKS
 
 router = APIRouter()
+
+import re
+
+from db import get_conn, init_db, stats_items
 
 
 @router.get("/api/price_trend")

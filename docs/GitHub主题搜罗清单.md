@@ -6,7 +6,7 @@
 ## 一、topic:agent-skill（2831 个仓库，TOP20 已看）
 
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 0xNyk/council-of-high-intelligence | 3920 | 多视角辩论系统（结构化多方深思）→ Go购辩论升级 + 金融评审团 | 🔴 |
 | DenisSergeevitch/agents-best-practices | 2205 | Agent 最佳实践（provider 中立）→ 三 agent 通用 | 🔴 |
 | Astro-Han/karpathy-llm-wiki | 1853 | Karpathy LLM 百科（Agent Skills 兼容）→ Pi 升级 | 🟡 |
@@ -20,7 +20,7 @@
 ## 二、topic:ai-agent（TOP10 已看）
 
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | ZhuLinsen/daily_stock_analysis | 61857 | **LLM 多市场股票分析系统**（多源行情/新闻/决策看板/自动推送）→ 金融 agent 蓝本 | 🔴 |
 | Panniantong/Agent-Reach | 70462 | 给 AI agent 联网能力 → 通用工具 | 🟡 |
 | NousResearch/hermes-agent | 228679 | "grows with you" 的 agent（hermes-memory 同源？）→ Pi 记忆参考 | 🟡 |
@@ -28,7 +28,7 @@
 ## 三、topic:agent-framework（TOP10 已看）
 
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | NirDiamant/agents-towards-production | 21268 | 生产级 agent 端到端教程（code-first）→ 三 agent 通用方法论 | 🔴 |
 | esengine/DeepSeek-Reasonix | 33848 | DeepSeek 原生编码 agent → Pi 参考（DeepSeek 同源） | 🟡 |
 | letta-ai/letta | 24185 | 有状态 agent 记忆平台 → 金融/雕龙记忆参考 | 🟡 |
@@ -51,8 +51,9 @@
 ## 五、第二轮搜罗（chinese-novel / coding-agent / financial-agent）
 
 ### topic:chinese-novel（59 个，雕龙大丰收）
+
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | zy-zmc/tianming-novel-ai-writer | 391 | **"天命"AI 小说创作系统：15维事实快照·12类变更声明** → 雕龙追踪系统直接参考 | 🔴 |
 | zy-zmc/tianming-skill | 124 | 天命协同创作 Skill（模块化提示词工程）→ 雕龙 prompt 体系参考 | 🔴 |
 | POf-L/Fanqie-novel-Downloader | 1550 | 番茄小说下载器 → 爬取参考 | 🟡 |
@@ -61,8 +62,9 @@
 | Narcooo/inkos | 8896 | 已克隆（inkos_ref）✅ | ✅ |
 
 ### topic:coding-agent（3757 个）
+
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | OthmanAdi/planning-with-files | 26093 | **持久文件化规划**（file-based planning for coding agents）→ Pi/三 agent 通用（planning 工具化） | 🔴 |
 | openinterpreter/openinterpreter | 67952 | 开源编码 agent → 通用参考 | 🟡 |
 | hesreallyhim/awesome-claude-code | 52099 | Claude Code 资源合集 → Pi 升级参考 | 🟡 |
@@ -72,7 +74,7 @@
 ## 六、第三轮搜罗（multi-agent / awesome-llm / agent）
 
 | 候选 | ★ | 价值 | 标记 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | bytedance/deer-flow | 79717 | **长时程 SuperAgent harness**（字节）→ 三 agent 通用架构参考 | 🔴 |
 | HKUDS/Vibe-Trading | 30567 | **个人交易 Agent** → 金融 agent 参考 | 🔴 |
 | Leonxlnx/taste-skill | 75220 | **"给 AI 好品味"**（去 AI 味/品味注入）→ 雕龙润色参考 | 🔴 |
@@ -84,6 +86,7 @@
 ## 七、最终汇总（按项目分，深读顺序）
 
 **金融 agent（5）**：
+
 1. 🔴 zhengxi-views（基金经理投研 skill）
 2. 🔴 daily_stock_analysis（LLM 股票分析系统）
 3. 🔴 council-of-high-intelligence（多视角辩论）
@@ -91,6 +94,7 @@
 5. 🔴 TradingAgents（已克隆 ✅ tradingagents_ref）
 
 **雕龙（6）**：
+
 1. 🔴 tianming-novel-ai-writer（15维事实快照/12类变更声明）
 2. 🔴 tianming-skill（模块化提示词）
 3. 🔴 shuorenhua（去 AI 味，确认克隆）
@@ -99,14 +103,17 @@
 6. 🟡 inkflow / open-novel-fanqie / Fanqie-Downloader
 
 **Go购（2）**：
+
 1. 🔴 council-of-high-intelligence（辩论升级）
 2. 🔴 agents-best-practices
 
 **Pi 升级（4）**：
+
 1. 🔴 planning-with-files（文件化规划）
 2. 🟡 karpathy-llm-wiki / compass-skills / hermes-agent / harness-sdk / awesome-claude-code
 
 **通用（2）**：
+
 1. 🔴 agents-towards-production（生产级教程）
 2. 🔴 deer-flow（长时程 harness）
 
@@ -115,7 +122,9 @@
 ## 八、第一批深读完成（Pi 升级 + Agent 合作，2026-08-11 晚）
 
 ### 1. planning-with-files（26093★）→ ✅ 已装 Pi
+
 **三文件模式**：task_plan.md（阶段勾选）/ findings.md（研究）/ progress.md（会话日志）
+
 - 核心原则：Context Window=RAM（易失），Filesystem=Disk（持久）→ 重要写盘
 - 触发：3+ 步骤或 5+ 工具调用 → 先建三文件
 - hooks：UserPromptSubmit 每轮注入 + PostToolUse 提醒 + Stop gate + PreCompact（Pi 8 hooks）
@@ -123,7 +132,9 @@
 - 价值：我的跨会话记忆工具化（与 hermes-memory 互补）
 
 ### 2. council-of-high-intelligence（3920★）→ ✅ 已装 Pi
+
 **18 位历史人物评委**（苏格拉底/费曼/孙子/芒格/塔勒布/卡尼曼…）
+
 - 流程：独立首轮立场（不互影响）→ 强制直接交锋 → 主席裁决（保留未解问题/异议/击杀标准/下一步）
 - polarity pairs（对立组）：苏格拉底vs费曼 / 亚里士多德vs老子 / 孙子vs奥勒留 / 图灵vs马基雅维利
 - 模式：--full（18人）/--triad（3人）/--duo（辩证）/--quick/profile
@@ -131,7 +142,9 @@
 - 价值：Go购辩论升级（3派→结构化多评委）+ 金融评审团流程参考
 
 ### 3. agents-best-practices（2205★）→ ✅ 已装 Pi
+
 **Harness 工程圣经**（provider 中立）
+
 - Canonical loop：模型提议 → harness 验证/授权/执行/记录/返回观察
 - 7 条循环不变量：工具调用必有结果/参数先验证/副作用前权限决策/结果有界/硬预算/答案基于观察/错误成结构化观察
 - MVP checklist（18 项：自治级别/权限矩阵/预算/记忆在 prompt 外/评估先行/影子模式）
@@ -139,15 +152,19 @@
 - 价值：三 agent 上线前审计清单直接可用
 
 ### 4. deer-flow（字节 79717★）→ 参考
+
 **Super agent harness**（sub-agents+memory+sandbox+skills）
+
 - 4 执行模式：flash/standard/pro（规划）/ultra（sub-agents）
 - contracts 契约驱动（run_event_stream/subagent_status/skill_review）
 - 价值：执行模式分级（Pi 参考）+ 契约化（雕龙/金融数据契约思想印证）
 
 ## Pi skills 最终清单（11 个）
+
 code-reviewer / council / karpathy-rules / planning-with-files / security-auditor / spec-driven / test-driven / webapp-testing / agents-best-practices / (superpowers/ponytail 包内)
 
 ## 下一批深读（待做）
+
 - 🟡 karpathy-llm-wiki / compass-skills / hermes-agent / harness-sdk / awesome-claude-code（Pi）
 - 🔴 agents-towards-production 教程精选（评估/记忆/安全三篇）
 - 金融：zhengxi-views / daily_stock_analysis / Vibe-Trading
@@ -158,33 +175,41 @@ code-reviewer / council / karpathy-rules / planning-with-files / security-audito
 ## 九、第二批深读完成（Pi 升级，2026-08-11 深夜）
 
 ### 1. pi-web-access + pi-session-recall → ✅ 已装 Pi
+
 - web-access：搜索/抓取/PDF（本地 unpdf 免费；搜索 API 需 key——我们暂不配，浏览器通道已够）
 - session-recall：跨会话索引/回忆（`/recall setup` → `index` → `search`）——"上次弹窗怎么改的"直接搜
 
 ### 2. 缓存命中率 KPI 看板 → ✅ 落地（178fa27）
+
 - /api/usage 加 hit_rate + cache_saved；首页 💰 弹窗显示
 - 实测：80.7% 命中率（同 session 94%），月费 ¥0.0786
 
 ### 3. AgentScope 2.0（阿里 22k★）→ 📌 观复底座备选
+
 - 生产级框架：模型覆盖（DeepSeek/OpenAI/DashScope + TTS）、事件系统（多模态流式）、Agentic Memory、多模态 RAG、MCP/Skill Hub、飞书/Discord 频道、K8s/Daytona 沙箱
 - 中文适配 ✅（阿里出品）——观复底座候选（与 Agno 二选一）
 
 ### 4. OpenCode（sst）→ 📌 Plan→Build 参考
+
 - build（全权限）/ plan（只读分析，默认拒编辑+bash 需权限）双 Agent Tab 切换
 - 对 Pi：plan 模式思路（只读分析）——spec-driven 已覆盖大部分；低优先
 
 ### 5. Voiceprint → 📌 概念确认（非仓库）
+
 - 搜索验证：Voiceprint 是**声纹识别**仓库（语音生物识别）——方案里是**借喻**（文字风格指纹）
 - 实现参考：novel-writing-framework（句长/标点/功能词统计已有）+ 雕龙方案 7 维指纹规格（P1 写 style_profile.py）
 
 ### 6. 性能优先原则确认（小骆）
+
 - 所有优化零延迟（缓存优化纯成本侧）；投影摘要不做（额外 LLM 调用=延迟）
 - 小成本接受（miss 部分）
 
 ## Pi 包最终清单（10 个）
+
 lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-web-access/pi-session-recall
 
 ## 剩余精读队列
+
 - hermes-agent（记忆——进行中）
 - n8n（工作流编排）
 - shuorenhua 深读（已克隆）
@@ -195,6 +220,7 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 ## 十、hermes-agent 精读（记忆升级，2026-08-11 深夜）
 
 ### 要点
+
 - **闭式学习循环**：Agent 策展记忆 + 周期性提醒 + 复杂任务后自主创建 skill + skill 自改进
 - **FTS5 会话搜索 + LLM 摘要跨会话回忆**（= pi-session-recall 已装 ✅）
 - Honcho 辩证用户建模（与用户画像同思想）
@@ -202,11 +228,13 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 - 7 终端后端（Telegram/Discord/Slack/WhatsApp + CLI 统一网关）
 
 ### 对 Pi 结论
+
 - hermes-memory（已装）= 它的核心记忆移植 ✅
 - session-recall（已装）= 它的跨会话搜索 ✅
 - **剩余价值低**（终端网关/后端多样我们不需求）——精读完成，不再深挖
 
 ## 今晚升级战果汇总（性能优先原则确认）
+
 1. ✅ 缓存 v2：命中率 55%→94%（a739652）
 2. ✅ 命中率 KPI 看板（178fa27）：/api/usage hit_rate + 首页显示（实测 80.7%）
 3. ✅ karpathy 补备份 + security 补底线清单（小布提升 #3/#4）
@@ -215,6 +243,7 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 6. ✅ 保守计费修复（cache 缺失按全 miss）
 
 ## 剩余队列
+
 - n8n（工作流编排——三 agent 未来）
 - shuorenhua 深读（雕龙 P1）
 - Langfuse（等服务器/轻量替代）
@@ -225,11 +254,13 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 ## 十一、n8n 快评 + shuorenhua 装机 + pi-lens 配置（2026-08-11 傍晚）
 
 ### n8n（200k★）→ 📌 不装
+
 - TypeScript 巨型 monorepo（26406 文件）——可视化工作流编排平台
 - 我们已有等价物：notify.py（定时）+ crawl.py（采集）+ app.py（服务）——编排内建在代码
 - 结论：参考思想（触发器→节点→状态传递），不装不读（架构不匹配）
 
 ### shuorenhua（去 AI 味）→ ✅ 已装 Pi（雕龙 P1 直接引用）
+
 - **7 类 AI 腔变体归并**：调试腔/庸医问诊腔/暴力动作腔/主动出击腔/总结提示腔/心理判断腔/郑重预告
 - **Tier 1-3 短语表**：开场套话（值得注意的是/众所周知/随着……的不断发展…）+ 渲染性强调（深刻的/前所未有/发人深省…）
 - **12 结构反模式**：二元对比假戏剧/否定式列举/戏剧化碎句/反问式铺垫/虚假主语/被动语态/三件套/首先其次最后/总结式收尾/对称填充/无源引用
@@ -237,20 +268,23 @@ lens/simplify/subagents/context-mode/hermes-memory/superpowers/ponytail/rtk/pi-w
 - 落地：~/.pi/agent/skills/shuorenhua/（SKILL.md + references 全量）
 
 ### pi-lens 配置 → ✅ 性能优先
+
 - Python 支持确认（pyright/ruff-lint）
 - 性能配置：关 opengrep/tests（重件），留 lsp/format/autofix 核心
 - 延迟基准：辅助工具 399-682ms（可接受，重件已关）
 
 ## Pi skills 最终清单（12 个）
+
 agents-best-practices / code-reviewer / council / karpathy-rules / planning-with-files /
 security-auditor / shuorenhua（新）/ spec-driven / test-driven / webapp-testing
-+ 包内 superpowers/ponytail
+- 包内 superpowers/ponytail
 
 ---
 
 ## 十二、DeepEval 精读完成（雕龙质检测试写法）
 
 ### 要点
+
 - **assert_test 语法**（pytest 风格）：LLMTestCase(input/actual_output/expected_output) + metric
 - 指标：G-Eval（LLM-as-judge 自定义标准）/ Task Completion / Tool Correctness 等
 - `deepeval test run` CLI 跑测试

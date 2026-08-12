@@ -2,9 +2,17 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from app_state import _BACKGROUND_TASKS, _json, CATEGORIES, templates
+from app_state import CATEGORIES, _json, templates
 
 router = APIRouter()
+
+import re
+
+import asyncio
+
+from api_client import search_goods, search_pdd, value_score
+from content_reader import read_content_items
+from llm_parse import generate_options, parse_intent
 
 
 def search_taobao_full(
@@ -121,18 +129,13 @@ def search_pdd_full(
 
 
 from db import (
-    add_watch,
-    check_watches,
     find_manual_prices,
     find_subsidies,
     get_conn,
     init_db,
     list_recommendations,
-    list_watches,
     query_items,
-    save_manual_price,
     save_search_result,
-    stats_items,
     upsert_product_item,
 )
 from matcher import ADAPTERS, group_by_sku, parse_items

@@ -1,5 +1,4 @@
 import os
-import re
 
 # app.py - Go购网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
@@ -40,16 +39,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 import asyncio
 
 import uvicorn
-
-from app_state import _BACKGROUND_TASKS, _langfuse, _trace_llm, CATEGORIES, templates
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-
-from api_client import search_goods, search_pdd, value_score
-from content_reader import read_content_items
-from llm_parse import generate_options, parse_intent
 
 app = FastAPI(title="Go购")
 app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "templates", "static")), name="static")
@@ -71,7 +62,10 @@ async def no_cache(request, call_next):
 
 
 # ===== 路由挂载（拆分工程 2026-08-12：路由移入 routes/ 包）=====
-from routes import search as _r_search, pages as _r_pages, api as _r_api
+from routes import api as _r_api
+from routes import pages as _r_pages
+from routes import search as _r_search
+
 app.include_router(_r_search.router)
 app.include_router(_r_pages.router)
 app.include_router(_r_api.router)
