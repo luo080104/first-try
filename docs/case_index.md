@@ -1,0 +1,12 @@
+- **zhaoyingjun/chatbot**（3583星，2026-08-12 自动收录）
+  - 简介: Chatbot继续沿着LLM前进，近期更新小参数量SLM的和训练脚本，支持本地训练。新增ChatAgent,实现各种有实际场景价值的Agent实现。
+  - 地址: https://github.com/zhaoyingjun/chatbot
+  - 本地: ~/chatbot_ref
+- **cirosantilli/china-dictatorship**（3140星，2026-08-12 自动收录）
+  - 简介: 反中共政治宣传库。Anti Chinese government propaganda. 住在中国真名用户的网友请别给星星，不然你要被警察请喝茶。常见问答集，新闻集和饭店和音乐建议。卐习万岁卐。冠状病
+  - 地址: https://github.com/cirosantilli/china-dictatorship
+  - 本地: ~/china-dictatorship_ref
+- **gege-circle/.github**（1973星，2026-08-12 自动收录）
+  - 简介: 这里是GitHub的草场，也是戈戈圈爱好者的交流地，主要讨论动漫、游戏、科技、人文、生活等所有话题，欢迎各位小伙伴们在此讨论趣事。This is GitHub grassland, and the c
+  - 地址: https://github.com/gege-circle/.github
+  - 本地: ~/_github_ref
