@@ -10416,16 +10416,31 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 Wardrobe 安装使用（2026-08-12 夜）
 
 ## 安装完成
+
 - 位置：`C:/Users/luoji/wardrobe/`（npm install 142 包 ✅，服务 HTTP 200 ✅）
 - 桌面入口：`Wardrobe衣柜.bat`（双击 → 自动开浏览器 localhost:5173）
 - .env 已建：OPENAI_API_KEY 空——等用户注册 OpenAI 后填
 
 ## 使用路径（用户待办）
+
 1. 注册 OpenAI 账号 + 充值（需海外支付）→ 创建 API Key → 填进 `C:/Users/luoji/wardrobe/.env`
 2. 放一张自己的 PNG 照片到 `data/model-reference.png`（做"模特上身图"用）
 3. 拍衣服照片 → 拖进网页 → 自动抠图入库
 4. 没有 Key 也能看界面（导入功能灰着）——核心功能等 Key
 
 ## 依赖
+
 - OpenAI API（gpt-5.4-mini 识图 + gpt-image-2 抠图）——DeepSeek 不支持替代
 - Node 22 ✅（已装）
+
+---
+
+# 🛠️ 桌面异常修复（2026-08-12 夜）
+
+## 真相（两个问题都查清了）
+1. **右上角"新图标"** = 我自己的锅：bash 创建中文文件名（Wardrobe衣柜.bat/使用教程.docx）时编码乱码 → 生成了乱码目录"先锋尝试" → 已移出文件 + 删目录 ✅
+2. **壁纸被换** = Windows 聚焦（Spotlight）开启 → 已关闭 Spotlight + 恢复 Windows 默认壁纸 ✅
+
+## 教训（记入）
+- **Windows 下 bash 创建中文文件名会乱码**（GBK/UTF-8 编码问题）——桌面文件一律用 PowerShell 或 edit 工具创建
+- 用户原壁纸未知（Pictures 里只有截图）——如果用户有原壁纸图可再设回
