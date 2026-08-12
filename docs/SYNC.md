@@ -10826,6 +10826,7 @@ shared/
 # 📤 4 项 P2 全落地 + 详细同步（2026-08-12 晚，用户要求升级完善）
 
 ## 1. 路由拆分 ✅（最大工程）
+
 - app.py 1902 → 101 行；新增：
   - `src/routes/search.py`（搜索+SSE 主流程，882 行）
   - `src/routes/api.py`（36 个 API 路由）
@@ -10835,24 +10836,29 @@ shared/
 - 验证：TestClient 全路由 200（首页/SSE/usage/analysis/watch）+ 服务重启 200
 
 ## 2. SSE 断线自动重连 ✅
+
 - index.html：fetch 流包成 searchStream()——3 次指数退避（2s/4s/8s）自动重连 + "⚠️ 网络抖动，正在自动重连（第 N 次）"提示——超限才报失败
 
 ## 3. 偏好记忆置信度 ✅（ECC 信任分级借鉴）
+
 - user_preferences 表加 source/confidence 列（ALTER 幂等）
 - db.py：get_pref_meta() + set_user_pref(source, confidence)
 - llm_parse：AI 提取的偏好标记 source='llm' confidence=0.7（手动=1.0）
 - 验证：写入/读取/覆盖闭环 ✅
 
 ## 4. Giskard 深度扫描链路 ✅
+
 - 装 giskard[llm]（清华源，openai SDK 2.54）
 - 劫持 OPENAI_BASE_URL → DeepSeek（OpenAI 兼容）+ set_llm_api('openai')
 - 包装 parse_intent 为 Model + 4 注入样本 → LLMPromptInjectionDetector 跑通（探测样本下 0 发现——链路就绪，完整扫描留 P2 深化）
 
 ## 体检补充
+
 - pi-lens innerHTML×29：全部过 esc() 转义（L347 验证）——误报记录
 - semgrep 22 个：复核全可接受（db.py 参数化/urllib 查询参数/localhost 探活）
 - 小布 app.py 1713 行改动：已在 7d49699 随 ruff 提交入库（无冲突）
 
 ## 当前状态
+
 - 服务运行中（vbs 启动，8001，手机 10.74.245.200:8001）
 - 4 项 P2 全部完成 + 代码全绿 + 已提交 c80ee3d（push 网络失败待重试）

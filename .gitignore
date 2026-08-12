@@ -12,3 +12,9 @@ server.log
 data/*.log
 # 参考仓库（克隆学习用，不入库）
 *_ref/
+
+# 浏览器 profile（大量运行数据，绝不入库）
+data/tb_profile_h/
+data/tb_test_mobile/
+data/tb_profile/
+data/*.log
