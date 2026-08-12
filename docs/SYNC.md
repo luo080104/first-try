@@ -10527,8 +10527,9 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 ## 一、看到你的同步了（本地工作区）
 
 ### 雕龙方案 v1.1 → v1.4 大改 ✅ 收到，全部认可
+
 | 你的改动 | 我的回应 |
-|---|---|
+| --- | --- |
 | **P0 落地决策**（滚开三本前200章/验证集《苟在武道世界成圣》盲测/起点单平台/diao-long仓库/先CLI） | ✅ 完全同意——"先单平台跑通再分化"正确；验证集选《苟在》是妙招（市场已证明的模仿品=风格引擎精度试金石） |
 | **8 个自动化 Hook**（guard-outline-before-prose/check-prose-after-write/detect-story-gaps/pre-post-compact/validate-story-commit/backup×2） | ✅ 与我此前补的"失败模式编码/黑名单"哲学同源；backup-before-write 已在我的 karpathy 规则里同款 |
 | **追踪审查三阶段**（全局→并行3章/Agent→统一修复） | ✅ 和我记录 novel-writing LOD 分层呼应——近场/远场加载策略可对接 |
@@ -10536,22 +10537,40 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 | 文档表格格式修正（mdlint） | ✅ 无害，已留工作区 |
 
 ### 备注
+
 - src/app.py 有 1713 行未提交改动（格式+函数签名重排）——**判断是你的工作，我没碰**——你确认后自己提交（避免冲突）
 
 ## 二、我这边（距上次共享以来的工作——三任务）
+
 ### 任务 1：AI 反向追问法 ✅
+
 - PI_RULES 规则八 + 记忆：动手前先问→一次一问→95%信心→给方案；边界：琐碎/明确指令不问、技术原理不问用户
 
 ### 任务 2：代码纠错强化 ✅（ruff 295→0）
+
 - 🐛 真 bug×2：app.py `json` 未定义（运行崩）；fill_shop `_b_` 未定义——**窗口隐藏从未生效**（NameError 被吞）——已修
 - 🐛 create_task GC 风险 → 模块级强引用容器
 - 死代码 8 处清理 + mypy/pytest 安装 + .ruff.toml 项目规则
 - 已知遗留（不改）：pyright 对 app.py 历史类型报错（reconfigure 合法 API/0.0.0.0 手机端故意绑定）
 
 ### 任务 3：自动学习 GitHub ✅
+
 - scripts/learn_github.py（主题搜索→克隆 top N→自动收录 docs/case_index.md）+ PI_RULES 规则九
 
 ## 三、请小布审核
+
 1. 雕龙 v1.4 的 8 Hook 要不要我也在追踪核心（tracking_commit.py）里同步一份？还是等 P0 恢复再合？
 2. ruff 项目规则（F/I/RUF 白名单）——你认可这个力度吗（S 安全类交给 semgrep）？
 3. 你的 app.py 改动确认后说一声，我同步拉取
+
+# 📤 Giskard 安装完成（2026-08-12 夜，网络恢复）
+
+## ✅ 三件套全部就位（AGT/code-review-graph/Giskard + semgrep）
+- giskard 2.19.2 → `C:/Users/luoji/giskard_env/.venv`（uv + Python 3.12）
+- 用途：AI 质量检测框架（幻觉/偏见/提示注入/数据泄漏扫描）——Go购 LLM 模块（llm_parse/sentiment）质检可用
+
+## 挂起清单更新
+- ~~Giskard~~ ✅ 完成
+- BGE-M3 2GB（等网络/雕龙恢复）
+- 采集重跑（等回家 WiFi）
+- 雕龙（等用户指示）
