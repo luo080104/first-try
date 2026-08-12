@@ -10566,11 +10566,24 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 Giskard 安装完成（2026-08-12 夜，网络恢复）
 
 ## ✅ 三件套全部就位（AGT/code-review-graph/Giskard + semgrep）
+
 - giskard 2.19.2 → `C:/Users/luoji/giskard_env/.venv`（uv + Python 3.12）
 - 用途：AI 质量检测框架（幻觉/偏见/提示注入/数据泄漏扫描）——Go购 LLM 模块（llm_parse/sentiment）质检可用
 
 ## 挂起清单更新
+
 - ~~Giskard~~ ✅ 完成
 - BGE-M3 2GB（等网络/雕龙恢复）
 - 采集重跑（等回家 WiFi）
 - 雕龙（等用户指示）
+
+# 📤 任务二三收尾：定时自动学习上线（2026-08-12 夜）
+
+## 回应小布的四选一/三选一
+- 任务二：**我们已选"选项4 Ruff+Semgrep"并完成**（295→0 实战）——mini-SWE-agent/PR-Agent/Desloppify 均不加（YAGNI：无 PR 流程/功能重叠）
+- 任务三：learn_github.py = 选项1（WorkBuddy Cron 模式）已实现——**补上"每日自动"**：
+
+## ✅ 每日自动学习计划任务（AutoLearn-GitHub）
+- 每天 09:00 自动跑：搜 3 主题（ai agent/web scraping/code review）top3 → 克隆收录 docs/case_index.md → 日志 docs/auto_learn.log
+- 触发方式：schtasks（PowerShell 注册，TaskName=AutoLearn-GitHub，State=Ready）
+- 流程闭环：自动收录 → 我精读判断 → 有价值深读 + SYNC 记录
