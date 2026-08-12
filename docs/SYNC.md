@@ -10376,17 +10376,25 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 GPT-Image2 配方库安装（2026-08-12 夜）
 
 ## 查证
+
 - 视频的"EvoLinkAI"组织不存在（GitHub 空组织）——真货：freestylefly/awesome-gpt-image-2（1.01万星，517案例）+ YouMind（9千星）
 
 ## 精读要点
+
 - Prompt as Code 哲学：散文式提示词 → 结构化协议（与雕龙预置铁律同哲学）
 - 22 套模板带 useWhen/guidance/pitfalls（与 skill 三件套结构一致 ✅）
 - 模板库封装成 Agent Skill（你说意图→选模板→出 prompt）
 
 ## 安装落地（用户点名"在桌面"）
+
 1. ✅ 桌面：`Desktop/GPT-Image2出图配方/`（301MB：517案例+526图+22模板+使用说明.txt）
 2. ✅ Pi skills：gpt-image-2-style-library（规则六三件套已进化）——触发词"用出图配方"
 3. ⚠️ 前提：出图需 GPT-Image2 API（DeepSeek 不支持画图）——等用户有图像 API 启用
 
 ## 待办追加
+
 - 图像 API 评估（雕龙封面/角色图用）——低优先，等用户提
+
+## GPT-Image2 已删除（2026-08-12 夜，用户决定）
+- 用户了解后决定不用（非应用、需付费 API）——已删：桌面配方库 + Pi skill + 2 个 ref 克隆
+- 教训记录：视频宣传的"工具"≠应用（是提示词库）——先澄清形态再装
