@@ -3,9 +3,9 @@
 # 第一次运行：会自动打开浏览器 → 请手动登录京东（60-120秒内）→ 登录后自动继续
 # 之后运行：登录态保持，直接搜索
 # 用法: python src/jd_browser_probe.py "石头岛"
+import os
 import sys
 import time
-import os
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',

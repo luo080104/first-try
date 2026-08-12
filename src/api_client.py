@@ -1,14 +1,16 @@
 # api_client.py - 大淘客 API 客户端 v1.1（阶段 1）
 # 支持：商品搜索 + 字段解析
+import datetime
 import hashlib
-import time
-import random
 import json
 import os
+import random
 import sqlite3
-import datetime
-import urllib.request
+import time
 import urllib.parse
+import urllib.request
+from typing import Optional
+
 
 def load_env():
     env = {}
@@ -116,7 +118,7 @@ def get(api_url: str, biz_params: dict) -> dict:
     with urllib.request.urlopen(urllib.request.Request(url, headers=_headers()), timeout=15) as r:
         return json.loads(r.read().decode('utf-8'))
 
-def search_goods(keywords: str, category: str = None, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
+def search_goods(keywords: str, category: Optional[str] = None, page: int = 1, size: int = 20, use_cache: bool = True) -> list:
     """淘宝系商品搜索（大淘客），带 24h 缓存"""
     cids = CATEGORY_CIDS.get(category) if category else None
     if use_cache:

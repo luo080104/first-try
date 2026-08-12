@@ -90,7 +90,7 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
         _cache_set(text, result)
         # v5.2：偏好自动记忆（"不要拼多多"→排除平台；"要纯棉"→品类偏好）
         try:
-            from db import add_excluded_platform, add_category_pref, add_global_pref
+            from db import add_category_pref, add_excluded_platform, add_global_pref
             if result['exclude_platform']:
                 add_excluded_platform(result['exclude_platform'])
             if result['pref_word']:

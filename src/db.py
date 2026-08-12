@@ -410,7 +410,7 @@ def query_items(keyword: str = '', category: str = '', platform: str = '',
     rows = conn.execute(f'''
         SELECT * FROM product_items {wsql}
         ORDER BY {order} LIMIT ? OFFSET ?
-    ''', args + [size, (page - 1) * size]).fetchall()
+    ''', [*args, size, (page - 1) * size]).fetchall()
     conn.close()
     if total == 0 and keyword:
         # 分词降级：提取型号token（5070ti/rtx5090）+ 去停用词后的中文词，逐个试

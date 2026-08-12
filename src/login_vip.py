@@ -1,5 +1,9 @@
 # login_vip.py - 唯品会登录引导（9302 独立实例，扫码用）
-import sys, os, time
+import os
+import sys
+import time
+
+
 def main():
     from DrissionPage import Chromium, ChromiumOptions
     profile = os.path.join(os.path.dirname(__file__), '..', 'data', 'vip_profile')

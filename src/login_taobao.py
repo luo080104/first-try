@@ -1,9 +1,10 @@
 # login_taobao.py - 淘宝登录引导（DrissionPage tb_profile）
 # 用法: python src/login_taobao.py
 # 流程: 弹出浏览器 → 请扫码/账号登录淘宝 → 检测登录成功后自动退出
-import sys
 import os
+import sys
 import time
+
 
 def main():
     from DrissionPage import Chromium, ChromiumOptions

@@ -1,12 +1,12 @@
 # crawl.py - v5 采集引擎（一键采集，WorkBuddy 审核版）
 # 流程：种子词/失败词 → API 快通道 + 浏览器慢通道 → 入库 → 状态记账 → 自动扩展新词
 # 断点续跑：done 跳过 / failed 重试 / 中断后可恢复
+import asyncio
 import os
 import re
 import sys
-import time
-import asyncio
 import threading
+import time
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -96,8 +96,8 @@ def find_new_words(items: list) -> list:
 async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回 (入库件数, items)"""
     from api_client import search_goods, search_pdd, search_vip
+    from app import search_pdd_full, search_taobao_full, search_vip_full
     from db import get_conn, upsert_product_item
-    from app import search_taobao_full, search_vip_full, search_pdd_full
 
     all_items = []
     # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
@@ -173,9 +173,13 @@ async def run_crawl_round(pages: int = 2, max_seconds: int = 72000) -> dict:  # 
     """跑一轮采集：pending+failed 词 → 报告。
     max_seconds: 硬性时长上限（默认 8 小时），到点自动停止，未完成词保持 pending 下轮继续。
     进度含 avg_per_word/eta 精准预估（实测均值 × 剩余量）。"""
-    from db import (ensure_crawl_tasks, get_pending_tasks,
-                    mark_crawl_task, add_auto_keywords, get_conn,
-                    upsert_product_item)
+    from db import (
+        ensure_crawl_tasks,
+        get_conn,
+        get_pending_tasks,
+        mark_crawl_task,
+        upsert_product_item,
+    )
 
     ensure_crawl_tasks()
     tasks = get_pending_tasks(500)  # 一轮取全部（310+ 词），避免 100 上限截断

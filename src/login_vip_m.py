@@ -1,7 +1,7 @@
 # login_vip_m.py - 唯品会移动站登录引导（m.vip.com，搜索页需要 m 站登录态）
 # 用法: python src/login_vip_m.py
-import sys
 import os
+import sys
 import time
 
 

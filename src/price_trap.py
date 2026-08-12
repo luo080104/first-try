@@ -1,7 +1,7 @@
 # price_trap.py - 套路检测（先涨后降 + 虚标原价）
 # WorkBuddy 审核修正：30天窗口 / ≥5条历史价 / 平台分组 / 占位价过滤 / 高点持续≥3天 / 虚标检测
-import sqlite3
 import os
+import sqlite3
 import statistics
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')

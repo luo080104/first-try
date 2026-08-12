@@ -1,0 +1,12 @@
+2026-08-11 02:30:16.771: [INFO] CurrentProfilePath: C:\Users\luoji\shopping-agent\src\data\pdd_profile\Default
+2026-08-11 02:30:16.771: [INFO] Profiles total count: 1
+2026-08-11 02:30:16.771: [INFO] Profile: name=用户配置 1 path=C:\Users\luoji\shopping-agent\src\data\pdd_profile\Default lastActive=2026-08-11T02:30:16.743Z
+2026-08-11 02:30:16.771: [INFO] LastUsedProfileDir: C:\Users\luoji\shopping-agent\src\data\pdd_profile\Default
+2026-08-11 02:30:16.771: [INFO] MostRecentlyActiveProfile: name=用户配置 1 path=C:\Users\luoji\shopping-agent\src\data\pdd_profile\Default lastActive=2026-08-11T02:30:16.743Z
+2026-08-11 02:30:16.771: [INFO] OnDoneLoading sync enabled: 0
+2026-08-11 02:30:16.771: [INFO] BookmarkModelLoaded, ids_reassigned: 0
+2026-08-11 02:30:16.771: [INFO] BookmarksLoadDropped droppedNodes=0
+2026-08-11 02:30:16.771: [INFO] BookmarksSnapshot Startup total=5 bar=5 other=0 mobile=0 showBar=0 showBarNTP=1
+2026-08-11 02:30:16.828: [INFO] RecordSyncInitDuration has_sync_been_enabled: 0 state: 0
+2026-08-11 02:30:17.233: [INFO] VisibilityChanged: 0
+2026-08-11 02:30:29.792: [INFO] BookmarksSnapshot Shutdown total=5 bar=5 other=0 mobile=0 showBar=0 showBarNTP=1

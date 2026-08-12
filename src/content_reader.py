@@ -5,8 +5,8 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(__file__))
-from score import score_content
 from price_trap import detect_trap
+from score import score_content
 
 # 内容读取缓存（60s：同一关键词短时间不重复读 jsonl）
 _content_cache = {}  # keyword -> (timestamp, result)

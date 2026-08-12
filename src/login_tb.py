@@ -1,5 +1,9 @@
 # login_tb.py - 淘宝登录引导（详情页需要）
-import sys, os, time
+import os
+import sys
+import time
+
+
 def main():
     from DrissionPage import Chromium, ChromiumOptions
     profile = os.path.join(os.path.dirname(__file__), '..', 'data', 'tb_profile')

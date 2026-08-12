@@ -1,9 +1,9 @@
 # extract_products.py - 内容→商品抽取（DeepSeek，WorkBuddy 审核的设计）
 # 流程：读 mc_ref jsonl → DeepSeek 抽取商品 → recommendations 表入库（content_id 去重）
 # 用法: python src/extract_products.py [关键词]   不带参数 = 全量抽取
-import sys
-import os
 import json
+import os
+import sys
 import urllib.request
 
 API_URL = 'https://api.deepseek.com/chat/completions'
@@ -88,7 +88,7 @@ def _call_llm(content_texts: list, batch_keywords: str) -> list:
 def run_extract(keyword: str = '') -> dict:
     """主入口：抽取 + 入库。返回统计"""
     sys.path.insert(0, os.path.dirname(__file__))
-    from db import get_conn, save_recommendation, init_db
+    from db import get_conn, init_db, save_recommendation
     init_db()  # 确保表结构/迁移就绪
     contents = read_content_all(keyword)
     if not contents:

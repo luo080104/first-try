@@ -1,8 +1,9 @@
 import re
+
 # app.py - Go购网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
 import sys
-import sys
+
 # 2026-08-11 小布①④：pythonw 下 stdout 默认 GBK，print emoji 崩（阻塞搜索+盯价500）——全局改 UTF-8
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -12,18 +13,21 @@ for _s in (sys.stdout, sys.stderr):
 import os
 
 sys.path.insert(0, os.path.dirname(__file__))
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
-import uvicorn
 import asyncio
-from fastapi.responses import StreamingResponse
 import json as _json
 
+import uvicorn
+
+_BACKGROUND_TASKS = set()  # 采集任务强引用容器（防 GC 回收未完成任务）
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from api_client import search_goods, search_pdd, value_score
-from llm_parse import parse_intent, generate_options
 from content_reader import read_content_items
+from llm_parse import generate_options, parse_intent
+
 
 def search_taobao_full(keyword: str, page: int = 1, max_items: int = 8, propagate_captcha: bool = False) -> list:
     """淘宝全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice
@@ -117,10 +121,22 @@ def search_pdd_full(keyword: str, page: int = 1, max_items: int = 8, propagate_c
             return []
         print(f'[pdd_full] 失败: {str(e)[:80]}')
         return []
-from score import score_content
-from price_trap import detect_trap
-from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, save_manual_price, find_manual_prices, add_watch, list_watches, check_watches, find_subsidies, upsert_product_item, query_items, stats_items, list_recommendations
+from db import (
+    add_watch,
+    check_watches,
+    find_manual_prices,
+    find_subsidies,
+    get_conn,
+    init_db,
+    list_recommendations,
+    list_watches,
+    query_items,
+    save_manual_price,
+    save_search_result,
+    stats_items,
+    upsert_product_item,
+)
+from matcher import ADAPTERS, group_by_sku, parse_items
 
 app = FastAPI(title='Go购')
 # 2026-08-10 弹窗终极方案：不预热！浏览器懒加载（仅实时模式首次搜索时创建）
@@ -149,7 +165,9 @@ def index(request: Request):
 
 @app.get('/search_bili')
 def search_bili_api(keyword: str = ''):
-    import subprocess, glob, json, os, time
+    import os
+    import subprocess
+    import time
 
     # 1. 确保 Edge CDP 在跑（9222）
     import urllib.request
@@ -456,7 +474,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             keyword, category = search_kw, search_cat
             # 快通道：API 并行（v5.2 加唯品会）
             yield step('搜索淘宝/拼多多/唯品会', 'running')
-            yield sse({'type': 'progress', 'msg': f'🔍 帮你搜下淘宝、拼多多、唯品会～'})
+            yield sse({'type': 'progress', 'msg': '🔍 帮你搜下淘宝、拼多多、唯品会～'})
             from api_client import search_vip
             tb_items, pdd_items, vip_items = await asyncio.gather(
                 asyncio.to_thread(search_goods, keyword, category or None, 1, 20, False),
@@ -479,7 +497,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
             # 慢通道自动补搜：快通道结果少（<5 条）→ 全网补搜；或拼多多 API 被限（返回空）→ 拼多多浏览器兜底
             slow_items = []
             if len(all_items) < 5:
-                yield sse({'type': 'progress', 'msg': f'这波没搜到啥合适的，我再帮你把淘宝、京东、唯品会、拼多多都翻一遍…'})
+                yield sse({'type': 'progress', 'msg': '这波没搜到啥合适的，我再帮你把淘宝、京东、唯品会、拼多多都翻一遍…'})
                 tb_full, jd_full, vip_full, pdd_full = await asyncio.gather(
                     asyncio.to_thread(search_taobao_full, keyword, 15),
                     asyncio.to_thread(search_jd_full, keyword, 15),
@@ -584,7 +602,7 @@ async def search_sse(keyword: str = '', category: str = '', guide_round: int = 0
                         _c = get_conn()
                         _row = _c.execute('SELECT history FROM chat_sessions WHERE session_id=? LIMIT 1', (session_id,)).fetchone()
                         if _row:
-                            _hist = json.loads(_row['history'] or '[]')
+                            _hist = _json.loads(_row['history'] or '[]')
                             history_txt = chr(10).join(
                                 ('用户: ' if m.get('role') == 'user' else 'AI: ') + str(m.get('content', ''))[:120]
                                 for m in _hist[-8:])
@@ -752,6 +770,7 @@ def wander_page(request: Request):
 async def api_chat(session_id: str = Form(''), user_name: str = Form(''), message: str = Form('')):
     """陪你出发：一轮聊天"""
     import uuid
+
     from guide import chat
     sid = session_id.strip() or str(uuid.uuid4())
     if not message.strip():
@@ -772,8 +791,8 @@ def api_usage():
 @app.get('/api/wander')
 def api_wander(user: str = '', size: int = 12):
     """购物漫游：按画像推荐（返回卡片 + 推荐理由）"""
-    from wander import wander_recommend
     from db import get_conn
+    from wander import wander_recommend
     # 已不喜欢/已收藏的排除
     conn = get_conn()
     rows = conn.execute("SELECT item_id FROM wander_feedback WHERE user_name=? AND action IN ('dislike','fav')", (user or '',)).fetchall()
@@ -925,7 +944,7 @@ async def api_spec_compare(keyword: str = Form(''), category: str = Form(''), gr
 @app.post('/api/debate')
 async def api_debate(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
     """多视角辩论：三派各自点评（分角色 prompt）"""
-    from compare import search_compare_slow, gen_debate
+    from compare import gen_debate, search_compare_slow
     data = await search_compare_slow(keyword, category)
     group = next((g for g in data['groups'] if g['key'] == group_key), None)
     if not group:
@@ -954,6 +973,7 @@ def api_similar(id: str = ''):
 async def api_invite_gen(user_name: str = Form(''), categories: str = Form('')):
     """生成邀请码（管理员）：Go-xxxx 6 位，绑定角色名+品类"""
     import secrets
+
     from db import get_conn, init_db
     init_db()
     if not user_name.strip():
@@ -1000,12 +1020,12 @@ def api_invite_list():
 async def api_crawl(pages: int = Form(2), max_minutes: int = Form(480)):
     """启动一轮采集（后台任务，进度查 /api/crawl_status）。
     max_minutes: 硬性时长上限（默认 480 分钟 = 8 小时），到点自动停"""
-    from crawl import run_crawl_round, get_progress
+    from crawl import get_progress, run_crawl_round
     if get_progress().get('running'):
         return {'ok': False, 'msg': '采集已在运行中，请稍候'}
     pages = min(max(pages, 1), 5)
     max_minutes = min(max(max_minutes, 10), 1200)  # 10 分钟 ~ 20 小时（P1-1：对齐 crawl 20h 上限）
-    asyncio.create_task(run_crawl_round(pages, max_seconds=max_minutes * 60))
+    _BACKGROUND_TASKS.add(asyncio.create_task(run_crawl_round(pages, max_seconds=max_minutes * 60)))
     return {'ok': True, 'msg': f'采集已启动（每词翻 {pages} 页，最长跑 {max_minutes} 分钟，到点自动停）'}
 
 @app.get('/api/crawl_status')
@@ -1017,7 +1037,7 @@ def api_crawl_status():
 @app.get('/api/crawl_tasks')
 def api_crawl_tasks():
     """任务表（采集中心页）"""
-    from db import list_crawl_tasks, crawl_stats
+    from db import crawl_stats, list_crawl_tasks
     init_db()
     return {'tasks': list_crawl_tasks(), 'stats': crawl_stats()}
 
@@ -1037,7 +1057,7 @@ async def api_crawl_add(keyword: str = Form(''), category: str = Form('')):
 @app.post('/api/prefs')
 async def api_prefs(prefs: str = Form('')):
     """偏好设置（v5.2）：逗号分隔排除平台，空=清除"""
-    from db import set_user_pref, PREF_EXCLUDE_PLATFORMS
+    from db import PREF_EXCLUDE_PLATFORMS, set_user_pref
     PLAT_MAP = {'拼多多': 'pdd', '京东': 'jd', '淘宝': 'tb', '唯品会': 'vip',
                 'pdd': 'pdd', 'jd': 'jd', 'tb': 'tb', 'vip': 'vip'}
     if not prefs.strip():
@@ -1068,7 +1088,7 @@ def compare_page(request: Request):
 @app.post('/api/compare')
 async def api_compare(keyword: str = Form(''), category: str = Form('')):
     """四平台搜索（快通道 + 京东/唯品会慢通道）+ SKU 合并 + 内容摘要"""
-    from compare import search_compare_slow, parse_link, content_summary
+    from compare import content_summary, parse_link, search_compare_slow
     kw = keyword.strip()
     link_info = parse_link(kw)
     # 链接输入：提取平台+ID，用 ID 查不到详情就回退为关键词搜索
@@ -1098,8 +1118,8 @@ async def api_compare(keyword: str = Form(''), category: str = Form('')):
 @app.post('/api/advice')
 async def api_advice(keyword: str = Form(''), category: str = Form(''), group_key: str = Form('')):
     """AI 建议面板（V4-Pro，异步加载 + 6h 缓存，WorkBuddy P1-3）"""
-    from compare import search_compare_slow, gen_advice
-    from db import get_conn, get_advice_cache, save_advice_cache
+    from compare import gen_advice, search_compare_slow
+    from db import get_advice_cache, get_conn, save_advice_cache
     cache_key = f'{keyword.strip()}|{group_key.strip()}'
     cached = get_advice_cache(cache_key)
     if cached:
@@ -1122,7 +1142,6 @@ async def api_advice(keyword: str = Form(''), category: str = Form(''), group_ke
             break
     conn.close()
     # v1.0 A-B 实验分流：按 user_name 稳定 hash → variant（a=新版prompt / b=旧版）
-    uname = ''  # api_advice 无 user 参数，用 keyword hash 稳定分流
     variant = 'a' if (sum(ord(c) for c in keyword) % 2 == 0) else 'b'
     advice = await asyncio.to_thread(gen_advice, keyword, group, data['subsidies'], history, variant)
     if not advice.startswith('【当前位】AI 建议暂时不可用'):

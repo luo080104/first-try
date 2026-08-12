@@ -1,7 +1,7 @@
 # llm_usage.py - AI 费用统计（Agent Part 会话追踪借鉴）
 # 各 LLM 调用点记录 token → 估算费用（元）→ 页面可查本月花费
-import sqlite3
 import os
+import sqlite3
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 

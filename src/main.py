@@ -1,13 +1,14 @@
 # main.py - Go购命令行入口 v2.0（阶段 2 雏形）
 # 用法: python src/main.py "羽绒服" [品类]
 # 流程: 双平台搜索 → SKU 分组 → 比价展示 → 存入 SQLite
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from api_client import search_goods, search_pdd
-from matcher import parse_items, group_by_sku, ADAPTERS
-from db import init_db, get_conn, save_search_result, recent_prices
+from db import get_conn, init_db, save_search_result
+from matcher import ADAPTERS, group_by_sku, parse_items
+
 
 def show_sku_comparison(groups: dict, max_groups: int = 5):
     """按 SKU 组展示比价：每组列出各平台最低价"""

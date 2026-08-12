@@ -1,5 +1,8 @@
 # jd_debug.py - 京东搜索页结构探测（一次性调试）
-import sys, os, time
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 EDGE_PATHS = [r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',

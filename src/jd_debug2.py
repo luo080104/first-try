@@ -1,5 +1,9 @@
 # jd_debug2.py - 京东搜索页数据源探测
-import sys, os, time, re, json
+import os
+import re
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 PROFILE_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'jd_profile')
@@ -36,7 +40,7 @@ def main():
     # 3. 打印含"石头岛"文本的 span/div 数量
     print('\n=== 含关键词文本元素 ===')
     try:
-        kws = tab.eles(f'xpath://*[contains(text(),"石头岛")]', timeout=5)
+        kws = tab.eles('xpath://*[contains(text(),"石头岛")]', timeout=5)
         print(f'  找到 {len(kws)} 个，前5个:')
         for k in kws[:5]:
             print(f'  - tag={k.tag} text={k.text[:40]}')

@@ -1,10 +1,11 @@
 # detail_crawler.py - 四平台商品详情浏览器爬取（小布决策：API只覆盖佣金商品，浏览器抓全量）
 # 复用各平台登录态+端口：tb9300/jd9301/vip9302/pdd9303；低频 15-20s；新商品入库时触发，不重跑全量
 import os
+import random
+import re
 import sys
 import time
-import re
-import random
+
 from browser_pool import get_browser, rehide_loop
 
 sys.path.insert(0, os.path.dirname(__file__))

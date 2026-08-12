@@ -3,7 +3,6 @@
 # 流程：定时检查 watched_items → 按标题搜索最新价 → 命中目标价 → 推送
 import os
 import sys
-import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -29,8 +28,8 @@ def push_wechat(text: str) -> bool:
     if sendkey:
         try:
             import json
-            import urllib.request
             import urllib.parse
+            import urllib.request
             body = urllib.parse.urlencode({'title': '🎯 Go购 盯价提醒', 'desp': text}).encode('utf-8')
             req = urllib.request.Request(f'https://sctapi.ftqq.com/{sendkey}.send', data=body)
             resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))

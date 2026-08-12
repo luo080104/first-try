@@ -1,19 +1,19 @@
 # compare.py - v3.5 对比页后端（Mode 2「帮我比」）
 # 职责：链接解析 + 三平台搜索 + SKU 合并 + 对比数据组装 + R1 AI 建议
+import json
 import os
 import re
 import sys
-import json
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from api_client import search_goods, search_pdd
-from matcher import parse_items, group_by_sku, ADAPTERS
-from db import find_subsidies, get_conn
 from content_reader import read_content_items
+from db import find_subsidies
+from matcher import ADAPTERS, group_by_sku, parse_items
 
 API_URL = 'https://api.deepseek.com/chat/completions'
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
@@ -106,7 +106,7 @@ def _group_items(all_items: list, category: str) -> list:
 
 def search_compare(keyword: str, category: str = '') -> dict:
     """对比页搜索：快通道 API（同步，供 advice 等秒回场景）"""
-    all_items, tb_items, pdd_items, vip_items = _search_fast(keyword, category)
+    all_items, tb_items, pdd_items, _vip_items = _search_fast(keyword, category)
     groups = _group_items(all_items, category)
     subsidies = find_subsidies(keyword, category)
     return {'keyword': keyword, 'category': category, 'groups': groups,
@@ -117,9 +117,11 @@ async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) 
     """对比页搜索：快通道 + 京东/唯品会浏览器慢通道（异步调用方负责 to_thread）
     慢通道结果 6h 内存缓存。"""
     import asyncio
-    from app import search_jd_full, search_vip_full, search_taobao_full as search_tb_full
 
-    all_items, tb_items, pdd_items, vip_api_items = _search_fast(keyword, category)
+    from app import search_jd_full, search_vip_full
+    from app import search_taobao_full as search_tb_full
+
+    all_items, tb_items, pdd_items, _vip_api_items = _search_fast(keyword, category)
 
     # 慢通道：淘宝 + 京东 + 唯品会浏览器（并行，端口 9300/9301/9302 不冲突）
     slow_key = f'{keyword}|{category}'

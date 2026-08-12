@@ -1,9 +1,9 @@
 # score.py - 内容可信度评分（按 WorkBuddy 审核修正实现）
 # 维度：互动35% + 口碑30% + 价格20% + 时效15%，博主乘法系数，跨平台一致性加分
+import datetime
 import json
 import os
 import sqlite3
-import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 BLOGGERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'bloggers.json')
@@ -65,7 +65,7 @@ def sentiment_score(platform: str, content_id: str) -> dict:
         conn.close()
         if not row:
             return {'score': 0.5, 'pos': 0, 'neg': 0, 'total': 0, 'ad': 0, 'data_limited': True}
-        pos, neg, neu, ad, total = row
+        pos, neg, _neu, ad, total = row
         if total < 5:
             return {'score': 0.5, 'pos': pos, 'neg': neg, 'total': total, 'ad': ad, 'data_limited': True}
         # 口碑分：正面占比 - 负面占比*1.5（负面信息量大），软广嫌疑每条 -0.05

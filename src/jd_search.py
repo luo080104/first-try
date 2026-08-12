@@ -2,11 +2,11 @@
 # 约束：真浏览器+真账号 / 低频（调用间隔>=30s）/ 遇验证码即停 / 只读提取
 # 第一次使用：运行后浏览器弹出，手动登录京东一次，之后免登录
 # 用法: from jd_search import search_jd; items = search_jd('石头岛')
-import sys
-import threading
 import os
-import time
 import re
+import sys
+import time
+
 from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [

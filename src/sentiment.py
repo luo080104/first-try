@@ -18,6 +18,7 @@ DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+
 def _llm_classify(comments: list, batch_size: int = 20) -> list:
     """调 DeepSeek 批量分析评论（并发 5 批，P0-2）"""
     batches = [comments[i:i + batch_size] for i in range(0, len(comments), batch_size)]
@@ -113,7 +114,8 @@ def analyze_platform(platform: str, jsonl_path: str) -> dict:
     return stats
 
 if __name__ == '__main__':
-    import sys, time
+    import sys
+    import time
     platform = sys.argv[1] if len(sys.argv) > 1 else 'bili'
     path_map = {
         'bili': 'C:/Users/luoji/mc_ref/data/bili/jsonl/search_comments_*.jsonl',

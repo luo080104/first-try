@@ -1,0 +1,4 @@
+# Go购 项目 ruff 规则（2026-08-12 建立——强化代码纠错）
+# 分工：ruff 管 F(真bug)/I(import)/RUF(杂项)；安全类(S)交给 semgrep（项目已有白名单复核流程）
+lint.select = ["F", "I", "RUF"]
+lint.ignore = ["RUF001", "RUF002", "RUF003"]  # 中文全角冒号注释提示（中文项目惯例）

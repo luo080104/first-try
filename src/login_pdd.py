@@ -1,8 +1,8 @@
 # login_pdd.py - 拼多多 H5 登录引导（DrissionPage pdd_profile）
 # 用法: python src/login_pdd.py
 # 流程: 弹出浏览器 → 请扫码/手机号登录拼多多 → 检测登录成功后自动退出
-import sys
 import os
+import sys
 import time
 
 

@@ -1,7 +1,7 @@
 # login_jd.py - 京东登录引导（DrissionPage jd_profile）
 # 用法: python src/login_jd.py
-import sys
 import os
+import sys
 import time
 
 

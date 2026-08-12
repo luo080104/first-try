@@ -1,12 +1,12 @@
 # pdd_search.py - 拼多多 H5 搜索（DrissionPage，登录态 pdd_profile）
 # 约束：真浏览器+登录态 / 低频(12-20s随机) / 遇验证码抛 CaptchaError（按合规原则不绕）
 # 入口：mobile.yangkeduo.com/search_result.html?search_key=xxx（2026-08-10 实测：等 10s 数据注入页面 JSON）
-import sys
-import threading
 import os
-import time
-import re
 import random
+import re
+import sys
+import time
+
 from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [

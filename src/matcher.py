@@ -1,6 +1,7 @@
 # matcher.py - SKU 品类适配器原型 v0.1（阶段 1）
 # 设计：每品类一套解析规则，输出结构化"匹配键"，跨平台按匹配键对齐
 import re
+from typing import Optional
 
 # ========== 品牌提取（通用）==========
 
@@ -59,8 +60,8 @@ class FoodMatcher:
 class ClothingMatcher:
     """匹配键：品牌 + 长度/性别/系列款号特征词（标题无显式款号时弱匹配）"""
 
-    FEATURES = ['短款', '长款', '中长款', '连帽', '收腰', '男', '女', '鹅绒', '白鸭绒', '鸭绒', '面包服',
-                '白月光', '极寒', '星空', '奥莱', '反季']
+    FEATURES = ('短款', '长款', '中长款', '连帽', '收腰', '男', '女', '鹅绒', '白鸭绒', '鸭绒', '面包服',
+                '白月光', '极寒', '星空', '奥莱', '反季')
 
     @staticmethod
     def parse(title: str) -> dict:
@@ -99,10 +100,10 @@ def classify_digital(title: str) -> str:
 class DigitalMatcher:
     """数码家电：品牌 + 型号 + 核心配置（GPU/CPU/内存/存储）"""
 
-    BRANDS = ['联想', '惠普', '戴尔', '华硕', '宏碁', '微星', '机械革命', '神舟', '苹果',
-              '华为', '小米', '荣耀', '三星', '索尼', '松下', '格力', '美的', '海尔', 'TCL', '海信']
+    BRANDS = ('联想', '惠普', '戴尔', '华硕', '宏碁', '微星', '机械革命', '神舟', '苹果',
+              '华为', '小米', '荣耀', '三星', '索尼', '松下', '格力', '美的', '海尔', 'TCL', '海信')
 
-    CONFIG_PATTERNS = [
+    CONFIG_PATTERNS = (
         (r'rtx\s*\d+', 'gpu'),          # RTX5080/RTX 5080
         (r'gtx\s*\d+', 'gpu'),
         (r'酷睿\s*\S*', 'cpu'),          # 酷睿Ultra9
@@ -111,7 +112,7 @@ class DigitalMatcher:
         (r'(\d+)g[bd]', 'ram'),           # 32G/16GB
         (r'(\d+)t[bd]', 'storage'),       # 1T/1TB
         (r'(\d+)g[bd]\s*ssd', 'storage'),
-    ]
+    )
 
     @staticmethod
     def parse(title: str) -> dict:
@@ -205,7 +206,7 @@ def shop_type_of(item: dict) -> str:
     return ''
 
 
-def genuine_pick(items: list) -> dict:
+def genuine_pick(items: list) -> Optional[dict]:
     """正品保障推荐：组内优先 京东自营 > 天猫/旗舰店 > 唯品自营；无则 None"""
     if not items:
         return None
@@ -222,7 +223,7 @@ def genuine_pick(items: list) -> dict:
     return best_it
 
 
-def unit_price_of(item: dict, category: str = '') -> float:
+def unit_price_of(item: dict, category: str = '') -> Optional[float]:
     """食品单斤价：每百毫升价格（元）。非食品/无规格返回 None"""
     if category != '食品':
         return None

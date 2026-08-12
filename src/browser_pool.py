@@ -3,8 +3,8 @@
 # v2: 双重隐藏（DrissionPage hide 重试 + ctypes ShowWindow 按 PID 强制隐藏 + 验证）
 import os
 import sys
-import time
 import threading
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 

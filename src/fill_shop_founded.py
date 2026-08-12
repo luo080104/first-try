@@ -1,12 +1,12 @@
 # fill_shop_founded.py - 店铺成立时间回填（v1.0-⑥，小布方案：500家×15s≈2小时，通宵跑）
 # 流程：商品库淘宝商品（数字ID）→ 详情页提取 shop_user_id → 店铺页爬成立时间 → 存 shop_profiles
 # 低频 15-20s；断点续跑（已处理的 item_id 跳过）；失败重试下轮
-import sys
 import os
-import time
-import re
 import random
+import re
 import sqlite3
+import sys
+import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -42,7 +42,7 @@ def crawl_shop_founded(user_id: str, shop_name: str) -> int:
     browser = Chromium(co)
     tab = browser.latest_tab
     try:
-        _b_.latest_tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
+        tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
     except Exception:
         pass
 

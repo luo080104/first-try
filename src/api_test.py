@@ -1,12 +1,14 @@
 # 大淘客 API 客户端 v1.0（官方签名方式，2026-08-06 调通）
 # 用法: python src/api_test.py
 import hashlib
-import time
-import random
 import json
 import os
-import urllib.request
+import random
+import time
 import urllib.parse
+import urllib.request
+from typing import Optional
+
 
 def load_env():
     env = {}
@@ -47,7 +49,7 @@ def get(api_url: str, biz_params: dict) -> dict:
     with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=15) as r:
         return json.loads(r.read().decode('utf-8'))
 
-def search_goods(keywords: str, cids: str = None, page: int = 1, size: int = 10) -> dict:
+def search_goods(keywords: str, cids: Optional[str] = None, page: int = 1, size: int = 10) -> dict:
     """商品搜索。cids: 1-女装 2-母婴 3-美妆 4-居家日用 5-鞋品 6-美食 7-文娱车品 8-数码家电 9-男装 10-内衣 11-箱包 12-配饰 13-户外运动 14-家装家纺"""
     params = {'keyWords': keywords, 'pageId': str(page), 'pageSize': str(size)}
     if cids:

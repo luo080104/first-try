@@ -181,7 +181,6 @@ def search_recommend(need_card: dict) -> list:
     keyword = need_card.get('keyword') or ''
     budget = need_card.get('budget') or ''
     exclude = need_card.get('exclude') or []
-    purpose = need_card.get('purpose') or ''
     if not keyword:
         return []
 
@@ -428,7 +427,6 @@ def copy_for_user(profile: dict, it: dict, need_card: dict) -> str:
     price = it.get('actualPrice') or 0
     tier = profile.get('budget_tier') or ''
     brands = profile.get('brands') or []
-    concerns = profile.get('concerns') or []
     brand_hit = any(b and b in title for b in brands)
     # 分群判断
     if tier == '低' or profile.get('price_sensitive'):
@@ -436,7 +434,7 @@ def copy_for_user(profile: dict, it: dict, need_card: dict) -> str:
     if tier == '高':
         return '✨ 品质之选，配得上你的标准'
     if brand_hit:
-        return f'👍 你关注的品牌，品质有保障'
+        return '👍 你关注的品牌，品质有保障'
     if need_card.get('purpose') == '游戏':
         return '🎮 适合你的游戏需求'
     if price and price >= 500:

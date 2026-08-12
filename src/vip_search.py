@@ -1,12 +1,12 @@
 # vip_search.py - 唯品会搜索（DrissionPage，category.vip.com/suggest.php）
 # 约束：真浏览器+登录态(vip_profile) / 低频(12-20s随机) / 只读提取
 # 入口：category.vip.com/suggest.php?keyword=xxx&ff=235|12|页码|1（PC 搜索页，2026-08 实测可用）
-import sys
-import threading
 import os
-import time
-import re
 import random
+import re
+import sys
+import time
+
 from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [

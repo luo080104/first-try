@@ -2,10 +2,10 @@
 # 召回四路：画像品类 60% / 关联(相似) 25% / 探索新品类 15% / 热门兜底
 # 排序：匹配度0.40 + 价格适配0.20 + 性价比0.15 + 新颖度0.10 + 店铺信誉0.10 - 重复0.15
 import os
-import sys
-import json
 import random
 import sqlite3
+import sys
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -45,7 +45,7 @@ def _recent_categories(user_name: str) -> list:
         return []
 
 
-def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: list = None) -> list:
+def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: Optional[list] = None) -> list:
     """购物漫游：四路召回 + 六因子排序 + 品类多样性 + 价格带降权（不过滤）。返回推荐卡片列表。"""
     exclude_ids = exclude_ids or []
     cats = _profile_categories(user_name) + _recent_categories(user_name)
@@ -84,8 +84,6 @@ def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: list = No
         pass
     # ③ 探索召回（15%）：未关注的品类随机
     quota3 = max(int(size * 0.15), 2)
-    all_cats = [r['category'] for r in conn.execute(
-        "SELECT DISTINCT category FROM product_items WHERE category != '' AND category NOT IN (SELECT DISTINCT category FROM product_items WHERE category IN ('服饰','食品','日用百货','数码家电'))").fetchall()] if False else None
     explore_cats = [c for c in ['服饰', '食品', '日用百货', '数码家电'] if c not in cats]
     if explore_cats:
         ec = random.choice(explore_cats)

@@ -9,15 +9,14 @@
 # 3. 丰富字段：借鉴 iokNokarl/taobao_spider 的 models.py，提取品牌/服务标签/商品属性/地区/天猫标识
 # 4. 搜索页 URL：用 uland.taobao.com/sem/tbsearch（ShilongLee/Crawler 用的搜索入口）
 # 5. 翻页加载：滚动触发更多 API 请求（xiuyegege 的 get_shop_info 模式）
-from browser_pool import get_browser, rehide_loop
-
-import sys
-import threading
-import os
-import time
-import re
 import json
+import os
+import re
+import sys
+import time
 import urllib.parse
+
+from browser_pool import get_browser, rehide_loop
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -283,10 +282,8 @@ def _parse_mtop_response(data: dict, max_items: int) -> list:
             price_show = raw_item.get('priceShow', {})
             if isinstance(price_show, dict):
                 price_str = str(price_show.get('price', raw_item.get('price', '')))
-                price_desc = price_show.get('priceDesc', '')
             else:
                 price_str = str(price_show or raw_item.get('price', ''))
-                price_desc = ''
             price = _extract_price(price_str)
 
             # 原价
