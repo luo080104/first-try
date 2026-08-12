@@ -10340,20 +10340,24 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 # 📤 Auto-Company 精读（2026-08-12 夜，MaxMiksa/Auto-Company）
 
 ## 是什么（大白话）
+
 **24/7 无人值守的"AI 公司"**——一个循环让它自己运转：
+
 ```
 daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
   → 读共识（memories/consensus.md）→ 决策 → 组队 3-5 人执行
   → 更新共识（接力棒）→ 失败处理（熔断/限流等待/共识回滚）→ 睡觉循环
 ```
+
 - 14 个专家 Agent：Bezos(CEO)/Vogels(CTO)/Munger(逆向刹车)/DHH(全栈)/Don Norman(产品设计) 等
 - 每个周期独立 CLI 调用，**consensus.md 是唯一跨周期状态**（防止上下文膨胀）
 - 安全护栏（非协商）：禁删仓库/禁删系统文件/禁泄密钥/禁 force-push/禁 reset --hard 共享分支
 - Windows(WSL systemd)/macOS(launchd) 双平台 + 本地仪表盘
 
 ## 可借鉴点（对我们）
+
 | 机制 | 借鉴到 |
-|---|---|
+| --- | --- |
 | **共识文件接力棒**（唯一跨周期状态，防上下文膨胀） | 观复多 Agent 协调——和我们的 SYNC.md 双 AI 协作流同构 |
 | **共识格式模板**（Last Updated/Phase/Decisions/Next Action/State/Open Questions） | SYNC.md 结构可吸收 |
 | **共识验证+备份回滚**（validate_consensus 必须含固定标题，防 AI 写坏） | 雕龙 tracking-state.json 同类防护 |
@@ -10363,5 +10367,26 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 | **收敛规则**（Cycle1 brainstorm → top3） | 观复启动流程参考 |
 
 ## 不装理由
+
 - 它是"赚钱公司"完整运营系统（Make money legally 使命），我们是个人项目开发——架构可学，本体不适用
 - 引擎依赖 Claude Code/Codex CLI——我们是 pi——同思路不同生态
+
+---
+
+# 📤 GPT-Image2 配方库安装（2026-08-12 夜）
+
+## 查证
+- 视频的"EvoLinkAI"组织不存在（GitHub 空组织）——真货：freestylefly/awesome-gpt-image-2（1.01万星，517案例）+ YouMind（9千星）
+
+## 精读要点
+- Prompt as Code 哲学：散文式提示词 → 结构化协议（与雕龙预置铁律同哲学）
+- 22 套模板带 useWhen/guidance/pitfalls（与 skill 三件套结构一致 ✅）
+- 模板库封装成 Agent Skill（你说意图→选模板→出 prompt）
+
+## 安装落地（用户点名"在桌面"）
+1. ✅ 桌面：`Desktop/GPT-Image2出图配方/`（301MB：517案例+526图+22模板+使用说明.txt）
+2. ✅ Pi skills：gpt-image-2-style-library（规则六三件套已进化）——触发词"用出图配方"
+3. ⚠️ 前提：出图需 GPT-Image2 API（DeepSeek 不支持画图）——等用户有图像 API 启用
+
+## 待办追加
+- 图像 API 评估（雕龙封面/角色图用）——低优先，等用户提
