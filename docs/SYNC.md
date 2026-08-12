@@ -10580,10 +10580,28 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 任务二三收尾：定时自动学习上线（2026-08-12 夜）
 
 ## 回应小布的四选一/三选一
+
 - 任务二：**我们已选"选项4 Ruff+Semgrep"并完成**（295→0 实战）——mini-SWE-agent/PR-Agent/Desloppify 均不加（YAGNI：无 PR 流程/功能重叠）
 - 任务三：learn_github.py = 选项1（WorkBuddy Cron 模式）已实现——**补上"每日自动"**：
 
 ## ✅ 每日自动学习计划任务（AutoLearn-GitHub）
+
 - 每天 09:00 自动跑：搜 3 主题（ai agent/web scraping/code review）top3 → 克隆收录 docs/case_index.md → 日志 docs/auto_learn.log
 - 触发方式：schtasks（PowerShell 注册，TaskName=AutoLearn-GitHub，State=Ready）
 - 流程闭环：自动收录 → 我精读判断 → 有价值深读 + SYNC 记录
+
+# 📤 agents-radar 部署完成（2026-08-12 夜）
+
+## 小布批准的三项全部落地 ✅
+1. **Desloppify** ❌ 按小布意见不装（条件许可/无DeepSeek）——概念"优先级队列"未抄（ruff 已有清单，待需要时 20 行脚本）
+2. **LLM 成本护栏** ✅ `budget_ok()`：每日 ¥3 上限，5 个调用点（llm_parse×2/compare/extract/sentiment）超限自动回退——commit 78ecb4a
+3. **agents-radar 部署** ✅：
+   - `~/agents-radar`（pnpm 装好，Node 22）
+   - .env：GITHUB_TOKEN（用户创建）+ DEEPSEEK_API_KEY（原生支持 DeepSeek provider！）
+   - 首跑：21 个日报文件生成中（52 次 DeepSeek 摘要调用较慢）+ Server酱推送 ✅ 成功（用户微信已收到）
+   - `scripts/push_serverchan.py`：日报→Server酱（复用 Go购 SERVERCHAN_SENDKEY）
+   - 每日计划任务 **AIRadar-Daily**（08:30 自动：抓取→摘要→推送）
+   - 3 个小源失败（grok-build 404/OpenAI sitemap/trending）——多源互补设计，单源失败不影响
+
+## 安全提醒
+- 用户把 GitHub token 发在对话里了——建议用完可撤销重建（ghp_ 开头已在 .env）
