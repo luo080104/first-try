@@ -10090,8 +10090,9 @@ Pi 立即做：
 # 📤 darwin 进化验证完成（2026-08-12）
 
 ## 验证结果（子 agent 独立评分模拟）
+
 | skill | 维度通过 | 补强 |
-|---|---|---|
+| --- | --- | --- |
 | karpathy/spec-driven/security/test-driven/agents-best/planning | 5/5 | — |
 | council | 4/5→5/5 | ✅ frontmatter 加触发词 |
 | webapp-testing | 4/5→5/5 | ✅ frontmatter 加触发词 |
@@ -10099,6 +10100,30 @@ Pi 立即做：
 | code-reviewer | 4/5→5/5 | ✅ "建议"为分类标签非软化词（误报已排除） |
 
 ## 结论
+
 - 10/10 skills 全部通过 darwin 5 项结构检查（frontmatter/失败编码/CHECKPOINT/可执行/黑名单）
 - 棘轮生效：只增不减，无退步
 - dim8（实测表现）：T1-T3 抽样验证通过（行为正确）
+
+---
+
+# 📤 Codex 10 技能精读（6789，2026-08-12）
+
+## 精读结论
+| 技能 | 来源 | 结论 |
+|---|---|---|
+| 06 Browser | 官方无独立技能 | 我们已有等价：browser_pool + lncrawl + RTK + camofox（参考） |
+| **07 Presentations** | anthropics/skills pptx | ✅ **已装 Pi**——pptxgenjs 创建/编辑/读取（markitdown）+ thumbnail 预览——投研报告 PPT 可用 |
+| **08 Skill Creator** | anthropics/skills skill-creator | ✅ **已装 Pi**——意图捕获→面试→草稿→测试prompt→评估迭代→描述优化——**与 darwin 互补**（Creator 造 / darwin 进化） |
+| 09 Testing Browser | anthropics/skills webapp-testing | ✅ 已装（Pi 第 10 个）——Playwright 测试流程 |
+
+## Pi skills 现状：13 个
+agents-best-practices / code-reviewer / council / darwin-skill / karpathy-rules /
+planning-with-files / **pptx（新）** / security-auditor / shuorenhua /
+**skill-creator（新）** / spec-driven / test-driven / webapp-testing
+
+## 生态闭环（skills 生命周期）
+```
+skill-creator（造新 skill）→ darwin（进化/评分/棘轮）→ code-reviewer（审查）
+→ shuorenhua（去AI味）→ webapp-testing（验证）→ planning（任务管理）
+```
