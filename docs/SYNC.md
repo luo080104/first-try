@@ -10110,20 +10110,42 @@ Pi 立即做：
 # 📤 Codex 10 技能精读（6789，2026-08-12）
 
 ## 精读结论
+
 | 技能 | 来源 | 结论 |
-|---|---|---|
+| --- | --- | --- |
 | 06 Browser | 官方无独立技能 | 我们已有等价：browser_pool + lncrawl + RTK + camofox（参考） |
 | **07 Presentations** | anthropics/skills pptx | ✅ **已装 Pi**——pptxgenjs 创建/编辑/读取（markitdown）+ thumbnail 预览——投研报告 PPT 可用 |
 | **08 Skill Creator** | anthropics/skills skill-creator | ✅ **已装 Pi**——意图捕获→面试→草稿→测试prompt→评估迭代→描述优化——**与 darwin 互补**（Creator 造 / darwin 进化） |
 | 09 Testing Browser | anthropics/skills webapp-testing | ✅ 已装（Pi 第 10 个）——Playwright 测试流程 |
 
 ## Pi skills 现状：13 个
+
 agents-best-practices / code-reviewer / council / darwin-skill / karpathy-rules /
 planning-with-files / **pptx（新）** / security-auditor / shuorenhua /
 **skill-creator（新）** / spec-driven / test-driven / webapp-testing
 
 ## 生态闭环（skills 生命周期）
+
 ```
 skill-creator（造新 skill）→ darwin（进化/评分/棘轮）→ code-reviewer（审查）
 → shuorenhua（去AI味）→ webapp-testing（验证）→ planning（任务管理）
+```
+
+---
+
+# 📤 skill-creator 首秀（2026-08-12）
+
+## 用 skill-creator 方法论沉淀：investment-research（投研分析）
+- 意图捕获：导师任务（选基金/写报告）高频
+- 框架：赛道拆解 → 硬指标筛选 → 重叠度验证 → 配置方案 → 操作 → 风险
+- 完整三件套：失败编码 4 条 / 黑名单 5 条 / CHECKPOINT 2 条
+- references 指向两份已验证报告
+
+## Pi skills 现状：14 个
+（+pptx +skill-creator +investment-research）
+
+## 生命周期闭环完整
+```
+skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuorenhua（去AI味）
+→ webapp-testing（验证）→ planning（管理）→ investment-research（行业沉淀）
 ```
