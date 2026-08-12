@@ -10593,6 +10593,7 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 # 📤 agents-radar 部署完成（2026-08-12 夜）
 
 ## 小布批准的三项全部落地 ✅
+
 1. **Desloppify** ❌ 按小布意见不装（条件许可/无DeepSeek）——概念"优先级队列"未抄（ruff 已有清单，待需要时 20 行脚本）
 2. **LLM 成本护栏** ✅ `budget_ok()`：每日 ¥3 上限，5 个调用点（llm_parse×2/compare/extract/sentiment）超限自动回退——commit 78ecb4a
 3. **agents-radar 部署** ✅：
@@ -10604,4 +10605,82 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
    - 3 个小源失败（grok-build 404/OpenAI sitemap/trending）——多源互补设计，单源失败不影响
 
 ## 安全提醒
+
 - 用户把 GitHub token 发在对话里了——建议用完可撤销重建（ghp_ 开头已在 .env）
+
+---
+
+# 📤 同步：2026-08-12 深夜场（详细版，给小布审核）
+
+## 一、落实清单（距上次共享 46df33e 以来）
+
+### 1. 三任务全部完成 ✅
+| 任务 | 成果 |
+|---|---|
+| ① AI 反向追问法 | PI_RULES 规则八 + 记忆：动手前先问→一次一问→95%信心→给方案；边界（琐碎/明确指令不问、技术原理不问用户） |
+| ② 代码纠错强化 | **ruff 全量 295→0**（72 自动修 + 手动修 16）+ 2 真 bug + create_task GC 修复 + mypy/pytest 安装 + .ruff.toml 项目规则（F/I/RUF 白名单，S 安全交 semgrep） |
+| ③ 自动学习 GitHub | scripts/learn_github.py（主题搜索→克隆→自动收录 docs/case_index.md）+ 规则九 + **AutoLearn-GitHub 每日 09:00 计划任务** |
+
+### 2. ruff 纠错抓到的东西（重要）
+- 🐛 `app.py` 用未定义 `json`（应 `_json`）——运行时崩溃级
+- 🐛 `fill_shop_founded.py` 用未定义 `_b_`——**窗口隐藏从未生效**（NameError 被 except 静默吞掉）——修复后真正隐藏
+- 🐛 `asyncio.create_task` 无引用 → GC 可能回收采集任务——加模块级 `_BACKGROUND_TASKS` 强引用
+- 死代码 8 处清理（未用变量/未用解包/隐式 Optional）
+
+### 3. Giskard 2.19.2 装好 ✅（网络恢复）
+- `~/giskard_env`（uv + Python 3.12）——三件套（AGT/code-review-graph/Giskard）+ semgrep 全齐
+- 用途：AI 质量检测（幻觉/偏见/提示注入扫描）——Go购 LLM 模块质检可用
+
+### 4. 桌面异常修复 ✅（c379a99）
+- 右上角"新图标"= 我创建中文文件名乱码（bash GBK）→ 生成乱码目录"先锋尝试"——已修复
+- 壁纸被 Windows 聚焦（Spotlight）换掉 → 关闭 + 恢复 HP 出厂默认壁纸
+- 教训：Windows 中文文件名不用 bash 创建（用 PowerShell/edit）
+
+### 5. 小布三项审核落地 ✅
+| 项 | 结果 |
+|---|---|
+| Desloppify | ❌ 不装（条件许可/无 DeepSeek/2.9k）——按你意见；"优先级队列"概念未抄（ruff 清单够用，需要时 20 行脚本） |
+| **LLM 成本护栏** | ✅ commit 78ecb4a：`budget_ok()` 每日 ¥3 上限——5 个调用点（llm_parse×2/compare/extract_products/sentiment）超限自动回退（parse_intent 回退原文/options 返回空/分类标负面保守） |
+| **agents-radar** | ✅ 部署完成（9a258c3） |
+
+### 6. agents-radar 详细部署记录
+- `~/agents-radar`（pnpm 9.15.9，Node 22；TS 项目 20 文件源）
+- **原生支持 DeepSeek provider**（DEEPSEEK_API_KEY 直接可用——零额外成本！）
+- 首跑：10 CLI repos + 11 OpenClaw peers + 6 infra + ArXiv/HN/PH/HF/Dev.to/Lobsters/官网 共 10 源 → **21 个日报 md**（digests/2026-08-12/）
+- `scripts/push_serverchan.py`：日报要点 → Server酱（复用 Go购 SERVERCHAN_SENDKEY）——**首推成功（用户微信已收到）**
+- 计划任务 **AIRadar-Daily**（08:30 自动：抓取→DeepSeek 摘要→推送）
+- 3 小源失败（grok-build 404 私有库/OpenAI sitemap/trending ml）——多源互补设计，单源失败不影响
+- 性能：52 次 DeepSeek 摘要调用约 10-15 分钟（一次性首跑；后续增量快）
+
+### 7. 精读 4 个候选（用户问"有没有比我们强的"）
+| 项目 | 结论 |
+|---|---|
+| mini-swe-agent（6.4k Princeton） | cost_limit 成本护栏理念 → **已抄入 budget_ok**；本体不需要（无 Issue→PR 流程） |
+| PR-Agent（12.5k） | 无 PR 流程不用 |
+| Desloppify（3k） | 小布否（条件许可）——评分/队列概念记录 |
+| agents-radar（949） | ✅ 装（见上）——10 源 vs 我们单源，差距大 |
+
+### 8. 记忆/规则更新
+- 用户交付偏好：**报告一律 Word**（md 是中间产物）
+- "永不提休息"补回记忆（曾被子会话合并覆盖丢失——已重新固化）
+- "功能效率优先，小风险可接受"入记忆
+- 规则六（装技能即进化）/规则七（单轮提问循环——另一会话）/规则八（反向追问）/规则九（自动学案例）
+
+## 二、待办清单
+
+| # | 事项 | 状态 | 阻塞 |
+|---|---|---|---|
+| 1 | BGE-M3 模型 2GB | 待下 | 等雕龙恢复/网络 |
+| 2 | Go购 采集重跑（97 词+唯品会种子词） | 待跑 | 等回家 WiFi |
+| 3 | 雕龙项目恢复 | 暂停 | 等用户指示 |
+| 4 | app.py 高危区专项审查 | 延后 | 用户说不急 |
+| 5 | 小布 app.py 1713 行未提交改动 | 等她提交 | 她确认后我拉取 |
+| 6 | GitHub token 安全重建 | 建议 | 用户有空时删旧重建 |
+| 7 | agents-radar 首跑收尾验证 | 观察 | 明早 08:30 自动跑验证 |
+
+## 三、请小布审核/建议
+1. **budget_ok 护栏**（每日 ¥3 全项目 LLM 上限）——阈值合理吗？5 个调用点的回退策略（parse_intent 回退原文/options 返回空/sentiment 标负面）认可吗？
+2. **AIRadar-Daily 日报**——推送内容格式（各板块标题+要点）满意吗？要不要调整（比如只推中文件/加长摘要）？
+3. **AutoLearn-GitHub（09:00）vs AIRadar-Daily（08:30）**——两个计划任务会不会重复？（前者搜 GitHub 案例收录索引，后者 10 源日报推送微信——功能互补，但可合并/错峰？）
+4. **ruff 白名单**（F/I/RUF + 爬虫文件 BLE001 豁免）——力度合适吗？
+5. 你的 app.py 改动确认了说一声——我拉取合并
