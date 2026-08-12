@@ -9966,12 +9966,32 @@ Pi 立即做：
 # 📤 信息差修复同步（2026-08-12）
 
 ## 已修复
+
 1. ✅ **semgrep 复核完成**：db.py 7 个 SQL 警告**全部误报**（用户输入走参数化/白名单；filt/idx 为硬编码词表）——无需修改
 2. ✅ **Dual-LLM 信任隔离**已写入 security-auditor skill（小布行动项#3 兑现）
 3. ✅ **lncrawl 状态更新**：pip install -e . 失败根因 = **Python 3.14 无 zstd/greenlet 预编译 wheel**；已用 **uv + Python 3.12** 解决（zstd 1.5.7.2 装好），48 源搜索跑通、找到极道天魔英文机翻版（Way of the Devil）——雕龙已暂停，状态存档
 
 ## 仍挂起（等审核/条件）
+
 - Giskard / AGT：待用户审核
 - headroom / code-review-graph：待用户审核（"精读≠只读"原则——未批不装）
 - 雕龙方案 v1.4 的 7 点建议：小布采纳与否待确认（雕龙先不急）
 - BGE-M3 模型 2GB：等网络/雕龙恢复
+
+---
+
+# 📤 token 消耗优化（2026-08-12）
+
+## 原因分析（用户问"今天 token 怎么这么快"）
+1. pi-lens 的 advisory 报告每次进对话（今天新装——之前没有）
+2. 今天任务类型=搜索/安装（网络输出大）
+
+## 优化
+- ✅ lens 配置降噪：关 actionableWarnings（advisory 不再刷）
+- ✅ giskard_env 清理（等网络再装 Giskard）
+- ✅ 保持：RTK（输出压缩）+ context-mode（上下文归档）已生效
+
+## 工具安装状态（三件套）
+- code-review-graph ✅ 装好
+- AGT ✅ 装好（agt verify 就绪）
+- Giskard ⏸ 等网络（Python 3.14 不兼容 → uv 3.12 环境就绪但下载卡）
