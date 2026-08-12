@@ -10,3 +10,5 @@ data/*_profile
 .idea/
 server.log
 data/*.log
+# 参考仓库（克隆学习用，不入库）
+*_ref/
