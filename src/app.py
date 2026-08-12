@@ -25,7 +25,7 @@ _langfuse = None
 try:
     if os.environ.get('LANGFUSE_PUBLIC_KEY') and os.environ.get('LANGFUSE_SECRET_KEY'):
         from langfuse import Langfuse
-        _langfuse = Langfuse(host=os.environ.get('LANGFUSE_BASE_URL', 'https://cloud.langfuse.com'))
+        _langfuse = Langfuse()  # key 从环境变量读（best practices：env 加载后再 import）
 except Exception:
     _langfuse = None
 from fastapi import FastAPI, Form, Request

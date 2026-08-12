@@ -7,7 +7,24 @@ import urllib.request
 
 API_URL = 'https://api.deepseek.com/chat/completions'
 
+# Langfuse 追踪（best practices：generation 类型 + model 名；无 key 自动禁用）
+_langfuse_ok = False
+try:
+    if os.environ.get('LANGFUSE_PUBLIC_KEY') and os.environ.get('LANGFUSE_SECRET_KEY'):
+        from langfuse import observe as _observe
+        _langfuse_ok = True
+except Exception:
+    _langfuse_ok = False
 
+
+def _maybe_observe(*args, **kwargs):
+    """有 key 才装饰——无 key 原样返回（零开销降级）"""
+    if _langfuse_ok:
+        return _observe(*args, **kwargs)
+    return lambda f: f
+
+
+@_maybe_observe(name='llm_call', as_type='generation', capture_input=False)
 def call(user_text: str, system: str = '', max_tokens: int = 800,
          model: str = 'deepseek-chat', timeout: int = 120) -> str:
     """调 DeepSeek 返回文本。失败/超预算返回空串（调用方自行回退）。"""

@@ -10694,10 +10694,10 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 4. **ruff 白名单**（F/I/RUF + 爬虫文件 BLE001 豁免）——力度合适吗？
 5. 你的 app.py 改动确认了说一声——我拉取合并
 
-
 ## 📋 今日状态 (2026-08-12)
 
 ### Go购
+
 - v2.0 交互打磨完成，用户实测中
 - ruff 295→0 已清理 + semgrep 7 SQL 警告
 - Langfuse 已装，待 Pi 接入 3 行追踪代码
@@ -10705,36 +10705,39 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 - cost_limit 护栏已写入 llm_parse.py（¥3/日 + 回退 Flash）
 
 ### 雕龙
+
 - 暂停中。方案 v1.4 就绪（9 模块+8 Hook+16 条设计决策）
 - lightnovel-crawler v4.14.0 已装（17 中文源内置），待 Pi 找 URL 验证爬数据
 
 ### 观复
+
 - 缓办。候选底座：Agno + PraisonAI + AutoAgent
 - 金融数据管道待 Pi 写最小原型（akshare → SQLite）
 
 ### 工具/技能
+
 - Darwin 两轮评估完成：36 技能 100% 有失败模式+黑名单+检查点
 - 新增 3 角色：后端架构师 + 数据库优化师 + 产品经理
 - agents-radar 已部署：10 源 + DeepSeek + Server酱推送
 - Giskard 2.19.2 已装
 
 ### 今天完成
+
 - ✅ 消费 ETF 报告（五角色分析→桌面 DOCX）
 - ✅ PI_RULES.md 规则八~十一落地
 - ✅ MEMORY.md 四条规范落地+清理重复
 - ✅ 三项任务中两项完成（追问法+纠错），一项等 Token（autolearn）
 
 ### 明天待办
+
 - Pi：app.py 提交 → Langfuse 接入 → lightnovel-crawler 验证 URL
 - 小布：验证 agents-radar 日报 → 检查 cost_limit 生效
 - 共同：等 Token 后启动 agents-radar 首报
 
-
-
 ## 小布：五方面完善建议（为雕龙和观复做准备，2026-08-12 晚）
 
 | # | 建议 | 优先级 | 状态 |
-|---|------|--------|------|
+| --- | ------ | -------- | ------ |
 | 1 | **作品质量盲测框架**：雕龙 P0 验收前写 Python 脚本——喂两段文字给 DeepSeek → 判断是否同一作者风格 → 打分 | 🟡 P0 前备好 | 待写 |
 | 2 | **观复数据管道原型**：`pip install akshare` → 拉茅台三年财务 → 存 SQLite，10 行代码验证骨架 | 🟡 雕龙暂停时隙可做 | 待 Pi |
 | 3 | **三 Agent 共用成本追踪**：Langfuse 已装 ✅，待 Pi 在 Go购 app.py 加 3 行接入，雕龙/观复跟随 | 🔴 已装，待接入 | 🟡 |
@@ -10742,19 +10745,21 @@ daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
 | 5 | **Pi 每日启动状态摘要**：小布每日在 SYNC 末尾写入今日状态块 → Pi 启动即读 | 🔴 今日已执行 | ✅ |
 
 ### 五方面落地策略
+
 - ③④⑤ 小布已做（Langfuse 装好 + 规则写入 + 摘要已写）
 - ①② 代码层需要 Pi 动手——不紧急，但雕龙/观复启动前必须就位
 - ③ Langfuse 接入是三个 Agent 共用的基础设施——Pi 优先做
 
-
 # 📤 小布③④ 落地（2026-08-12 夜）
 
 ## ③ Langfuse 接入 ✅（Pi 动手完成）
+
 - 真相澄清：小布说"pip install 完成"但主环境实际没装上 → Pi 用清华源真正装好（langfuse 4.14.4）
 - app.py 接入：模块级初始化（有 LANGFUSE_PUBLIC_KEY/SECRET_KEY 才启用，无 key 静默降级 ✅ 已验证）+ `_trace_llm()` 辅助 + search_sse 入口已挂追踪
 - 待用户：注册 langfuse.cloud（免费）→ 3 个 key 填 .env（和 GitHub token 一样的操作）
 
 ## ④ shared/ 抽取 ✅（规则十一落地，渐进迁移零破坏）
+
 ```
 shared/
 ├── __init__.py
@@ -10764,7 +10769,27 @@ shared/
 ├── llm_usage.py      ← 费用统计（DB_PATH 环境变量可覆盖）
 └── notify.py         ← 复制自 Go购 src/
 ```
+
 - **策略：渐进迁移（strangler）**——Go购 继续用 src/（零破坏风险），雕龙/观复起步直接用 shared/，Go购 迁移时机成熟再切
 - 验证：全部编译通过 + ruff 干净 + shared 包导入正常
 
 ## ⑤ 每日摘要：等小布收工前执行（规则十）
+
+# 📤 Langfuse 完整接入（2026-08-12 夜，官方 best practices）
+
+## 完成内容
+
+- key 配置：用户注册 langfuse.cloud（美国区 us.cloud.langfuse.com）→ pk/sk 已填 Go购 .env
+- **正确 API**：Langfuse 4.14.4 用 `@observe` 装饰器（client.trace 已废弃——初次踩坑）
+- shared/llm.py：`@_maybe_observe(name='llm_call', as_type='generation')` + model + token usage（best practices 基线 4 项）+ 无 key 自动降级
+- app.py：初始化修正 + _trace_llm 改 observe 风格 + search_sse 已挂
+- 真实调用验证：1+1 测试 → LLM 返回 → 追踪发送 ✅
+- langfuse skill 装 Pi + 三件套进化（规则六）
+- 官方 skill 最佳实践吸收：env 后 import/描述名/敏感数据脱敏/观测类型
+
+## 用户操作记录
+
+- ✅ #1 GitHub token 重建（新 token 验证 5000 配额）
+- ✅ #2 Langfuse 注册 + key 配置（美国区）
+- ✅ #3 Wardrobe 删除（用户决定）
+- 剩余待办：#5采集重跑 #6BGE-M3 #7手机验证 #8雕龙 #9app.py审查 #11重启验证
