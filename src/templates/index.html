@@ -605,7 +605,11 @@
             box.innerHTML = '';
             var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
             var uname = encodeURIComponent(getCurrent());
-            fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname + '&session_id=' + encodeURIComponent(localStorage.getItem('gobuy_sid') || ''))
+            var sseAttempt = 0;
+            // 2026-08-12 SSE 断线自动重连（3 次指数退避：2s/4s/8s）——网络抖动不用重搜
+            function searchStream() {
+              sseAttempt++;
+              fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname + '&session_id=' + encodeURIComponent(localStorage.getItem('gobuy_sid') || ''))
                 .then(resp => {
                     var reader = resp.body.getReader();
                     var decoder = new TextDecoder();
@@ -636,7 +640,18 @@
                         });
                     }
                     return read();
-                }).catch(() => { hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败，请重试</div>'; });
+                }).catch(() => {
+                    // 2026-08-12 SSE 自动重连：3 次指数退避（2s/4s/8s），超限才报失败
+                    if (sseAttempt < 3) {
+                        advanceLoading('⚠️ 网络抖动，正在自动重连（第 ' + sseAttempt + ' 次）…');
+                        setTimeout(searchStream, sseAttempt * 2000);
+                    } else {
+                        _stopSearchTimer(); hideLoading(); prog.style.display = 'none'; btn.disabled = false;
+                        box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败，请重试</div>';
+                    }
+                });
+            }
+            searchStream();
         }
         function pddSearch() {
             var btn = document.getElementById('pdd-btn');

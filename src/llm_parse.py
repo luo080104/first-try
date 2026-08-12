@@ -100,9 +100,9 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
                 add_excluded_platform(result['exclude_platform'])
             if result['pref_word']:
                 if result['pref_category']:
-                    add_category_pref(result['pref_category'], result['pref_word'])
+                    add_category_pref(result['pref_category'], result['pref_word'], source='llm', confidence=0.7)
                 else:
-                    add_global_pref(result['pref_word'])
+                    add_global_pref(result['pref_word'], source='llm', confidence=0.7)
         except Exception:
             pass
         # P1：缓存命中指标

@@ -755,13 +755,40 @@ def get_user_pref(key: str, default=None):
         return row['value']
 
 
-def set_user_pref(key: str, value):
-    """写偏好（JSON 编码 upsert）"""
+def get_pref_meta(key: str) -> dict:
+    """偏好元数据（ECC 信任分级借鉴：来源/置信度——低置信偏好可识别）"""
+    try:
+        conn = get_conn()
+        row = conn.execute(
+            'SELECT source, confidence FROM user_preferences WHERE key=?', (key,)
+        ).fetchone()
+        conn.close()
+        if not row:
+            return {"source": "manual", "confidence": 1.0}
+        return {"source": row["source"] or "manual", "confidence": row["confidence"] or 1.0}
+    except Exception:
+        return {"source": "manual", "confidence": 1.0}
+
+
+def set_user_pref(key: str, value, source: str = "manual", confidence: float = 1.0):
+    """写偏好（JSON 编码 upsert；source=llm 表示 AI 提取，低置信可标记）"""
     conn = get_conn()
-    conn.execute('''
-        INSERT INTO user_preferences (key, value) VALUES (?,?)
-        ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=datetime('now','localtime')
-    ''', (key, json.dumps(value, ensure_ascii=False)))
+    try:
+        conn.execute("ALTER TABLE user_preferences ADD COLUMN source TEXT DEFAULT 'manual'")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE user_preferences ADD COLUMN confidence REAL DEFAULT 1.0")
+    except Exception:
+        pass
+    conn.execute(
+        '''
+        INSERT INTO user_preferences (key, value, source, confidence) VALUES (?,?,?,?)
+        ON CONFLICT(key) DO UPDATE SET value=excluded.value, source=excluded.source,
+            confidence=excluded.confidence, updated_at=datetime('now','localtime')
+        ''',
+        (key, json.dumps(value, ensure_ascii=False), source, confidence),
+    )
     conn.commit()
     conn.close()
 
@@ -782,8 +809,8 @@ def add_excluded_platform(plat: str) -> bool:
     return True
 
 
-def add_category_pref(category: str, word: str) -> bool:
-    """记一条品类偏好（如 服饰→纯棉）"""
+def add_category_pref(category: str, word: str, source: str = "manual", confidence: float = 1.0) -> bool:
+    """记一条品类偏好（如 服饰→纯棉；AI 提取传 source='llm', confidence=0.7）"""
     prefs = get_user_pref(PREF_CATEGORY_PREFS, {})
     if not isinstance(prefs, dict):
         prefs = {}
@@ -791,17 +818,17 @@ def add_category_pref(category: str, word: str) -> bool:
     if word in lst:
         return False
     lst.append(word)
-    set_user_pref(PREF_CATEGORY_PREFS, prefs)
+    set_user_pref(PREF_CATEGORY_PREFS, prefs, source, confidence)
     return True
 
 
-def add_global_pref(word: str) -> bool:
-    """记一条全局偏好（如 看重销量）"""
+def add_global_pref(word: str, source: str = "manual", confidence: float = 1.0) -> bool:
+    """记一条全局偏好（如 看重销量；AI 提取传 source='llm', confidence=0.7）"""
     lst = get_user_pref(PREF_GLOBAL, [])
     if not isinstance(lst, list):
         lst = []
     if word in lst:
         return False
     lst.append(word)
-    set_user_pref(PREF_GLOBAL, lst)
+    set_user_pref(PREF_GLOBAL, lst, source, confidence)
     return True
