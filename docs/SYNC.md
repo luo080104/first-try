@@ -10158,8 +10158,9 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 # 📤 6 候选精读落地（2026-08-12）
 
 ## 精读结论
+
 | 候选 | 结论 | 落地 |
-|---|---|---|
+| --- | --- | --- |
 | ① brooks-lint | Iron Law（症状→来源→后果→药方）+ Health Score + 12本书grounding | ✅ code-reviewer 升级（Iron Law 格式 + 健康分 100起扣 + Do NOT trigger 边界） |
 | ② codebase-recon | 7 git 命令分析代码库健康（hotspot/bug magnet/bus factor/动量） | ✅ 克隆成功 + **Go购实跑**（见下） |
 | ③ novel-writing | LOD 上下文分层 L0-L4 + 硬规则（读者不知道=缺失/角色登场有锚点） | ✅ 雕龙方案 v2 附录 A（P2/P3 落地） |
@@ -10168,6 +10169,7 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 | ⑥ AuraKit | 46模式太重；token机制与 context-mode 同源验证 | 不装（记录） |
 
 ## Go购 Codebase Recon 报告（336 提交，8/4-8/12）
+
 - **最高危：src/app.py**（hotspot#2 改动73次 ∩ bug#1 修复13次）——核心+bug 集中区
 - 高危：src/templates/index.html（改动45次 ∩ bug 7次）——大 JS 块
 - 中危：src/db.py（bug 6次）
@@ -10175,3 +10177,7 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 - 建议：app.py 大改前必走 spec+测试；index.html JS 拆块
 
 ## skills 总数：15 个（+paperjsx）
+
+## 补充：codebase-recon 装 Pi（16 skills）
+- ✅ 装 Pi + 规则六三件套（失败编码 4 条/黑名单 3 条/CHECKPOINT 2 条）
+- 使用场景：新项目入手/代码库健康体检（Go购 已实跑验证）
