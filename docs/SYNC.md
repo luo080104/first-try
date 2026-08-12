@@ -10309,8 +10309,9 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 # 📤 GitHub 热榜 6 项目查证+精读（2026-08-12 夜）
 
 ## 查证结果（视频星数 vs 实查）
+
 | 项目 | 视频星数 | 实查 | 结论 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | andrej-karpathy-skills | 17万 | **201,708**（multica-ai） | ✅ 真（还低估了） |
 | CodeGraph | 4.7万 | 3（lzehrung/codegraph） | ❌ 严重虚标 |
 | Understand Anything | 5.7万 | **79,038**（Egonex-AI） | ✅ 真 |
@@ -10319,8 +10320,9 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 | claude-plugins-official | 3万 | **33,435**（anthropics） | ✅ 真 |
 
 ## 精读结论
+
 | 项目 | 核心 | 对我们的价值 | 行动 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | ① karpathy-skills | CLAUDE.md 4 条金律（Think/Simplicity/Surgical/Goal-Driven） | 我们的 karpathy-rules 已完整覆盖 + darwin 进化更强（失败编码/黑名单/CHECKPOINT） | ✅ 无需新增（已超越原版） |
 | ③ Understand Anything | 多agent流水线→知识图谱（文件/函数/类节点）→交互仪表盘；代码视图+**领域视图（业务逻辑图谱）**+知识库视图 | 与 pi-lens review graph 同思路；**领域视图是增量**（代码→业务流程映射） | 概念记录；领域视图记入 Go购/观复 候选 |
 | ④ Presenton | 自托管 AI PPT 生成器（Docker/桌面），多模型，**可编辑 PPTX 导出** | 我们有 pptx+paperjsx（脚本方案）覆盖报告场景；它是完整 App（重） | 不装（只做对的事） |
@@ -10328,6 +10330,38 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 | ② CodeGraph / ⑤ LongLive | 代码地图（3星小项目）/ 视频生成 | 不需要/不相关 | 跳过 |
 
 ## 关键洞察
+
 - 视频星数 3/6 严重虚标——查证必做（GitHub API 实查）
 - 我们的工具链已覆盖热榜核心能力（skills 体系 ⊇ karpathy-skills + 官方插件目录核心）
 - 唯一增量：**领域视图**（业务逻辑图谱）——Go购 未来可做（app.py 是核心枢纽，领域视图正好对症）
+
+---
+
+# 📤 Auto-Company 精读（2026-08-12 夜，MaxMiksa/Auto-Company）
+
+## 是什么（大白话）
+**24/7 无人值守的"AI 公司"**——一个循环让它自己运转：
+```
+daemon（崩溃自动重启）→ 每 30 秒一轮 → LLM 全新会话
+  → 读共识（memories/consensus.md）→ 决策 → 组队 3-5 人执行
+  → 更新共识（接力棒）→ 失败处理（熔断/限流等待/共识回滚）→ 睡觉循环
+```
+- 14 个专家 Agent：Bezos(CEO)/Vogels(CTO)/Munger(逆向刹车)/DHH(全栈)/Don Norman(产品设计) 等
+- 每个周期独立 CLI 调用，**consensus.md 是唯一跨周期状态**（防止上下文膨胀）
+- 安全护栏（非协商）：禁删仓库/禁删系统文件/禁泄密钥/禁 force-push/禁 reset --hard 共享分支
+- Windows(WSL systemd)/macOS(launchd) 双平台 + 本地仪表盘
+
+## 可借鉴点（对我们）
+| 机制 | 借鉴到 |
+|---|---|
+| **共识文件接力棒**（唯一跨周期状态，防上下文膨胀） | 观复多 Agent 协调——和我们的 SYNC.md 双 AI 协作流同构 |
+| **共识格式模板**（Last Updated/Phase/Decisions/Next Action/State/Open Questions） | SYNC.md 结构可吸收 |
+| **共识验证+备份回滚**（validate_consensus 必须含固定标题，防 AI 写坏） | 雕龙 tracking-state.json 同类防护 |
+| **熔断/限流等待**（连续 5 错熔断 + 300s 冷却 + 限流等 1h） | 采集引擎失败分类（验证码→暂停/超时→不计）已同思路 ✅ |
+| **安全护栏清单**（禁做什么列全） | CONSTITUTION.md Never 项对照补充 |
+| **Ship > Plan > Discuss** 优先级 | 已一致 |
+| **收敛规则**（Cycle1 brainstorm → top3） | 观复启动流程参考 |
+
+## 不装理由
+- 它是"赚钱公司"完整运营系统（Make money legally 使命），我们是个人项目开发——架构可学，本体不适用
+- 引擎依赖 Claude Code/Codex CLI——我们是 pi——同思路不同生态
