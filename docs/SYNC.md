@@ -10793,3 +10793,29 @@ shared/
 - ✅ #2 Langfuse 注册 + key 配置（美国区）
 - ✅ #3 Wardrobe 删除（用户决定）
 - 剩余待办：#5采集重跑 #6BGE-M3 #7手机验证 #8雕龙 #9app.py审查 #11重启验证
+
+# 📤 Go购 全面体检报告（2026-08-12 夜，进化方法论全量应用）
+
+## 检查矩阵（工具全跑）
+| 检查 | 结果 |
+|---|---|
+| ruff | ✅ 全绿（295→0 已清） |
+| mypy | 57 个类型问题：3 已修（_BACKGROUND_TASKS/results/by_platform 标注）剩余为级联推断/历史遗留——记录不改 |
+| semgrep | 22 个：db.py×7 参数化复核过（误报）；urllib 动态 URL×13（查询参数非 SSRF，爬虫必然）；localhost 探活×2（固定 IP 无害）——全部确认可接受 |
+| Giskard 2.19 | 组件就绪（PromptInjection/CharsInjection/Faithfulness 等 8 检测器）——**深度扫描需包装模型**（记 P2） |
+
+## 发现的真问题/升级点
+| # | 类型 | 内容 | 处理 |
+|---|---|---|---|
+| 1 | 🐛 | pythonw 秒退（stdout None 崩溃） | ✅ 已修（None-guard 重定向） |
+| 2 | 🔒 | **提示注入面**：用户输入/评论/商品标题直接进 LLM prompt | ✅ 已修（3 个 system prompt 加"数据边界声明"——llm_parse×2/sentiment/compare） |
+| 3 | 🔧 | app.py L1058/L860 冗余恒真判断 | ✅ 已简化 |
+| 4 | 🔧 | pyright ignore 码错误 | ✅ 已修正 |
+| 5 | 💡 | app.py 1901 行——单体过大 | 记录 P2：路由拆分（功能稳定期不冒险——"不搞重活"） |
+| 6 | 💡 | SSE 前端断线无自动重连 | 记录 P2：前端 SSE 断线重连（网络抖动体验） |
+| 7 | 💡 | 偏好记忆无置信度（误提取无法识别） | 记录 P2：pref 加来源/置信度（ECC 信任分级借鉴） |
+| 8 | 💡 | Giskard 深度扫描（注入/幻觉基准测试） | 记录 P2：包装 DeepSeek 客户端后跑 LLM 模块 |
+
+## 结论
+- **无高危漏洞**（SQL 参数化/XSS 已修/密钥不硬编码/注入面已封）
+- 8 项中 4 项已修，4 项 P2 记录

@@ -8,12 +8,22 @@ import sys
 # 2026-08-12 修复 pythonw 秒退：无控制台时 sys.stdout/stderr 为 None → print 崩 → 重定向到文件
 if sys.stdout is None:
     try:
-        sys.stdout = open(os.path.join(os.path.dirname(__file__), '..', 'data', 'server_stdout.log'), 'w', encoding='utf-8', errors='replace')
+        sys.stdout = open(
+            os.path.join(os.path.dirname(__file__), "..", "data", "server_stdout.log"),
+            "w",
+            encoding="utf-8",
+            errors="replace",
+        )
     except Exception:
         pass
 if sys.stderr is None:
     try:
-        sys.stderr = open(os.path.join(os.path.dirname(__file__), '..', 'data', 'server_stderr.log'), 'w', encoding='utf-8', errors='replace')
+        sys.stderr = open(
+            os.path.join(os.path.dirname(__file__), "..", "data", "server_stderr.log"),
+            "w",
+            encoding="utf-8",
+            errors="replace",
+        )
     except Exception:
         pass
 
@@ -22,7 +32,7 @@ for _s in (sys.stdout, sys.stderr):
     if _s is None:
         continue
     try:
-        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]  # pyright 不认识 TextIO.reconfigure（合法 API）
+        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]  # TextIO.reconfigure 合法 API，类型检查器不认识
     except Exception:
         pass
 
@@ -32,14 +42,17 @@ import json as _json
 
 import uvicorn
 
-_BACKGROUND_TASKS = set()  # 采集任务强引用容器（防 GC 回收未完成任务）
+_BACKGROUND_TASKS: set = set()  # 采集任务强引用容器（防 GC 回收未完成任务）
 
 # Langfuse LLM 追踪（2026-08-12 小布③）：有 key 才启用，无 key 静默降级
 _langfuse = None
 try:
-    if os.environ.get('LANGFUSE_PUBLIC_KEY') and os.environ.get('LANGFUSE_SECRET_KEY'):
+    if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY"):
         from langfuse import Langfuse
-        _langfuse = Langfuse()  # key 从环境变量读（best practices：env 加载后再 import）
+
+        _langfuse = (
+            Langfuse()
+        )  # key 从环境变量读（best practices：env 加载后再 import）
 except Exception:
     _langfuse = None
 from fastapi import FastAPI, Form, Request
@@ -532,7 +545,7 @@ async def api_deep_crawl(
     if not keyword:
         return {"ok": False, "msg": "请输入关键词"}
     pages = min(max(pages, 1), 5)
-    results = {"tb": [], "jd": [], "vip": []}
+    results: dict = {"tb": [], "jd": [], "vip": []}
     # 淘宝翻页（tb_search 已支持 page）
     try:
         for p in range(1, pages + 1):
@@ -844,13 +857,13 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
             yield step("比价合并", "running")
             init_db()
             groups = []
-            if category and category in ADAPTERS and ADAPTERS[category]:
+            if category and category in ADAPTERS:
                 parsed = parse_items(all_items, category)
                 grouped = group_by_sku(parsed, category)
                 for key, items in grouped.items():
                     if not key or key == "未解析":
                         continue
-                    by_platform = {}
+                    by_platform: dict = {}
                     for it in items:
                         it["value_score"] = value_score(it)
                         p = it.get("platform", "?")
@@ -1042,13 +1055,13 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(""))
 
     # SKU 分组
     groups = []
-    if category and category in ADAPTERS and ADAPTERS[category]:
+    if category and category in ADAPTERS:
         parsed = parse_items(all_items, category)
         grouped = group_by_sku(parsed, category)
         for key, items in grouped.items():
             if not key or key == "未解析":
                 continue
-            by_platform = {}
+            by_platform: dict = {}
             for it in items:
                 it["value_score"] = value_score(it)
                 p = it.get("platform", "?")
@@ -1883,4 +1896,6 @@ if __name__ == "__main__":
     import threading
 
     threading.Thread(target=lambda: asyncio.run(_watch_loop()), daemon=True).start()
-    uvicorn.run(app, host="0.0.0.0", port=8001)  # 故意 0.0.0.0：手机/家人设备局域网访问必需（防火墙已放行）
+    uvicorn.run(
+        app, host="0.0.0.0", port=8001
+    )  # 故意 0.0.0.0：手机/家人设备局域网访问必需（防火墙已放行）
