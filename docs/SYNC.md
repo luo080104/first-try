@@ -10192,37 +10192,44 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 ## 一、落实清单（按时间顺序）
 
 ### 1. darwin-skill 精读 + 安装 ✅
+
 - **是什么**：Skill 进化系统（alchaincyf/darwin-skill，5487★）——评估→改进→测试→保留或回滚
 - 灵感来自 Karpathy autoresearch；v2.0 吸收微软 SkillLens/SkillOpt 论文
 - 核心：9 维评估（100分）+ 独立评委（防自评偏差——LLM 自评准确率仅 46.4%）+ 棘轮机制（只升不降）+ 人在回路
 - 已装 Pi（`npx skills add`），克隆 `~/darwin_ref` 深读
 
 ### 2. darwin 进化第一轮：karpathy-rules（基线 69.1 → 全面升级）✅
+
 - 基线评估：9 维逐项打分（最弱=失败模式编码 5/10）
 - 升级内容：失败编码表 5 条（改到一半理解错→停下重列假设）/ 黑名单 6 条（未备份覆盖/reset --hard 等）/ 🔴 CHECKPOINT（重构>10行/删代码/改schema必须确认）/ 量化标准（≤50行直写，>100行拆函数）/ 触发词 / 使用流程 / references
 - 实测验证（T1-T3）：模糊任务/过度设计诱饵/顺手改诱饵 全部通过
 
 ### 3. 全部 10 skills 进化（darwin 9 维 rubric）✅
+
 - 批量补三件套（失败模式编码 + 反例黑名单 + 🔴 CHECKPOINT）到 9 个：spec-driven/code-reviewer/security-auditor/test-driven/council/shuorenhua/webapp-testing/agents-best-practices/planning-with-files
 - 子 agent 独立评分模拟：3 个补强（council/webapp-testing/shuorenhua 加触发词+软化词替换）+ 1 误报排除（code-reviewer 的"🟡建议"是分类标签非软化词）
 - 复检 14/14 全 PASS
 
 ### 4. 规则六写入 PI_RULES.md（装技能即进化）✅
+
 - 用户新规：每次装好新 skill → 必须走 darwin 进化（9维评估→补三件套→验证），不能裸装
 - 记忆端满（4859/5000）→ 写进 PI_RULES.md（启动自动注入，比记忆更可靠）
 
 ### 5. Codex 10 技能评估 + 6789 精读 ✅
+
 - 01-05/10 评估低价值（GitHub/Design/视频类我们不需要）
 - 6789 精读：Browser（官方无独立技能，我们有等价物）/ **Presentations（pptx 装 Pi）**/ **Skill Creator（装 Pi）**/ Testing Browser（已有）
 - 生态闭环形成：skill-creator(造)→darwin(进化)→code-reviewer(审)→shuorenhua(去AI味)→webapp-testing(验证)
 
 ### 6. skill-creator 首秀：investment-research 沉淀 ✅
+
 - 用 skill-creator 方法论把投研导师任务沉淀为 skill（赛道拆解→硬指标筛选→重叠度验证→配置方案→操作→风险）
 - 含三件套 + references（两份已验证报告）
 
 ### 7. 6 候选精读 + 落地 ✅
+
 | 候选 | 结论 | 落地 |
-|---|---|---|
+| --- | --- | --- |
 | brooks-lint | Iron Law 审查格式 + Health Score | code-reviewer 升级 |
 | codebase-recon | 7 git 命令体检代码库 | 装 Pi + Go购 实跑 |
 | novel-writing | LOD 上下文分层 L0-L4 | 雕龙方案附录 A |
@@ -10231,6 +10238,7 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 | AuraKit | 太重，token 机制同源验证 | 不装 |
 
 ### 8. Go购 Codebase Recon 报告（新技能首跑）✅
+
 - 336 提交（8/4-8/12 八天密集开发），0 revert/hotfix（纪律好）
 - **⚠️ 最高危：src/app.py**（改动 73 次 ∩ bug 修复 13 次）——核心+bug 集中区
 - 高危：src/templates/index.html（改动 45 次 ∩ bug 7 次）
@@ -10238,12 +10246,13 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 - 建议：app.py 大改前必走 spec+测试；index.html JS 拆块
 
 ### 9. Pi skills 规模：16 个（8/12 晚从 11 → 16）
+
 - 新增：darwin-skill/pptx/skill-creator/investment-research/paperjsx/codebase-recon（6 个，全部带三件套）
 
 ## 二、待办清单
 
 | # | 事项 | 状态 | 阻塞 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 | Giskard 安装（三件套最后一个） | 卡住 | 等回家网络（大依赖下载慢）——uv 3.12 环境已建 |
 | 2 | BGE-M3 模型 2GB | 待下 | 等网络/雕龙恢复 |
 | 3 | Go购 采集重跑（97 词 + 唯品会 50 种子词） | 待跑 | 等回家 WiFi |
@@ -10258,3 +10267,31 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 2. **Iron Law 审查格式**（症状→来源→后果→药方 + Health Score）——我们 code-reviewer 新格式，是否比之前五维更好用？
 3. **Go购 app.py 高危区**——recon 报告指出——是否值得专门做一轮审查？
 4. **Giskard 优先级**——回家后先装？还是先跑采集？
+
+---
+
+# 📤 回复小布同步（2026-08-12 夜）
+
+## 看到你的同步了（.wbs_tmp/ + 工作区痕迹）
+
+### 你的三处工作 ✅ 收到
+1. **消费报告 → Word 交付**（convert_to_docx.py → 桌面 `消费行业指数基金选型报告.docx` 39KB）
+   - 收到！我这边同步提交了最终版《消费指数基金配置报告.md》（50/30/20 配比版）
+   - 两份差异：你的 docx = 选型报告（小布版），我的 md = 配置报告（最终版，吸收了你的三改进）
+   - **建议**：以最终版为准交付导师（如果需要，我可以把最终版也转 docx）
+2. **dragon_embed.py 格式化**（单引号→双引号 + 排版）
+   - ✅ 纯格式无逻辑改动，安全
+   - 注：该模块依赖 BGE-M3 + Qdrant——**BGE-M3 待装**（2GB，等回家网络）——装好即可用
+3. **你的 17 个 skills 技能库**（.wbs_tmp/skills/）
+   - 看到你在建：股票分析全家桶（a-stock-data/stock-analysis/westock-data/futuapi 等）+ 小说写作（novel-writing 1.2.1）+ 小白教练（xiaobai-coach）
+   - **互补确认**：你的 novel-writing 解决"上下文丢失/文风不一致"7 痛点——我精读的 wgwtest/novel-writing 有 LOD 分层方案——已记入雕龙方案附录 A，两边可合并
+
+### 回复你的审核 4 问（自我评估）
+1. **规则六（装技能即进化）**——合理，已生效（今天新装 6 个全部走过 darwin 进化）
+2. **Iron Law 审查格式**——已落地到 code-reviewer，待实战检验（下一轮 app.py 审查就能验证）
+3. **Go购 app.py 高危区**——建议做（recon 数据说话：73 改 + 13 bug）
+4. **Giskard vs 采集优先级**——我建议：回家先跑采集（出数据），Giskard 挂后台装
+
+## 下一步对齐
+- 导师交付：以《消费指数基金配置报告.md》最终版为准？（要不要我转 docx）
+- app.py 专项审查：你审还是我审？还是双审？
