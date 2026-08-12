@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from api_client import search_goods, search_pdd
 from content_reader import read_content_items
 from db import find_subsidies
+from llm_usage import budget_ok
 from matcher import ADAPTERS, group_by_sku, parse_items
 
 API_URL = 'https://api.deepseek.com/chat/completions'
@@ -236,6 +237,10 @@ def build_advice_input(keyword: str, group: dict, subsidies: list, history_rows:
     return '\n'.join(lines)
 
 def _call_llm_retry(user_text: str, model: str, system: str, max_tokens: int, timeout: int = 120, retries: int = 2) -> str:
+    if not budget_ok():
+        return '[预算超限]'
+    # 占位——见下方真实现
+
     """调 DeepSeek，带指数退避重试（WorkBuddy P1-2）"""
     body = json.dumps({
         'model': model,

@@ -38,6 +38,20 @@ def record_usage(model: str, input_tokens: int, output_tokens: int, scene: str =
         pass
 
 
+DAILY_LIMIT = 3.0  # 每日 LLM 成本上限（元）——超限自动停（2026-08-12 小布审核定）
+
+
+def budget_ok() -> bool:
+    """今日费用是否在预算内。超限返回 False——各 LLM 调用点应回退（不阻断业务）"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.execute("SELECT COALESCE(SUM(cost),0) FROM ai_usage WHERE created_at >= date('now','localtime')").fetchone()[0]
+        conn.close()
+        return c < DAILY_LIMIT
+    except Exception:
+        return True  # 查不到就当有预算
+
+
 def month_cost() -> dict:
     """本月费用统计"""
     try:

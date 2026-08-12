@@ -6,6 +6,8 @@ import time
 import urllib.request
 from datetime import datetime
 
+from llm_usage import budget_ok
+
 # API Key 只从环境变量读取（禁止硬编码；部署见 docs/上下文清单.md 一、凭证与环境）
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 API_URL = 'https://api.deepseek.com/chat/completions'
@@ -53,6 +55,9 @@ def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cach
         pass
 
 def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V4-Flash（简单任务），R1 留给 AI 建议面板
+    if not budget_ok():
+        print('[llm] 今日预算超限，跳过 LLM 直接回退')
+        return {'keyword': text.strip()[:50], 'category': ''}
     # 缓存命中：同关键词 24h 内秒回（优化：省 LLM 调用）
     cached = _cache_get(text)
     if cached:
@@ -139,6 +144,9 @@ OPTIONS_SYSTEM = """你是Go购的导购助手。根据搜索结果标题，将�
 只输出JSON数组，不要其他文字。"""
 
 def generate_options(keyword: str, groups: list, history_txt: str = '') -> list:
+    if not budget_ok():
+        print('[llm] 今日预算超限，跳过导购选项')
+        return []
     """从搜索结果生成导购选项（V4-Pro，小骆：性能第一）
     2026-08-11 小布：对话历史拼进 prompt——LLM 看完整上下文再出选项"""
     lines = []

@@ -6,6 +6,8 @@ import os
 import sys
 import urllib.request
 
+from llm_usage import budget_ok
+
 API_URL = 'https://api.deepseek.com/chat/completions'
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
@@ -55,6 +57,8 @@ def read_content_all(keyword: str = '') -> list:
     return out
 
 def _call_llm(content_texts: list, batch_keywords: str) -> list:
+    if not budget_ok():
+        return []
     """DeepSeek 抽取一批（最多 15 条内容）"""
     if not API_KEY:
         print('❌ 未设置 DEEPSEEK_API_KEY 环境变量')

@@ -5,6 +5,8 @@ import os
 import sqlite3
 import urllib.request
 
+from llm_usage import budget_ok
+
 # API Key 只从环境变量读取（禁止硬编码）
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
@@ -38,6 +40,8 @@ def _llm_classify(comments: list, batch_size: int = 20) -> list:
     return [label for i in range(len(batches)) for label in results_map[i]]
 
 def _classify_batch(batch):
+    if not budget_ok():
+        return ['N'] * len(batch)  # 预算超限保守处理：标负面防误导
     """单批分类"""
     items = chr(10).join(f'{j}. {c}' for j, c in enumerate(batch))
     prompt = f"评论：{chr(10)}{items}"
