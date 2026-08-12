@@ -10179,5 +10179,82 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 ## skills 总数：15 个（+paperjsx）
 
 ## 补充：codebase-recon 装 Pi（16 skills）
+
 - ✅ 装 Pi + 规则六三件套（失败编码 4 条/黑名单 3 条/CHECKPOINT 2 条）
 - 使用场景：新项目入手/代码库健康体检（Go购 已实跑验证）
+
+---
+
+# 📤 同步：2026-08-12 晚间大作战（详细版）
+
+> 给小布审核用：本会话完整工作记录（落实 + 待办 + 建议）
+
+## 一、落实清单（按时间顺序）
+
+### 1. darwin-skill 精读 + 安装 ✅
+- **是什么**：Skill 进化系统（alchaincyf/darwin-skill，5487★）——评估→改进→测试→保留或回滚
+- 灵感来自 Karpathy autoresearch；v2.0 吸收微软 SkillLens/SkillOpt 论文
+- 核心：9 维评估（100分）+ 独立评委（防自评偏差——LLM 自评准确率仅 46.4%）+ 棘轮机制（只升不降）+ 人在回路
+- 已装 Pi（`npx skills add`），克隆 `~/darwin_ref` 深读
+
+### 2. darwin 进化第一轮：karpathy-rules（基线 69.1 → 全面升级）✅
+- 基线评估：9 维逐项打分（最弱=失败模式编码 5/10）
+- 升级内容：失败编码表 5 条（改到一半理解错→停下重列假设）/ 黑名单 6 条（未备份覆盖/reset --hard 等）/ 🔴 CHECKPOINT（重构>10行/删代码/改schema必须确认）/ 量化标准（≤50行直写，>100行拆函数）/ 触发词 / 使用流程 / references
+- 实测验证（T1-T3）：模糊任务/过度设计诱饵/顺手改诱饵 全部通过
+
+### 3. 全部 10 skills 进化（darwin 9 维 rubric）✅
+- 批量补三件套（失败模式编码 + 反例黑名单 + 🔴 CHECKPOINT）到 9 个：spec-driven/code-reviewer/security-auditor/test-driven/council/shuorenhua/webapp-testing/agents-best-practices/planning-with-files
+- 子 agent 独立评分模拟：3 个补强（council/webapp-testing/shuorenhua 加触发词+软化词替换）+ 1 误报排除（code-reviewer 的"🟡建议"是分类标签非软化词）
+- 复检 14/14 全 PASS
+
+### 4. 规则六写入 PI_RULES.md（装技能即进化）✅
+- 用户新规：每次装好新 skill → 必须走 darwin 进化（9维评估→补三件套→验证），不能裸装
+- 记忆端满（4859/5000）→ 写进 PI_RULES.md（启动自动注入，比记忆更可靠）
+
+### 5. Codex 10 技能评估 + 6789 精读 ✅
+- 01-05/10 评估低价值（GitHub/Design/视频类我们不需要）
+- 6789 精读：Browser（官方无独立技能，我们有等价物）/ **Presentations（pptx 装 Pi）**/ **Skill Creator（装 Pi）**/ Testing Browser（已有）
+- 生态闭环形成：skill-creator(造)→darwin(进化)→code-reviewer(审)→shuorenhua(去AI味)→webapp-testing(验证)
+
+### 6. skill-creator 首秀：investment-research 沉淀 ✅
+- 用 skill-creator 方法论把投研导师任务沉淀为 skill（赛道拆解→硬指标筛选→重叠度验证→配置方案→操作→风险）
+- 含三件套 + references（两份已验证报告）
+
+### 7. 6 候选精读 + 落地 ✅
+| 候选 | 结论 | 落地 |
+|---|---|---|
+| brooks-lint | Iron Law 审查格式 + Health Score | code-reviewer 升级 |
+| codebase-recon | 7 git 命令体检代码库 | 装 Pi + Go购 实跑 |
+| novel-writing | LOD 上下文分层 L0-L4 | 雕龙方案附录 A |
+| paperjsx | JSON→文档 纯本地 | 装 Pi |
+| unslop | audit.json 审计模式 | shuorenhua 加审计清单模式 |
+| AuraKit | 太重，token 机制同源验证 | 不装 |
+
+### 8. Go购 Codebase Recon 报告（新技能首跑）✅
+- 336 提交（8/4-8/12 八天密集开发），0 revert/hotfix（纪律好）
+- **⚠️ 最高危：src/app.py**（改动 73 次 ∩ bug 修复 13 次）——核心+bug 集中区
+- 高危：src/templates/index.html（改动 45 次 ∩ bug 7 次）
+- 中危：src/db.py（bug 6 次）
+- 建议：app.py 大改前必走 spec+测试；index.html JS 拆块
+
+### 9. Pi skills 规模：16 个（8/12 晚从 11 → 16）
+- 新增：darwin-skill/pptx/skill-creator/investment-research/paperjsx/codebase-recon（6 个，全部带三件套）
+
+## 二、待办清单
+
+| # | 事项 | 状态 | 阻塞 |
+|---|---|---|---|
+| 1 | Giskard 安装（三件套最后一个） | 卡住 | 等回家网络（大依赖下载慢）——uv 3.12 环境已建 |
+| 2 | BGE-M3 模型 2GB | 待下 | 等网络/雕龙恢复 |
+| 3 | Go购 采集重跑（97 词 + 唯品会 50 种子词） | 待跑 | 等回家 WiFi |
+| 4 | 雕龙项目恢复 | 暂停 | 等用户指示 |
+| 5 | Go购 app.py 高危区体检式审查 | 建议 | 可选（等用户点） |
+| 6 | 记忆库整理（user 记忆 4859/5000 满） | 待做 | 需要合并精简 |
+| 7 | codebase-recon 克隆 SSL 重试 | ✅ 已解决 | 网络恢复后克隆成功 |
+
+## 三、请小布审核/建议
+
+1. **规则六（装技能即进化）**——每装一个新 skill 自动走 darwin 进化——是否合理？
+2. **Iron Law 审查格式**（症状→来源→后果→药方 + Health Score）——我们 code-reviewer 新格式，是否比之前五维更好用？
+3. **Go购 app.py 高危区**——recon 报告指出——是否值得专门做一轮审查？
+4. **Giskard 优先级**——回家后先装？还是先跑采集？
