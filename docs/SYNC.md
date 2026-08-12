@@ -10300,5 +10300,34 @@ skill-creator（造）→ darwin（进化）→ code-reviewer（审）→ shuore
 - app.py 专项审查：你审还是我审？还是双审？
 
 ## 待办追加（2026-08-12 夜，用户指示）
+
 - 【待办】Go购 app.py 高危区专项审查——**不急**，用户延后；审查人未定（我/小布/双审）
 - ✅ 导师交付：用户已上交（Word 版），消费报告任务关闭
+
+---
+
+# 📤 GitHub 热榜 6 项目查证+精读（2026-08-12 夜）
+
+## 查证结果（视频星数 vs 实查）
+| 项目 | 视频星数 | 实查 | 结论 |
+|---|---|---|---|
+| andrej-karpathy-skills | 17万 | **201,708**（multica-ai） | ✅ 真（还低估了） |
+| CodeGraph | 4.7万 | 3（lzehrung/codegraph） | ❌ 严重虚标 |
+| Understand Anything | 5.7万 | **79,038**（Egonex-AI） | ✅ 真 |
+| Presenton | 5.7千 | **9,471**（presenton） | ✅ 真 |
+| NVlabs/LongLive | 3万 | 2,532 | ❌ 虚标 |
+| claude-plugins-official | 3万 | **33,435**（anthropics） | ✅ 真 |
+
+## 精读结论
+| 项目 | 核心 | 对我们的价值 | 行动 |
+|---|---|---|---|
+| ① karpathy-skills | CLAUDE.md 4 条金律（Think/Simplicity/Surgical/Goal-Driven） | 我们的 karpathy-rules 已完整覆盖 + darwin 进化更强（失败编码/黑名单/CHECKPOINT） | ✅ 无需新增（已超越原版） |
+| ③ Understand Anything | 多agent流水线→知识图谱（文件/函数/类节点）→交互仪表盘；代码视图+**领域视图（业务逻辑图谱）**+知识库视图 | 与 pi-lens review graph 同思路；**领域视图是增量**（代码→业务流程映射） | 概念记录；领域视图记入 Go购/观复 候选 |
+| ④ Presenton | 自托管 AI PPT 生成器（Docker/桌面），多模型，**可编辑 PPTX 导出** | 我们有 pptx+paperjsx（脚本方案）覆盖报告场景；它是完整 App（重） | 不装（只做对的事） |
+| ⑥ claude-plugins-official | 39 个官方插件（code-review/skill-creator/security/LSP 系列） | 核心同类物我们全有（16 skills） | 概念确认 |
+| ② CodeGraph / ⑤ LongLive | 代码地图（3星小项目）/ 视频生成 | 不需要/不相关 | 跳过 |
+
+## 关键洞察
+- 视频星数 3/6 严重虚标——查证必做（GitHub API 实查）
+- 我们的工具链已覆盖热榜核心能力（skills 体系 ⊇ karpathy-skills + 官方插件目录核心）
+- 唯一增量：**领域视图**（业务逻辑图谱）——Go购 未来可做（app.py 是核心枢纽，领域视图正好对症）
