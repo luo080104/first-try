@@ -1,16 +1,30 @@
+import os
 import re
 
 # app.py - Go购网页版 v1.0（雏形）
 # 运行: python src/app.py  → 浏览器打开 http://localhost:8000
 import sys
 
-# 2026-08-11 小布①④：pythonw 下 stdout 默认 GBK，print emoji 崩（阻塞搜索+盯价500）——全局改 UTF-8
-for _s in (sys.stdout, sys.stderr):
+# 2026-08-12 修复 pythonw 秒退：无控制台时 sys.stdout/stderr 为 None → print 崩 → 重定向到文件
+if sys.stdout is None:
     try:
-        _s.reconfigure(encoding="utf-8", errors="replace")
+        sys.stdout = open(os.path.join(os.path.dirname(__file__), '..', 'data', 'server_stdout.log'), 'w', encoding='utf-8', errors='replace')
     except Exception:
         pass
-import os
+if sys.stderr is None:
+    try:
+        sys.stderr = open(os.path.join(os.path.dirname(__file__), '..', 'data', 'server_stderr.log'), 'w', encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+# 2026-08-11 小布①④：pythonw 下 stdout 默认 GBK，print emoji 崩（阻塞搜索+盯价500）——全局改 UTF-8
+for _s in (sys.stdout, sys.stderr):
+    if _s is None:
+        continue
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]  # pyright 不认识 TextIO.reconfigure（合法 API）
+    except Exception:
+        pass
 
 sys.path.insert(0, os.path.dirname(__file__))
 import asyncio
@@ -226,6 +240,8 @@ def search_bili_api(keyword: str = ""):
             ),
             None,
         )
+        if not edge:
+            edge = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
         subprocess.Popen(
             [
                 edge,
@@ -266,7 +282,7 @@ def search_bili_api(keyword: str = ""):
             text=True,
         )
     except subprocess.TimeoutExpired:
-        pass
+        print(f"[content] 抓取超时（150s）: {keyword[:40]}")
 
     # 4. 抓取后重读（含三平台 + 打分）
     return read_content_items(keyword)
@@ -562,7 +578,7 @@ async def api_deep_crawl(
 
 
 @app.get("/search_sse")
-async def search_sse(
+async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（Python 3.3+），pyright 严格模式误报
     keyword: str = "",
     category: str = "",
     guide_round: int = 0,
@@ -1867,4 +1883,4 @@ if __name__ == "__main__":
     import threading
 
     threading.Thread(target=lambda: asyncio.run(_watch_loop()), daemon=True).start()
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=8001)  # 故意 0.0.0.0：手机/家人设备局域网访问必需（防火墙已放行）
