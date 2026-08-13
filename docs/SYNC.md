@@ -11440,14 +11440,15 @@ tldr tar               # 示例式速查
   3. git-guardrails 概念与 CONSTITUTION Never 一致（验证）
 - 不装仓库（Claude Code 插件格式 + 与我们 16 skills 重叠度高）——抄设计
 
-
 ## Vibe Kanban 替代品检索（2026-08-13 上午）
 
 ### 重要纠正：Vibe Kanban 没死透
+
 - Bloop 2026-04-10 宣布关停，但项目已交社区（Apache-2.0），2026-05 起完全本地化
 - 仍是可用状态，只是"社区时间"维护（最后 commit 2026-04-24）
 
 ### 🔥 最佳替代：Paseo（getpaseo/paseo，13.5k⭐，AGPL-3.0）
+
 - 定位：多 coding agent 编排——桌面/手机/Web/CLI 四端连接本地 daemon
 - **明确支持 Pi**（+Claude Code/Codex/OpenCode/Copilot/Cursor，共 38+）
 - 核心特性：
@@ -11462,8 +11463,9 @@ tldr tar               # 示例式速查
 - 判：**候选装**——解决"Pi 跑起来后无法从手机看进度"的痛点；AGPL 对个人自用无影响
 
 ### 其他候选
+
 | 项目 | ⭐ | 判断 |
-|------|-----|------|
+| ------ | ----- | ------ |
 | Multica（multica-ai） | 45.7k | Go，人机同权看板，今天活跃——值得看（也是 karpathy-skills 同组织） |
 | Claude Squad | 8.2k | tmux 管理 agents，纯终端，无 GUI |
 | Maestro | 2.9k | 编排指挥中心，Auto Run 无人值守 |
@@ -11471,6 +11473,7 @@ tldr tar               # 示例式速查
 | Nimbalyst | 1.3k | 视觉编辑器（markdown/草图/代码） |
 
 ### 行动项
+
 1. 🔥 Paseo 装不装——小骆拍板（npm install @getpaseo/cli，半小时可试）
 2. Multica 快读评估（45.7k⭐，可能是 Paseo 的更团队向替代）
 3. 其他备查
@@ -11478,12 +11481,23 @@ tldr tar               # 示例式速查
 # 📤 oh-my-pi 精读（2026-08-13，24.3k 星——pi 的增强 fork）
 
 ## 结论：不换装（工具链切换风险>收益）——抄设计
+
 - 我们是 @earendil-works/pi 用户；omp = badlogic/pi-mono 的 fork（can1357，60+ providers/31 工具/14 LSP/28 DAP/8万行 Rust）
 - 五个特性对比：代码执行（有 ctx_execute 类似）/LSP 接线（有 pi-lens 类似）/真调试器（无 DAP）/时间旅行流规则（无）/一等子代理（有 pi-subagents worktree）
 
 ## 最值钱设计：时间旅行流规则（04）
+
 - 规则不常驻 prompt——模型出格时（正则匹配）中止流→注入规则→同点重试——**不付每轮上下文税**；注入过压缩存活
 - vs 我们：PI_RULES 启动全量注入（每轮吃税）——概念记录；实现需 harness 核心（不可改）——已用"触发词"近似
 - 借鉴点：我们的规则可以更"轻"（短句+触发词）减少每轮税
 
 ## 次价值：schema 验证子代理结果（05）——pi-subagents 已有 outputSchema ✅（验证）
+
+# 📤 PI_RULES 精简落地（2026-08-13，oh-my-pi 时间旅行借鉴）
+
+## 落地内容
+- PI_RULES.md 144 行 → 55 行（指针式）：每条规则 1-2 行核心 + "详见"指针
+- 详细版在 karpathy-rules skill（失败模式/黑名单/检查点）——触发时按需加载
+- 规则一~十一全部保留语义 + 行为边界（CONSTITUTION 联动）+ 文档索引
+- 效果：每轮注入 token 大幅减少（时间旅行流规则概念近似——常态最小化，出格加载细节）
+- 注：karpathy-rules skill 本就是"触发加载"——真正的时间旅行需 harness 核心支持（不可改）
