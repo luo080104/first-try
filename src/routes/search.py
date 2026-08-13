@@ -47,7 +47,6 @@ def search_taobao_full(
         return []
 
 
-
 def search_jd_full(
     keyword: str, page: int = 1, max_items: int = 8, propagate_captcha: bool = False
 ) -> list:
@@ -78,7 +77,6 @@ def search_jd_full(
         return []
 
 
-
 def search_vip_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     """唯品会全量搜索（慢通道，浏览器），失败返回空；字段统一 actualPrice"""
     try:
@@ -97,7 +95,6 @@ def search_vip_full(keyword: str, page: int = 1, max_items: int = 8) -> list:
     except Exception as e:
         print(f"[vip_full] 失败: {str(e)[:80]}")
         return []
-
 
 
 def search_pdd_full(
@@ -218,14 +215,12 @@ def search_bili_api(keyword: str = ""):
     return read_content_items(keyword)
 
 
-
 @router.get("/search_tb")
 def search_tb_api(keyword: str = ""):
     import tb_search
 
     items = tb_search.search_taobao(keyword, max_items=10)
     return {"items": items}
-
 
 
 @router.get("/search_jd")
@@ -236,7 +231,6 @@ def search_jd_api(keyword: str = ""):
     return {"items": items}
 
 
-
 @router.get("/search_pdd")
 def search_pdd_api(keyword: str = ""):
     """拼多多浏览器补搜（v6.1 打通）"""
@@ -244,7 +238,6 @@ def search_pdd_api(keyword: str = ""):
 
     items = pdd_search.search_pdd(keyword, max_items=10)
     return {"items": items}
-
 
 
 @router.get("/api/items")
@@ -272,7 +265,6 @@ def api_items(
     )
 
 
-
 @router.post("/api/extract")
 async def api_extract(keyword: str = Form("")):
     """内容→商品抽取（DeepSeek）→ recommendations 入库"""
@@ -282,13 +274,11 @@ async def api_extract(keyword: str = Form("")):
     return result
 
 
-
 @router.get("/api/recommendations")
 def api_recommendations(limit: int = 50):
     """博主推荐列表（按商品聚合）"""
     init_db()
     return {"items": list_recommendations(limit)}
-
 
 
 @router.post("/api/deep_crawl")
@@ -344,7 +334,6 @@ async def api_deep_crawl(
     }
 
 
-
 @router.get("/search_sse")
 async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（Python 3.3+），pyright 严格模式误报
     request: Request,
@@ -354,9 +343,21 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
     mode: str = "live",
     user_name: str = "",
     session_id: str = "",
+    pin: str = "",
 ):
     """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）
-    2026-08-13 小布🟡3：客户端断开检测——不挂死生成器"""
+    2026-08-13 小布🟡3：客户端断开检测——不挂死生成器
+    2026-08-13 小布🔴2：设置 PIN 后历史模式需校验（live 模式不校验——防日常搜索卡壳）"""
+    from db import verify_pin
+
+    if mode == "history" and not verify_pin(pin or ""):
+        _err = _json.dumps(
+            {"type": "error", "msg": "访问密码不对（或未设置密码）"}, ensure_ascii=False
+        )
+        return StreamingResponse(
+            iter([b"data: " + _err.encode("utf-8") + b"\n\n"]),
+            media_type="text/event-stream",
+        )
 
     async def gen():
         nonlocal keyword, category
@@ -803,6 +804,7 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
 # 前端已全部改走 /search_sse；此 POST /search 仅保留供直接调用/测试，
 # 逻辑与 SSE 版存在分叉——新功能只改 SSE 版，本入口不再维护，后续版本删除
 
+
 @router.post("/search", response_class=HTMLResponse)
 def search(request: Request, keyword: str = Form(...), category: str = Form("")):
     request.state.deprecated = True  # 标记：日志/监控可识别遗留入口调用
@@ -906,6 +908,3 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(""))
 
 
 # ========== v6 多用户（角色切换，WorkBuddy 定案：不登录，localStorage）==========
-
-
-

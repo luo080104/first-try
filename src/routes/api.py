@@ -9,6 +9,15 @@ from app_state import _BACKGROUND_TASKS
 
 router = APIRouter()
 
+
+def _pin_guard(pin: str) -> dict:
+    """PIN 校验（小布🔴2）：失败返回 403 响应体，成功返回 None"""
+    from db import verify_pin
+
+    if not verify_pin(pin or ''):
+        return {"ok": False, "msg": "访问密码不对（或未设置）"}
+    return None
+
 import re
 
 from db import get_conn, init_db, stats_items
@@ -41,7 +50,9 @@ def api_price_trend(sku_id: str = "", platform: str = "", days: int = 30):
 
 
 @router.get("/api/search_history")
-def api_search_history(user_name: str = ""):
+def api_search_history(user_name: str = "", pin: str = ""):
+    g = _pin_guard(pin)
+    if g: return g
     with closing(get_conn()) as conn:
         rows = conn.execute(
             """SELECT keyword, category, MAX(searched_at) searched_at
@@ -54,7 +65,9 @@ def api_search_history(user_name: str = ""):
 
 
 @router.post("/api/search_history_del")
-def api_search_history_del(keyword: str = Form(""), user_name: str = ""):
+def api_search_history_del(keyword: str = Form(""), user_name: str = "", pin: str = Form("")):
+    g = _pin_guard(pin)
+    if g: return g
     with closing(get_conn()) as conn:
         conn.execute(
             "DELETE FROM search_history WHERE keyword=? AND user_name=?",
@@ -66,7 +79,9 @@ def api_search_history_del(keyword: str = Form(""), user_name: str = ""):
 
 
 @router.post("/api/search_history_clear")
-def api_search_history_clear(user_name: str = ""):
+def api_search_history_clear(user_name: str = "", pin: str = ""):
+    g = _pin_guard(pin)
+    if g: return g
     with closing(get_conn()) as conn:
         conn.execute("DELETE FROM search_history WHERE user_name=?", (user_name,))
         conn.commit()
@@ -113,7 +128,10 @@ def watch_add(
     item_id: str = Form(""),
     current_price: float = Form(...),
     target_price: float = Form(...),
+    pin: str = Form(""),
 ):
+    g = _pin_guard(pin)
+    if g: return g
     from db import add_watch, init_db
 
     init_db()
@@ -145,7 +163,9 @@ def api_family():
 
 
 @router.post("/api/family_tasks")
-async def api_family_tasks(categories: str = Form("")):
+async def api_family_tasks(categories: str = Form(""), pin: str = Form("")):
+    g = _pin_guard(pin)
+    if g: return g
     """把用户勾选的品类的采集词加入采集计划（幂等）
     categories: 逗号分隔的细品类名，如 '女士服装,护肤品'；空=全部"""
     from db import FAMILY_CATEGORIES, get_conn
@@ -190,7 +210,9 @@ async def api_search_log(
 
 
 @router.get("/api/profile")
-def api_profile(user: str = ""):
+def api_profile(user: str = "", pin: str = ""):
+    g = _pin_guard(pin)
+    if g: return g
     """v6 用户画像：最近搜索词 + 品类分布"""
     from db import user_profile
 
@@ -199,7 +221,9 @@ def api_profile(user: str = ""):
 
 
 @router.post("/api/resume_tasks")
-async def api_resume_tasks():
+async def api_resume_tasks(pin: str = Form("")):
+    g = _pin_guard(pin)
+    if g: return g
     """经验学习：手动恢复暂停的采集任务"""
     from db import resume_crawl_tasks
 
@@ -244,7 +268,9 @@ def api_usage():
 
 
 @router.get("/api/wander")
-def api_wander(user: str = "", size: int = 12):
+def api_wander(user: str = "", size: int = 12, pin: str = ""):
+    g = _pin_guard(pin)
+    if g: return g
     """购物漫游：按画像推荐（返回卡片 + 推荐理由）"""
     from db import get_conn
     from wander import wander_recommend
@@ -313,7 +339,9 @@ async def api_wander_feedback(
 
 
 @router.get("/api/wander_favs")
-def api_wander_favs(user: str = ""):
+def api_wander_favs(user: str = "", pin: str = ""):
+    g = _pin_guard(pin)
+    if g: return g
     """我的收藏列表"""
     from db import get_conn
 
@@ -650,7 +678,9 @@ async def api_crawl_add(keyword: str = Form(""), category: str = Form("")):
 
 
 @router.post("/api/prefs")
-async def api_prefs(prefs: str = Form("")):
+async def api_prefs(prefs: str = Form(""), pin: str = Form("")):
+    g = _pin_guard(pin)
+    if g: return g
     """偏好设置（v5.2）：逗号分隔排除平台，空=清除"""
     from db import PREF_EXCLUDE_PLATFORMS, set_user_pref
 
@@ -851,4 +881,12 @@ def api_analysis():
     }
 
 
+@router.post("/api/set_pin")
+def api_set_pin(pin: str = Form(""), old_pin: str = Form("")):
+    """设置/修改家庭访问 PIN（小布🔴2）。首次设置不用旧 PIN；修改需旧 PIN；空=清除"""
+    from db import get_family_pin, set_family_pin
 
+    if get_family_pin() and not verify_pin(old_pin or ''):
+        return {"ok": False, "msg": "旧密码不对"}
+    set_family_pin(pin.strip())
+    return {"ok": True, "msg": "访问密码已设置" if pin.strip() else "访问密码已清除"}

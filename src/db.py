@@ -809,6 +809,27 @@ def add_excluded_platform(plat: str) -> bool:
     return True
 
 
+PREF_PIN = 'family_pin'  # 家庭访问 PIN（2026-08-13 小布🔴2：空=未设置=不校验）
+
+
+def set_family_pin(pin: str):
+    """设置/修改家庭 PIN（空=清除保护）"""
+    set_user_pref(PREF_PIN, pin or '', source='manual', confidence=1.0)
+
+
+def get_family_pin() -> str:
+    v = get_user_pref(PREF_PIN, '')
+    return str(v or '')
+
+
+def verify_pin(pin: str) -> bool:
+    """PIN 校验：未设置 → 放行（向后兼容）；已设置 → 必须匹配"""
+    saved = get_family_pin()
+    if not saved:
+        return True
+    return bool(pin) and str(pin) == saved
+
+
 def add_category_pref(category: str, word: str, source: str = "manual", confidence: float = 1.0) -> bool:
     """记一条品类偏好（如 服饰→纯棉；AI 提取传 source='llm', confidence=0.7）"""
     prefs = get_user_pref(PREF_CATEGORY_PREFS, {})
