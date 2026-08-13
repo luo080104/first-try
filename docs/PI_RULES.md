@@ -109,3 +109,11 @@ SYNC.md 是历史存档（append-only），memory-bank 是当前状态（curated
 - `docs/SYNC.md`：双 AI 协作交接本（历史存档）
 - `docs/case_index.md`：案例索引
 - `memory-bank/`：**启动先读**（prd/tech-stack/progress/architecture）
+
+## 规则十二：装技能先扫描（2026-08-13 建立，SkillSpector 实战）
+
+- 装任何新 skill（尤其第三方）前：`skillspector scan <skill路径> --no-llm`（NVIDIA 开源，68 种漏洞模式/0-100 评分）
+- 装完跑 baseline 更新：`skillspector baseline ~/.pi/agent/skills -o ~/.pi/agent/skills/.skillspector-baseline.yaml --no-llm`（重扫只报新发现）
+- 工具位置：`~/skillspector_ref/.venv/Scripts/skillspector.exe`
+- 实测（2026-08-13）：17 个 skills 全扫——4 个 HIGH/CRITICAL 均为静态误报（XSD 标准文件/正常 env 读取/npx 安装命令）——无真实恶意；84 个发现已入 baseline
+- 数据背景：NVIDIA 研究 26.1% skills 含漏洞、5.2% 含恶意意图——**第三方 skill 不可信，必扫**
