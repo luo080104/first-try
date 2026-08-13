@@ -11398,29 +11398,33 @@ tldr tar               # 示例式速查
 - 首次请求 timed out = 模型下载尝试（直通模式无此问题）
 - LiteLLM 拉远程 cost map 超时（手机热点）——自动 fallback 本地 ✅
 
-
 ## Vibe Coding 专题精读（2026-08-13 上午，4 项目）
 
 ### 1. easy-vibe（DataWhale，5.9k+⭐，免费）
+
 - vibe coding 101 中文入门课程，零基础友好，三阶段：小游戏/单页应用 → 全栈 → MCP+Claude Code+Agent 协作
 - 80+ 交互式练习 + 微信小程序/Android/iOS 多平台 + 可导出 PDF/EPUB
 - 判：**装（克隆本地）**——编程小白入门教材，比买课强，Stage 3 讲 MCP+Skills 正好对应我们的路线
 
 ### 2. vibe-coding-cn（tradecatlabs，~10k⭐，MIT）—— 本批最有价值
+
 - 核心公式：Vibe Coding = 规划驱动 + 上下文固定 + AI 结对执行
 - **Workflow 六步**：GDD/PRD 设计文档 → 技术栈+AGENTS.md 规则（强制模块化禁巨石文件）→ 实施计划（每步带测试、不含代码）→ memory-bank 记忆库（gdd/tech-stack/plan/progress/architecture）→ 分步执行（一步一测、每步新建会话隔离上下文）→ 功能/修复
 - 判：**方法论与我们 PI_RULES/SDD 高度同源但更系统**——memory-bank 模式值得抄（我们的 SYNC.md 太长了，memory-bank 分文件更清晰）；"每步新建会话+progress.md 传上下文"正是 Pi 上下文管理的解法
 
 ### 3. Vibe Kanban（BloopAI，26.9k⭐）—— ⚠️ 正在关停
+
 - 用看板管理多个 coding agent（workspace=分支+终端+dev server，diff 内联评审，10+ agent 切换）
 - **官方宣布 sunsetting（shutdown）**——不装，也不建议任何新用户接入
 - 结论：pass。但它验证了"多 Agent 可视化编排"是刚需——以后需要时找替代品
 
 ### 4. awesome-vibe-coding（filipecalegario，4.7k⭐）
+
 - 127+ 条目的 Vibe Coding 生态总目录（CLI/IDE/云 Agent/任务管理/MCP/学习资源）
 - 判：📖 备查——需要找某个具体工具时再翻，不整体读
 
 ### 行动项
+
 1. 🔥 vibe-coding-cn 的 memory-bank 模式 → 对照 PI_RULES 评估是否引入（解决 SYNC.md 过长问题）
 2. 🟡 easy-vibe 克隆到本地（用户自学的入门教材）
 3. Vibe Kanban pass（关停），awesome-vibe-coding 备查
@@ -11428,9 +11432,58 @@ tldr tar               # 示例式速查
 # 📤 mattpocock/skills 精读（2026-08-13，21.5万星）
 
 ## 结论
+
 - 哲学：小/易改/可组合（反 GSD/BMAD 流程框架）
 - 三个可抄设计已落地：
   1. **code-reviewer 双轴升级**（Standards+Spec 并行子代理 + Fowler smells 基线 + 固定点 diff 流程）——已写入 skill
   2. **反馈循环纪律**（tight pass/fail 信号优先于读代码——Redact 脱敏纪律）——已写入 code-reviewer
   3. git-guardrails 概念与 CONSTITUTION Never 一致（验证）
 - 不装仓库（Claude Code 插件格式 + 与我们 16 skills 重叠度高）——抄设计
+
+
+## Vibe Kanban 替代品检索（2026-08-13 上午）
+
+### 重要纠正：Vibe Kanban 没死透
+- Bloop 2026-04-10 宣布关停，但项目已交社区（Apache-2.0），2026-05 起完全本地化
+- 仍是可用状态，只是"社区时间"维护（最后 commit 2026-04-24）
+
+### 🔥 最佳替代：Paseo（getpaseo/paseo，13.5k⭐，AGPL-3.0）
+- 定位：多 coding agent 编排——桌面/手机/Web/CLI 四端连接本地 daemon
+- **明确支持 Pi**（+Claude Code/Codex/OpenCode/Copilot/Cursor，共 38+）
+- 核心特性：
+  - worktree 隔离（每 agent 独立分支，互不覆盖）
+  - 分屏/标签页：agents + 终端 + 浏览器预览 + diff 内联评审并排
+  - 手机 App（iOS/Android）完整功能，QR 配对，E2E 加密 relay——出门能看 agent 进度
+  - 语音控制（本地优先）
+  - 完全脚本化 CLI：paseo run/ls/attach/send
+  - 无遥测、无强制登录、免费开源
+- 活跃度：单维护者（Mo Boudra）每日提交，118 releases/8 个月，13.5k⭐ 且今天还在更新
+- 安装：npm install -g @getpaseo/cli && paseo（daemon headless 可跑服务器）
+- 判：**候选装**——解决"Pi 跑起来后无法从手机看进度"的痛点；AGPL 对个人自用无影响
+
+### 其他候选
+| 项目 | ⭐ | 判断 |
+|------|-----|------|
+| Multica（multica-ai） | 45.7k | Go，人机同权看板，今天活跃——值得看（也是 karpathy-skills 同组织） |
+| Claude Squad | 8.2k | tmux 管理 agents，纯终端，无 GUI |
+| Maestro | 2.9k | 编排指挥中心，Auto Run 无人值守 |
+| Parallel Code | — | 原生桌面 App，Arena 模式，无 Windows 版 |
+| Nimbalyst | 1.3k | 视觉编辑器（markdown/草图/代码） |
+
+### 行动项
+1. 🔥 Paseo 装不装——小骆拍板（npm install @getpaseo/cli，半小时可试）
+2. Multica 快读评估（45.7k⭐，可能是 Paseo 的更团队向替代）
+3. 其他备查
+
+# 📤 oh-my-pi 精读（2026-08-13，24.3k 星——pi 的增强 fork）
+
+## 结论：不换装（工具链切换风险>收益）——抄设计
+- 我们是 @earendil-works/pi 用户；omp = badlogic/pi-mono 的 fork（can1357，60+ providers/31 工具/14 LSP/28 DAP/8万行 Rust）
+- 五个特性对比：代码执行（有 ctx_execute 类似）/LSP 接线（有 pi-lens 类似）/真调试器（无 DAP）/时间旅行流规则（无）/一等子代理（有 pi-subagents worktree）
+
+## 最值钱设计：时间旅行流规则（04）
+- 规则不常驻 prompt——模型出格时（正则匹配）中止流→注入规则→同点重试——**不付每轮上下文税**；注入过压缩存活
+- vs 我们：PI_RULES 启动全量注入（每轮吃税）——概念记录；实现需 harness 核心（不可改）——已用"触发词"近似
+- 借鉴点：我们的规则可以更"轻"（短句+触发词）减少每轮税
+
+## 次价值：schema 验证子代理结果（05）——pi-subagents 已有 outputSchema ✅（验证）
