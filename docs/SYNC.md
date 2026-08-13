@@ -12133,20 +12133,22 @@ memory-bank/
 - 精读完成：毫秒级索引/158语言/Hybrid LSP/10×少token基准（arXiv）
 - **不装**（Go购规模 pi-lens 已覆盖）——**记入大项目候选**（>50万行或查询瓶颈时评估——用户提示以后可能有更大项目）
 
-
 ## 简历 v4：角色审 + 去 AI 感（2026-08-13 中午）
 
 ### 三角色审（内容创作者/图书联合作者/产品经理）
+
 - 🔴 必改：删"没有竞赛奖"（与奋进杯自相矛盾）✅
 - 🟡 建议：雕龙压缩、重复段合并、"两条线"指代修正 ✅
 - 新增：高中担任班长（用户确认）
 
 ### 去 AI 感（content-humanizer 评分器实测）
+
 - 初稿 84/100 → 清理 12 处破折号后 **92/100 "Sounds human"** ✅
 - Em-Dash 维度 0/10 → 8/10（剩 2 处为标题，合理保留）
 - 其他维度全满：AI 词汇 25/25、句长方差 20/20、被动 0%、hedging 0
 
 ### 用户档案已补录 MEMORY.md
+
 班长/高考650/杭州/联系方式——之前漏记，已补
 
 ### 简历 v4 完成，可投递
@@ -12154,17 +12156,34 @@ memory-bank/
 # 📤 codebase-memory-mcp 安装（2026-08-13 晚，用户拍板"先装了"）
 
 ## 状态：装好 + 验证通过 ✅
+
 - 位置：`~/codebase-memory/codebase-memory-mcp.exe`（v0.10.3，37MB，纯 C 无依赖）
 - **Go购 实测**：索引 6 秒（2366 节点/5217 边——.env/pdd_profile 正确排除）| search_code 1.1 秒（get_conn 73 结果含签名/行号/调用）
 - 15 个 MCP 工具（search_code/trace_call_path/get_architecture/query_graph/check_index_coverage 等）
 - 定位：**备用引擎**（日常 pi-lens；它用于大项目/性能场景——用户提示以后可能有更大项目）
 
 ## 用法备忘
+
 - 索引：`cli index_repository --repo-path <路径> --mode fast|moderate|full`
 - 查询：`echo '{"project":"<项目名>","pattern":"xxx"}' | cli search_code`（项目名=路径连字符化）
 - UI：`--ui=true` 开 HTTP 图谱可视化
 - Pi MCP 接入：待研究（CLI 已可用不阻塞）——记待办
 
 ## 待办更新
+
 - ~~codebase-memory-mcp 补精读~~ ✅ 已装已测
 - 新增：Pi MCP 接入 codebase-memory（需要时）
+
+# 📤 WorkBuddy 工具盘点 + 8 个 skills 装到 Pi（2026-08-13 晚）
+
+## WorkBuddy 全清单（已盘点）
+- 插件 25 个（welcomemode/interactionmode/ardot 设计系列/skill-wb-finance-skill 等）
+- skills 40 个（金融 13/写作 8/工程 5/设计 4/其他 10）
+- connectors/MCP：agent-mail（邮件代理）
+
+## 装到 Pi 的 8 个（用户授权"你要用的都装"）
+prompt-engineer（提示词）/ study-planner（学习规划）/ finance-investment-researcher（投资研究——观复核心）/ finance-financial-analyst（金融分析）/ data-analyst（数据分析）/ engineering-backend-architect（后端架构）/ engineering-database-optimizer（数据库优化）/ agents-orchestrator（Agent 编排）
+
+## 每个已按规则六补三件套（失败编码/黑名单/CHECKPOINT——含"自信不自负"原则）
+## Pi skills 总数：16 → 24
+## 未装的（理由）：设计/营销/写作类与现有重叠或非当前需要——需要时再装
