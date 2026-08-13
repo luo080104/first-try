@@ -10862,3 +10862,72 @@ shared/
 
 - 服务运行中（vbs 启动，8001，手机 10.74.245.200:8001）
 - 4 项 P2 全部完成 + 代码全绿 + 已提交 c80ee3d（push 网络失败待重试）
+
+
+## 小布：Go购 全量审查报告（2026-08-13 上午，代码审查员+后端架构师+数据库优化师三角色）
+
+> 已由小骆转发给你，这里存档完整版。审查范围：src/app.py + src/routes/ 全部 + db.py。
+
+### 整体印象
+比 8 月 1 日进化明显：路由拆分（1902→101行）、索引已建、.env 已 gitignore、安全头已加。**没有致命漏洞**，但有 2 个值得修的阻塞项 + 一批架构升级机会。
+
+### 🔴 阻塞项
+
+**1. SQLite 连接泄漏风险（12 处）**
+- `routes/api.py` 的 12 个函数 + `routes/search.py:793` 的 search：`get_conn()` 后没有 try/finally
+- SQL 执行抛异常（如并发写库锁冲突）时连接不关闭 → 泄漏累积拖垮搜索性能
+- 修法：统一改 `with closing(get_conn()) as conn:` 或装饰器包裹
+
+**2. 无认证的 user_name 参数（27 处）**
+- user_name 是前端随便传的字符串，没有登录/token
+- 任何人知道别人 user_name 就能看搜索历史/删记录/改盯价
+- 目前绑定 0.0.0.0（局域网家人用）风险可控；端口转发公网即后门
+- 修法：不做完整登录，加共享 `family_pin` 校验（POST 带 PIN，查历史时校验）
+
+### 🟡 建议项
+
+**3. SSE 搜索端点无超时保护（search.py:356）**
+浏览器慢通道 10-30 秒，客户端断开时生成器可能挂着。加 `asyncio.wait_for` 或检查 `request.is_disconnected()`
+
+**4. 遗留 POST /search 与 SSE 版逻辑分叉（search.py:789-790）**
+注释自己写了"改动优先改 SSE 版"——保留两套逻辑 = 双倍维护。删掉遗留入口或标 deprecated
+
+**5. crawl 竞态检查确认（api.py:602）**
+装饰器方案已覆盖 API 路径 ✅，确认包住了 `run_crawl_round` 即可
+
+### 💭 架构升级机会
+
+| 机会 | 说明 |
+|------|------|
+| db.py 连接管理 | 抽上下文管理器统一 try/finally（配合 🔴1 一起做） |
+| shared/ 包抽取 | 规则十一：browser_pool/db/llm/notify 四模块抽出去，雕龙观复复用 |
+| Langfuse 接入 | 已装未接——app.py 加 3 行，token 消耗全程可视 |
+| 读接口缓存 | /api/price_trend、/api/stats 无缓存，高频全查库 |
+
+### ✅ 已做对的
+- .env gitignore、密钥全走环境变量
+- 索引已建（platform/item_id/category/price/brand）
+- 安全头已加、路由已拆分
+
+### 优先级
+🔴1 连接泄漏最值得今天修——12 处统一 `with closing()`，半小时的事。🔴2 的 family_pin 可以顺手加。
+
+# 📤 小布三角色审查全落实（2026-08-13 上午）
+
+## 🔴 阻塞项
+1. ✅ 连接泄漏 22 处（api.py 19 + search.py 3）：全部转 `with closing(get_conn()) as conn:`——异常路径也自动关（脚本精确转换 + 编译 + 路由 8/8 验证）
+2. ⏳ family_pin（user_name 无认证）：技术可行——产品决策待用户确认（局域网风险可控；加 PIN 影响家人使用体验——需用户拍板做不做）
+
+## 🟡 建议项
+3. ✅ SSE 断线检测：request 注入 + _aborted()（is_disconnected）+ 3 个关键点提前退出（慢通道前/done 前）
+4. ✅ 遗留 POST /search 标记 DEPRECATED（request.state.deprecated + 注释）
+5. ✅ crawl 竞态确认：@_crawl_single 装饰器确实包住 run_crawl_round（crawl.py:171）——API/__main__ 双路径覆盖
+
+## 💭 架构升级
+- ✅ price_trend 缓存（10 分钟 TTL 字典）
+- ✅ shared/ 抽取 + Langfuse 接入：**昨晚已完成**（她审查基于旧版——push 成功后可见）
+
+## 坑记录（今晚血泪）
+- git add -A 误加浏览器 profile（tb_profile_h 几千文件）→ 推送失败 → gitignore 补 data/tb_profile_h/ 等
+- ruff --fix 会把 app_state 的 `import json as _json` 当未用删除（跨模块使用它不知道）→ 谁用谁 import 的教训
+- push 网络反复失败（远端挂断）——后台重试窗口 45 分钟
