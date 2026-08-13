@@ -16,7 +16,7 @@ from db import find_subsidies
 from llm_usage import budget_ok
 from matcher import ADAPTERS, group_by_sku, parse_items
 
-API_URL = 'https://api.deepseek.com/chat/completions'
+API_URL = os.environ.get('LLM_API_URL', 'https://api.deepseek.com/chat/completions')
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
 # ========== 链接解析（WorkBuddy 确认的平台格式）==========

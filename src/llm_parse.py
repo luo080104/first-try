@@ -10,7 +10,7 @@ from llm_usage import budget_ok
 
 # API Key 只从环境变量读取（禁止硬编码；部署见 docs/上下文清单.md 一、凭证与环境）
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
-API_URL = 'https://api.deepseek.com/chat/completions'
+API_URL = os.environ.get('LLM_API_URL', 'https://api.deepseek.com/chat/completions')
 TRACE_LOG = os.path.join(os.path.dirname(__file__), '..', 'data', 'agent_trace.log')
 
 # 意图解析缓存（内存 24h：同关键词不重复调 LLM，提速 + 省钱）

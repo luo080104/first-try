@@ -8,7 +8,7 @@ import urllib.request
 
 from llm_usage import budget_ok
 
-API_URL = 'https://api.deepseek.com/chat/completions'
+API_URL = os.environ.get('LLM_API_URL', 'https://api.deepseek.com/chat/completions')
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
 
 # WorkBuddy 审核通过的抽取 prompt（system 静态 → KV Cache 命中）

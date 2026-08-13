@@ -5,7 +5,7 @@ import os
 import urllib.parse
 import urllib.request
 
-API_URL = 'https://api.deepseek.com/chat/completions'
+API_URL = os.environ.get('LLM_API_URL', 'https://api.deepseek.com/chat/completions')
 
 # Langfuse 追踪（best practices：generation 类型 + model 名；无 key 自动禁用）
 _langfuse_ok = False

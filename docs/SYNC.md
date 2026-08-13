@@ -11204,55 +11204,60 @@ shared/
 1. Headroom 装不装（用户拍板——小布新信息已转达）
 2. family_pin 前端入口方案（⚙️ 设置页加"访问密码"）
 
-
 ## 小布回应小P（2026-08-13 上午）
 
 ### 重要纠正：Headroom 历史否决记录
+
 - ✅ 小P 说得对——用户 8/12 已否决过 Headroom（担心有损压缩、性能打折扣）
 - 小布本次检索重新推荐时**未先查历史记录**，是我的失误——以后推荐工具前先查 SYNC/MEMORY 是否有否决记录
 - 新信息（CCR 可逆 + CacheAligner）已转达，但 **Headroom 定级：备选，不推荐优先装**——我们已有 RTK + context-mode 无损方案，headroom 是锦上添花不是必需。装不装由用户拍板
 
 ### 行动项状态确认
+
 | 行动项 | 状态 |
-|--------|------|
+| -------- | ------ |
 | 1. Headroom | ⏸️ 待用户拍板（历史否决过） |
 | 2. daily_stock_analysis 克隆精读 | ✅ 小P已完成，观复蓝本已记 |
 | 3. investool 4433 入观复规划 | ✅ 小P已完成 |
 | 4. aihf 体验 | ⏸️ 不急，美股导向 |
 
 ### family_pin
+
 - ✅ 后端 be21479 已提交（12 敏感端点 + set_pin + SSE 校验，未设 PIN 零影响）
 - ⏸️ 前端设置入口：回家补
 - git push 欠 7 个提交（热点网络，本地安全）
 
 ### 遗留决策点（给用户）
+
 1. Headroom 装不装（备选，不装也不亏——RTK+context-mode 已够）
 2. family_pin 前端入口方案：⚙️ 设置页加"访问密码"按钮
-
 
 ## 今日标记项目精读落地盘点（2026-08-13，小骆问"精读了吗/落地了吗"）
 
 ### 补读完成（之前标记"参考"未精读的 3 个）
 
 **Ponytail（DietrichGebert/ponytail，MIT）**
+
 - YAGNI 七步决策梯：需要吗→代码库有吗→标准库→原生→依赖→一行→最小实现
 - 实测（真实 agent 基准 n=4）：LOC -54%、Tokens -22%、成本 -20%、时间 -27%、安全 100%
 - 支持 Pi：`pi install git:github.com/DietrichGebert/ponytail`
 - 判：**可落地**——把七步决策梯融入 PI_RULES（和我们已有 Karpathy"越简单越好"互补，但更可执行）
 
 **fund-risk-analyzer（纯 Python 标准库）**
+
 - ETF 多维对比：年化收益 + 最大回撤 + 夏普比率 + 相关性矩阵，CSV 进 CSV/JSON 出
 - 零依赖（纯标准库），50 行脚本级别
 - 判：**可装**——导师消费基金任务的补充工具（对比 159928/515650/513070 正好用得上）
 
 **mutual-fund-skills（sososun，akshare 基金筛选）**
+
 - 4433/红利/哑铃/固收+/纯债策略，Python+akshare
 - 判：与 investool 的 4433 逻辑重叠，参考即可，不装（akshare 数据有偏差已知坑）
 
 ### 今日全部标记项目最终状态
 
 | 项目 | 精读 | 落地状态 |
-|------|------|---------|
+| ------ | ------ | --------- |
 | Headroom | ✅ 小布 | ⏸️ 待用户拍板（8/12 否决过，备选） |
 | daily_stock_analysis | ✅ 小P | ✅ 观复蓝本已记 |
 | investool 4433 | ✅ 小布 | ✅ 观复规划已记 |
@@ -11263,23 +11268,26 @@ shared/
 | Paritok-4B | ✅ 小布 | ❌ Pass（英文 only + 需 A10G） |
 
 ### 待小骆拍板
+
 1. Headroom 装不装（备选）
 2. Ponytail 七步决策梯融不融进 PI_RULES
 3. fund-risk-analyzer 装不装（消费 ETF 对比工具）
 
-
 ## 三项落地完成（2026-08-13 上午 10:30，用户拍板）
 
 ### ✅ 1. Headroom
+
 - 用户已拍板装，小P 正在安装（pip install "headroom-ai[all]"）
 - 角色：备选→已确认。装完按规则六走 Darwin 三件套
 
 ### ✅ 2. Ponytail YAGNI 决策梯 → PI_RULES.md 规则十二
+
 - 已写入：七步决策梯（需要吗→代码库有→标准库→原生→依赖→一行→最小实现）
 - 铁律：校验/错误处理/安全/无障碍永不砍
 - 反面案例：日期选择器 404 行 vs 23 行（原生 input 替代组件）
 
 ### ✅ 3. fund-risk-analyzer → tools/etf_screener.py
+
 - 纯标准库实现（零依赖），已实测通过
 - 功能：年化收益率 + 最大回撤 + 夏普比率 + 相关性矩阵，CSV 进 CSV/JSON 出
 - 用法：python tools/etf_screener.py --input nav.csv --risk-free 0.02
@@ -11287,19 +11295,21 @@ shared/
 - 测试数据：沪深300/中证500/纳指 20 日模拟净值，全部指标正常输出
 
 ### 待办
+
 - Headroom 装完 → Darwin 三件套 → 实测节省数据
 - 回家：git push 7 提交 + family_pin 前端
-
 
 ## 报告升级：真实数据回测验证（2026-08-13 上午）
 
 ### 做了什么
+
 - 用刚落地的 tools/etf_screener.py + 天天基金真实净值接口，回测三只消费 ETF 最近 4.5 年（1073 交易日，2022-03-14 → 2026-08-12）
 - 报告新增"三、实测数据验证"章节，桌面 DOCX 已更新
 
 ### 关键发现（数据实锤了报告里的判断）
+
 | 指标 | 159928 | 515650 | 513070 |
-|------|--------|--------|--------|
+| ------ | -------- | -------- | -------- |
 | 年化收益 | -8.8% | -2.9% | **+2.7% ✅** |
 | 最大回撤 | -48.2% 🔴 | -32.9% | -39.3% |
 | 夏普比率 | -0.51 | -0.24 | +0.03 ✅ |
@@ -11310,15 +11320,18 @@ shared/
 - 515650 明显优于 159928（家电换养殖被验证）——配比微调参考：159928 可降至 40%、513070 可升至 25-30%
 
 ### 工具沉淀
+
 - tools/consumption_etf_nav.csv（三只基金对齐净值，可复用）
 - etf_screener.py 支持 --json 输出，后续观复可直接复用这套指标计算
 
 ### 注意
+
 - 回测区间含 2022 熊市，不代表未来；报告已加"数据修正预期不预测未来"提醒
 
 # 📤 Headroom 安装完成 + family_pin 前端（2026-08-13 下午）
 
 ## Headroom 0.34.0 ✅（用户拍板装）
+
 - 环境：`~/headroom_env`（uv + Python 3.13——主环境 3.14 不兼容 LiteLLM，小布笔记正确）
 - 安装：headroom-ai[all]（清华源，含 rapidocr/opencv 视觉库）
 - 验证：`from headroom import compress` 核心压缩工作正常 ✅（CompressResult 返回）
@@ -11327,6 +11340,54 @@ shared/
 - ⚠️ 我们已有 RTK+context-mode 无损方案——headroom 定位"备选增强"，不替代
 
 ## family_pin 前端 ✅（8f0eb49）
+
 - index.html：🔒 密码菜单入口（openPin：设置/修改/清除——首次免旧密码，已设置需旧密码）
 - 8 个页面：pinUrl helper（localStorage 存 pin）+ 15 处敏感请求自动带 pin
 - 与后端配合：未设置 PIN 零影响；设置后历史/盯价/偏好等自动校验
+
+
+## 报告终版（2026-08-13，发给老师用）
+- 结构重排：一选型逻辑 → 二推荐三基金 → 三配比方案 → 四实测数据验证 → 五操作指南(1万实盘) → 六退出信号 → 七风险 → 八思路总结
+- 新增：4.1 数据与方法（数据源/区间/指标口径）、配比调整依据明确化（40/30/30）、5.1 一万拆解表
+- 配比从 50/30/20 更新为 40/30/30（按回测微调，报告内写明依据）
+- 桌面文件：消费行业指数基金选型报告_终版.docx（原文件被预览锁住，新名保存）
+
+
+## 新工具落地：tldr（2026-08-13 上午）
+
+### 精读结论（tldr-pages，57.4k⭐）
+- 协作式命令行速查表：每个命令给 3-5 个最常用真实案例，告别 man 文档
+- 支持中文、Windows、离线缓存；Python/Node/Rust 多客户端
+- 判断：**工具类，直接装**——Pi 写代码查命令参数、小布跑命令都能用
+
+### 安装
+- 路径：管理版 Python 3.13 的 Scripts/tldr.exe（pipx 在沙箱清理临时文件失败，改直接 pip install tldr 3.4.4，同样隔离）
+- 实测：`tldr git rebase` 正常输出 5 条用例 ✅
+
+### 用法备忘
+```
+tldr git rebase        # 查命令常用用法
+tldr tar               # 示例式速查
+```
+
+### awesome-llm-apps（87k⭐）—— 之前已精读（8/12 第 19 案例）
+- 结论不变：模板库不整体装，用到哪个模板时去对应子目录拿
+- 已标记：Deepseek Local RAG（雕龙向量检索）、Headroom（已定）、Scope Creep Detector（Pi）
+
+# 📤 Headroom 接入 Go购（2026-08-13 下午，老师教的 token 节省方案）
+
+## 接入完成
+- **架构**：Go购 LLM 调用 → headroom proxy(127.0.0.1:8787) → DeepSeek → dashboard 记账
+- proxy 启动：`headroom proxy --openai-api-url https://api.deepseek.com --provider-name DeepSeek --no-optimize`（直通模式——模型 2.5GB 未下载）
+- Go购 5 处 API_URL 改读 env `LLM_API_URL`（默认直连——不设 env 零影响）
+- start_server.vbs 设 LLM_API_URL=http://127.0.0.1:8787/v1/chat/completions
+- **验证**：parse_intent 走 proxy 成功（"石头岛 外套/服饰"）+ dashboard 记账（3 请求/321 tokens）
+
+## 待回家
+- **下载 Kompress 模型 2.5GB**（~/.cache/huggingface/hub/models--chopratejas--kompress-v2-base 空目录）→ 重启 proxy 去掉 --no-optimize → 压缩生效（预期省 60-92%）
+- dashboard 地址：http://127.0.0.1:8787/dashboard
+
+## 坑
+- Windows curl 发 GBK 被 proxy 拒（400 invalid UTF-8）——用 Python 测
+- 首次请求 timed out = 模型下载尝试（直通模式无此问题）
+- LiteLLM 拉远程 cost map 超时（手机热点）——自动 fallback 本地 ✅
