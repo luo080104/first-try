@@ -119,8 +119,8 @@ async def search_compare_slow(keyword: str, category: str = '', pages: int = 1) 
     慢通道结果 6h 内存缓存。"""
     import asyncio
 
-    from app import search_jd_full, search_vip_full
-    from app import search_taobao_full as search_tb_full
+    from routes.search import search_jd_full, search_vip_full
+    from routes.search import search_taobao_full as search_tb_full
 
     all_items, tb_items, pdd_items, _vip_api_items = _search_fast(keyword, category)
 

@@ -884,7 +884,7 @@ def api_analysis():
 @router.post("/api/set_pin")
 def api_set_pin(pin: str = Form(""), old_pin: str = Form("")):
     """设置/修改家庭访问 PIN（小布🔴2）。首次设置不用旧 PIN；修改需旧 PIN；空=清除"""
-    from db import get_family_pin, set_family_pin
+    from db import get_family_pin, set_family_pin, verify_pin
 
     if get_family_pin() and not verify_pin(old_pin or ''):
         return {"ok": False, "msg": "旧密码不对"}

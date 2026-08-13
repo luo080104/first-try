@@ -179,6 +179,35 @@ def warmup():
     threading.Thread(target=_w, daemon=True).start()
 
 
+def act_with_retry(action, verify=None, retries: int = 2, delay: float = 1.0, desc: str = '动作'):
+    """执行动作→验证→失败重试（2026-08-13 Kimi WebBridge v2 VerifyCondition/RetryPolicy 借鉴）
+
+    参数:
+        action: 执行动作的 callable（返回结果）
+        verify: 验证 callable（接收 action 结果，返回 True=成功；None=不验证）
+        retries: 额外重试次数（默认 2）
+        delay: 重试间隔秒
+        desc: 动作描述（日志用）
+    返回: (成功 bool, 结果或错误信息)
+    """
+    for i in range(retries + 1):
+        try:
+            r = action()
+        except Exception as e:
+            if i >= retries:
+                return False, f'{desc}异常: {str(e)[:80]}'
+            print(f'[browser_pool] {desc}异常，重试 {i + 1}/{retries}: {str(e)[:60]}')
+            time.sleep(delay)
+            continue
+        if verify is None or verify(r):
+            return True, r
+        if i >= retries:
+            return False, f'{desc}验证失败'
+        print(f'[browser_pool] {desc}验证未过，重试 {i + 1}/{retries}')
+        time.sleep(delay)
+    return False, '未知错误'
+
+
 if __name__ == '__main__':
     p = sys.argv[1] if len(sys.argv) > 1 else 'tb'
     b = get_browser(p)

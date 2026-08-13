@@ -96,8 +96,8 @@ def find_new_words(items: list) -> list:
 async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
     """采集一个词：API 快通道 + 浏览器慢通道翻页 → 返回 (入库件数, items)"""
     from api_client import search_goods, search_pdd, search_vip
-    from app import search_pdd_full, search_taobao_full, search_vip_full
     from db import get_conn, upsert_product_item
+    from routes.search import search_pdd_full, search_taobao_full, search_vip_full
 
     all_items = []
     # 快通道：API（走 24h 缓存，秒级；新鲜度靠慢通道）
@@ -108,11 +108,16 @@ async def _crawl_one_keyword(keyword: str, category: str, pages: int) -> tuple:
 
     # 慢通道：浏览器翻页（串行，频率受限：tb 30s / vip 12-20s / pdd 12-20s）
     # 注：京东不走浏览器（搜索页验证码多，案例启发）→ 改为采集轮次的全局榜单通道 crawl_jd_by_elite
+    # 2026-08-13 WebBridge v2 借鉴：翻页用 act_with_retry（动作后验证 batch 非空 + 重试 1 次）
+    from browser_pool import act_with_retry
     tb_full, vip_full, pdd_full = [], [], []
     for p in range(1, pages + 1):
-        batch = await asyncio.to_thread(search_taobao_full, keyword, p, 8, True)
-        tb_full += batch
-        if len(batch) < 8:
+        ok, batch = act_with_retry(
+            lambda: search_taobao_full(keyword, p, 8, True),
+            lambda b: len(b) > 0,
+            retries=1, delay=1.5, desc=f'tb翻页{p}')
+        tb_full += batch if ok else []
+        if ok and len(batch) < 8:
             break
         await asyncio.sleep(2)
     for p in range(1, pages + 1):
