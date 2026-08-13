@@ -1,6 +1,5 @@
 # app_state.py — 应用共享状态（2026-08-12 路由拆分工程：打破 app↔routes 循环 import）
 # app.py / routes/* 都从这里取共享符号
-import json as _json
 import os
 
 from fastapi.templating import Jinja2Templates

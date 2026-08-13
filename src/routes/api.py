@@ -1,6 +1,7 @@
 # routes/api.py — API 路由（从 app.py 拆分，2026-08-12 路由拆分工程）
 import asyncio
 import os
+from contextlib import closing
 
 from fastapi import APIRouter, Form
 
@@ -12,59 +13,63 @@ import re
 
 from db import get_conn, init_db, stats_items
 
+_trend_cache = {}  # 10 分钟 TTL 缓存（小布 💭：高频读接口避免全查库）
+
 
 @router.get("/api/price_trend")
 def api_price_trend(sku_id: str = "", platform: str = "", days: int = 30):
     """价格趋势（近 N 天，按天聚合取最后价）——price_compare_tool 借鉴"""
-    conn = get_conn()
-    rows = conn.execute(
-        """SELECT date(queried_at) d, price FROM price_history
-        WHERE item_id=? AND platform=? AND queried_at >= datetime('now','localtime', ?)
-        ORDER BY queried_at""",
-        (sku_id, platform, f"-{days} days"),
-    ).fetchall()
-    conn.close()
+    import time as _t
+    _ck = f"{sku_id}|{platform}|{days}"
+    _hit = _trend_cache.get(_ck)
+    if _hit and _t.time() - _hit[0] < 600:
+        return _hit[1]
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            """SELECT date(queried_at) d, price FROM price_history
+            WHERE item_id=? AND platform=? AND queried_at >= datetime('now','localtime', ?)
+            ORDER BY queried_at""",
+            (sku_id, platform, f"-{days} days"),
+        ).fetchall()
     daily = {}
     for r in rows:
         daily[r["d"]] = r["price"]
     pts = [{"date": d, "price": p} for d, p in sorted(daily.items())]
+    _trend_cache[_ck] = (_t.time(), {"ok": True, "points": pts})
     return {"ok": True, "points": pts}
 
 
 
 @router.get("/api/search_history")
 def api_search_history(user_name: str = ""):
-    conn = get_conn()
-    rows = conn.execute(
-        """SELECT keyword, category, MAX(searched_at) searched_at
-        FROM search_history WHERE user_name=? GROUP BY keyword
-        ORDER BY searched_at DESC LIMIT 200""",
-        (user_name,),
-    ).fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            """SELECT keyword, category, MAX(searched_at) searched_at
+            FROM search_history WHERE user_name=? GROUP BY keyword
+            ORDER BY searched_at DESC LIMIT 200""",
+            (user_name,),
+        ).fetchall()
     return {"ok": True, "items": [dict(r) for r in rows]}
 
 
 
 @router.post("/api/search_history_del")
 def api_search_history_del(keyword: str = Form(""), user_name: str = ""):
-    conn = get_conn()
-    conn.execute(
-        "DELETE FROM search_history WHERE keyword=? AND user_name=?",
-        (keyword, user_name),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        conn.execute(
+            "DELETE FROM search_history WHERE keyword=? AND user_name=?",
+            (keyword, user_name),
+        )
+        conn.commit()
     return {"ok": True}
 
 
 
 @router.post("/api/search_history_clear")
 def api_search_history_clear(user_name: str = ""):
-    conn = get_conn()
-    conn.execute("DELETE FROM search_history WHERE user_name=?", (user_name,))
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        conn.execute("DELETE FROM search_history WHERE user_name=?", (user_name,))
+        conn.commit()
     return {"ok": True}
 
 
@@ -145,26 +150,25 @@ async def api_family_tasks(categories: str = Form("")):
     categories: 逗号分隔的细品类名，如 '女士服装,护肤品'；空=全部"""
     from db import FAMILY_CATEGORIES, get_conn
 
-    conn = get_conn()
-    added = 0
-    pick = (
-        [c.strip() for c in categories.replace("，", ",").split(",") if c.strip()]
-        if categories.strip()
-        else []
-    )
-    for sub, big, words in FAMILY_CATEGORIES:
-        if pick and sub not in pick:
-            continue
-        for w in words:
-            cur = conn.execute(
-                """
-                INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?, 'family')
-            """,
-                (w, big),
-            )
-            added += cur.rowcount
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        added = 0
+        pick = (
+            [c.strip() for c in categories.replace("，", ",").split(",") if c.strip()]
+            if categories.strip()
+            else []
+        )
+        for sub, big, words in FAMILY_CATEGORIES:
+            if pick and sub not in pick:
+                continue
+            for w in words:
+                cur = conn.execute(
+                    """
+                    INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?, 'family')
+                """,
+                    (w, big),
+                )
+                added += cur.rowcount
+        conn.commit()
     return {
         "ok": True,
         "msg": f"已把 {len(pick) if pick else 15} 个品类的采集词加入计划（+{added} 个新词）",
@@ -246,12 +250,11 @@ def api_wander(user: str = "", size: int = 12):
     from wander import wander_recommend
 
     # 已不喜欢/已收藏的排除
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT item_id FROM wander_feedback WHERE user_name=? AND action IN ('dislike','fav')",
-        (user or "",),
-    ).fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            "SELECT item_id FROM wander_feedback WHERE user_name=? AND action IN ('dislike','fav')",
+            (user or "",),
+        ).fetchall()
     exclude = [r["item_id"] for r in rows if r["item_id"]]
     items = wander_recommend(user or "", min(max(size, 6), 30), exclude)
     cards = []
@@ -295,17 +298,16 @@ async def api_wander_feedback(
     """漫游反馈：dislike=不感兴趣 / fav=收藏"""
     from db import get_conn
 
-    conn = get_conn()
-    conn.execute(
-        "DELETE FROM wander_feedback WHERE user_name=? AND item_id=? AND action=?",
-        (user or "", item_id, action),
-    )
-    conn.execute(
-        "INSERT INTO wander_feedback (user_name, item_id, action) VALUES (?,?,?)",
-        (user or "", item_id, action),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        conn.execute(
+            "DELETE FROM wander_feedback WHERE user_name=? AND item_id=? AND action=?",
+            (user or "", item_id, action),
+        )
+        conn.execute(
+            "INSERT INTO wander_feedback (user_name, item_id, action) VALUES (?,?,?)",
+            (user or "", item_id, action),
+        )
+        conn.commit()
     return {"ok": True}
 
 
@@ -315,14 +317,13 @@ def api_wander_favs(user: str = ""):
     """我的收藏列表"""
     from db import get_conn
 
-    conn = get_conn()
-    rows = conn.execute(
-        """SELECT f.item_id, p.title, p.price, p.platform, p.shop_name, p.url
-        FROM wander_feedback f LEFT JOIN product_items p ON p.item_id = f.item_id
-        WHERE f.user_name=? AND f.action='fav' ORDER BY f.id DESC""",
-        (user or "",),
-    ).fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            """SELECT f.item_id, p.title, p.price, p.platform, p.shop_name, p.url
+            FROM wander_feedback f LEFT JOIN product_items p ON p.item_id = f.item_id
+            WHERE f.user_name=? AND f.action='fav' ORDER BY f.id DESC""",
+            (user or "",),
+        ).fetchall()
     return {"items": [dict(r) for r in rows]}
 
 
@@ -342,13 +343,12 @@ async def api_event(
     from db import get_conn, init_db
 
     init_db()  # 确保表存在
-    conn = get_conn()
-    conn.execute(
-        "INSERT INTO advice_events (scene, keyword, action, user_name, variant) VALUES (?,?,?,?,?)",
-        (scene[:20], (keyword or "")[:60], action, user_name[:30], variant[:4]),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        conn.execute(
+            "INSERT INTO advice_events (scene, keyword, action, user_name, variant) VALUES (?,?,?,?,?)",
+            (scene[:20], (keyword or "")[:60], action, user_name[:30], variant[:4]),
+        )
+        conn.commit()
     return {"ok": True}
 
 
@@ -359,21 +359,20 @@ def api_advice_stats():
     from db import get_conn, init_db
 
     init_db()  # 确保表存在
-    conn = get_conn()
-    shown = conn.execute(
-        "SELECT COUNT(*) FROM advice_events WHERE action='shown'"
-    ).fetchone()[0]
-    adopt = conn.execute(
-        "SELECT COUNT(*) FROM advice_events WHERE action='adopt'"
-    ).fetchone()[0]
-    by_scene = conn.execute("""SELECT scene, COUNT(*) n FROM advice_events WHERE action='adopt'
-        GROUP BY scene ORDER BY n DESC""").fetchall()
-    # v1.0 A-B：按 variant 分别统计采纳率
-    by_variant = conn.execute("""SELECT variant,
-        SUM(CASE WHEN action='shown' THEN 1 ELSE 0 END) shown,
-        SUM(CASE WHEN action='adopt' THEN 1 ELSE 0 END) adopt
-        FROM advice_events GROUP BY variant""").fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        shown = conn.execute(
+            "SELECT COUNT(*) FROM advice_events WHERE action='shown'"
+        ).fetchone()[0]
+        adopt = conn.execute(
+            "SELECT COUNT(*) FROM advice_events WHERE action='adopt'"
+        ).fetchone()[0]
+        by_scene = conn.execute("""SELECT scene, COUNT(*) n FROM advice_events WHERE action='adopt'
+            GROUP BY scene ORDER BY n DESC""").fetchall()
+        # v1.0 A-B：按 variant 分别统计采纳率
+        by_variant = conn.execute("""SELECT variant,
+            SUM(CASE WHEN action='shown' THEN 1 ELSE 0 END) shown,
+            SUM(CASE WHEN action='adopt' THEN 1 ELSE 0 END) adopt
+            FROM advice_events GROUP BY variant""").fetchall()
     rate = round(adopt / shown * 100, 1) if shown else 0
     ab = {}
     for r in by_variant:
@@ -401,13 +400,12 @@ def api_price_prediction(platform: str = "", item_id: str = ""):
 
     if not item_id:
         return {"ok": False, "msg": "缺少商品 ID"}
-    conn = get_conn()
-    rows = conn.execute(
-        """SELECT price FROM price_history
-        WHERE platform=? AND item_id=? ORDER BY queried_at ASC""",
-        (platform, str(item_id)),
-    ).fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            """SELECT price FROM price_history
+            WHERE platform=? AND item_id=? ORDER BY queried_at ASC""",
+            (platform, str(item_id)),
+        ).fetchall()
     prices = [r["price"] for r in rows if r["price"] and r["price"] > 1]
     return {"ok": True, **predict_price(prices)}
 
@@ -433,12 +431,11 @@ def api_detail(platform: str = "", id: str = ""):
         if d:
             return {"ok": True, **d}
     # API 失败/不可用 → 回退商品库已有信息（保证详情总能用）
-    conn = get_conn()
-    row = conn.execute(
-        "SELECT title, shop_name, price, sales, url, img FROM product_items WHERE item_id=? LIMIT 1",
-        (id,),
-    ).fetchone()
-    conn.close()
+    with closing(get_conn()) as conn:
+        row = conn.execute(
+            "SELECT title, shop_name, price, sales, url, img FROM product_items WHERE item_id=? LIMIT 1",
+            (id,),
+        ).fetchone()
     if row:
         return {
             "ok": True,
@@ -539,13 +536,12 @@ async def api_invite_gen(user_name: str = Form(""), categories: str = Form("")):
     if not user_name.strip():
         return {"ok": False, "msg": "请填角色名（如：妈妈）"}
     code = "Go-" + secrets.token_hex(2).lower()
-    conn = get_conn()
-    conn.execute(
-        "INSERT INTO invite_codes (code, user_name, categories) VALUES (?,?,?)",
-        (code, user_name.strip()[:30], categories or "[]"),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        conn.execute(
+            "INSERT INTO invite_codes (code, user_name, categories) VALUES (?,?,?)",
+            (code, user_name.strip()[:30], categories or "[]"),
+        )
+        conn.commit()
     return {"ok": True, "code": code, "user_name": user_name.strip()}
 
 
@@ -557,20 +553,19 @@ async def api_invite_use(code: str = Form(""), device_id: str = Form("")):
 
     init_db()
     code = code.strip()
-    conn = get_conn()
-    row = conn.execute("SELECT * FROM invite_codes WHERE code=?", (code,)).fetchone()
-    if not row:
-        conn.close()
-        return {"ok": False, "msg": "邀请码不存在，检查一下？"}
-    if row["used_at"]:
-        conn.close()
-        return {"ok": False, "msg": "这个邀请码已被使用过了"}
-    conn.execute(
-        "UPDATE invite_codes SET used_at=datetime('now','localtime'), used_by=? WHERE id=?",
-        (device_id[:50], row["id"]),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        row = conn.execute("SELECT * FROM invite_codes WHERE code=?", (code,)).fetchone()
+        if not row:
+            conn.close()
+            return {"ok": False, "msg": "邀请码不存在，检查一下？"}
+        if row["used_at"]:
+            conn.close()
+            return {"ok": False, "msg": "这个邀请码已被使用过了"}
+        conn.execute(
+            "UPDATE invite_codes SET used_at=datetime('now','localtime'), used_by=? WHERE id=?",
+            (device_id[:50], row["id"]),
+        )
+        conn.commit()
     return {"ok": True, "user_name": row["user_name"], "categories": row["categories"]}
 
 
@@ -581,11 +576,10 @@ def api_invite_list():
     from db import get_conn, init_db
 
     init_db()
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT code, user_name, categories, used_at, created_at FROM invite_codes ORDER BY id DESC LIMIT 20"
-    ).fetchall()
-    conn.close()
+    with closing(get_conn()) as conn:
+        rows = conn.execute(
+            "SELECT code, user_name, categories, used_at, created_at FROM invite_codes ORDER BY id DESC LIMIT 20"
+        ).fetchall()
     return {"items": [dict(r) for r in rows]}
 
 
@@ -642,13 +636,12 @@ async def api_crawl_add(keyword: str = Form(""), category: str = Form("")):
     kw = keyword.strip()
     if not kw:
         return {"ok": False, "msg": "请输入关键词"}
-    conn = get_conn()
-    cur = conn.execute(
-        "INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?,?)",
-        (kw[:30], category or "", "manual"),
-    )
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO crawl_tasks (keyword, category, source) VALUES (?,?,?)",
+            (kw[:30], category or "", "manual"),
+        )
+        conn.commit()
     return {
         "ok": True,
         "msg": "已加入采集计划" if cur.rowcount else "这个词已在计划里了",
@@ -763,20 +756,19 @@ async def api_advice(
         return {"ok": False, "msg": "未找到该商品组"}
     # 查历史（取组内第一个有 goodsId 的商品）
     history = []
-    conn = get_conn()
-    for p, it in group["platforms"].items():
-        gid = it.get("goodsId") or ""
-        if gid:
-            rows = conn.execute(
-                """
-                SELECT price, queried_at FROM price_history
-                WHERE platform=? AND item_id=? ORDER BY queried_at DESC LIMIT 30
-            """,
-                (p, str(gid)),
-            ).fetchall()
-            history += [dict(r) for r in rows]
-            break
-    conn.close()
+    with closing(get_conn()) as conn:
+        for p, it in group["platforms"].items():
+            gid = it.get("goodsId") or ""
+            if gid:
+                rows = conn.execute(
+                    """
+                    SELECT price, queried_at FROM price_history
+                    WHERE platform=? AND item_id=? ORDER BY queried_at DESC LIMIT 30
+                """,
+                    (p, str(gid)),
+                ).fetchall()
+                history += [dict(r) for r in rows]
+                break
     # v1.0 A-B 实验分流：按 user_name 稳定 hash → variant（a=新版prompt / b=旧版）
     variant = "a" if (sum(ord(c) for c in keyword) % 2 == 0) else "b"
     advice = await asyncio.to_thread(
@@ -788,13 +780,12 @@ async def api_advice(
     try:
         from db import get_conn
 
-        conn = get_conn()
-        conn.execute(
-            "INSERT INTO advice_events (scene, keyword, action, variant) VALUES (?,?,?,?)",
-            ("compare", keyword[:60], "shown", variant),
-        )
-        conn.commit()
-        conn.close()
+        with closing(get_conn()) as conn:
+            conn.execute(
+                "INSERT INTO advice_events (scene, keyword, action, variant) VALUES (?,?,?,?)",
+                ("compare", keyword[:60], "shown", variant),
+            )
+            conn.commit()
     except Exception:
         pass
     return {"ok": True, "advice": advice, "cached": False, "variant": variant}
@@ -809,47 +800,46 @@ def api_analysis():
     """商品库分析：价格分布 + 品牌占比 + 价格销量散点 + 平台分布 + 入库趋势（供看板图表）"""
     from db import get_conn
 
-    conn = get_conn()
-    # 2026-08-11 仪表盘增强：平台分布 + 近 7 天入库趋势
-    plat_dist = [
-        dict(r)
-        for r in conn.execute(
-            """SELECT platform, COUNT(*) n FROM product_items GROUP BY platform ORDER BY n DESC"""
-        ).fetchall()
-    ]
-    in_trend = [
-        dict(r)
-        for r in conn.execute("""SELECT date(first_seen) d, COUNT(*) n FROM product_items
-        WHERE first_seen >= date('now','localtime','-6 day') GROUP BY d ORDER BY d""").fetchall()
-    ]
-    # 价格区间分布
-    bins = [(0, 100), (100, 300), (300, 1000), (1000, 3000), (3000, 999999)]
-    labels = ["0-100", "100-300", "300-1000", "1000-3000", "3000+"]
-    price_hist = []
-    for (lo, hi), lb in zip(bins, labels):
-        n = conn.execute(
-            "SELECT COUNT(*) FROM product_items WHERE price >= ? AND price < ?",
-            (lo, hi),
-        ).fetchone()[0]
-        price_hist.append({"range": lb, "n": n})
-    # 品牌 TOP8 占比
-    brands = conn.execute("""SELECT brand, COUNT(*) n FROM product_items
-        WHERE brand != '' GROUP BY brand ORDER BY n DESC LIMIT 8""").fetchall()
-    total = (
-        conn.execute("SELECT COUNT(*) FROM product_items WHERE brand != ''").fetchone()[
-            0
+    with closing(get_conn()) as conn:
+        # 2026-08-11 仪表盘增强：平台分布 + 近 7 天入库趋势
+        plat_dist = [
+            dict(r)
+            for r in conn.execute(
+                """SELECT platform, COUNT(*) n FROM product_items GROUP BY platform ORDER BY n DESC"""
+            ).fetchall()
         ]
-        or 1
-    )
-    brand_share = [{"name": r["brand"], "value": r["n"]} for r in brands]
-    # 价格 vs 销量散点（样本 300 条）
-    scatter = [
-        {"price": r["price"], "sales": r["sales"]}
-        for r in conn.execute(
-            "SELECT price, sales FROM product_items WHERE price > 0 AND sales > 0 ORDER BY id DESC LIMIT 300"
+        in_trend = [
+            dict(r)
+            for r in conn.execute("""SELECT date(first_seen) d, COUNT(*) n FROM product_items
+            WHERE first_seen >= date('now','localtime','-6 day') GROUP BY d ORDER BY d""").fetchall()
+        ]
+        # 价格区间分布
+        bins = [(0, 100), (100, 300), (300, 1000), (1000, 3000), (3000, 999999)]
+        labels = ["0-100", "100-300", "300-1000", "1000-3000", "3000+"]
+        price_hist = []
+        for (lo, hi), lb in zip(bins, labels):
+            n = conn.execute(
+                "SELECT COUNT(*) FROM product_items WHERE price >= ? AND price < ?",
+                (lo, hi),
+            ).fetchone()[0]
+            price_hist.append({"range": lb, "n": n})
+        # 品牌 TOP8 占比
+        brands = conn.execute("""SELECT brand, COUNT(*) n FROM product_items
+            WHERE brand != '' GROUP BY brand ORDER BY n DESC LIMIT 8""").fetchall()
+        total = (
+            conn.execute("SELECT COUNT(*) FROM product_items WHERE brand != ''").fetchone()[
+                0
+            ]
+            or 1
         )
-    ]
-    conn.close()
+        brand_share = [{"name": r["brand"], "value": r["n"]} for r in brands]
+        # 价格 vs 销量散点（样本 300 条）
+        scatter = [
+            {"price": r["price"], "sales": r["sales"]}
+            for r in conn.execute(
+                "SELECT price, sales FROM product_items WHERE price > 0 AND sales > 0 ORDER BY id DESC LIMIT 300"
+            )
+        ]
     return {
         "price_hist": price_hist,
         "brand_share": brand_share,

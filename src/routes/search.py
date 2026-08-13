@@ -1,14 +1,16 @@
 # routes/search.py — 搜索路由（从 app.py 拆分，2026-08-12 路由拆分工程）
+from contextlib import closing
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from app_state import CATEGORIES, _json, templates
+from app_state import CATEGORIES, templates
 
 router = APIRouter()
 
-import re
-
 import asyncio
+import json as _json
+import re
 
 from api_client import search_goods, search_pdd, value_score
 from content_reader import read_content_items
@@ -327,15 +329,14 @@ async def api_deep_crawl(
     except Exception as e:
         print(f"[deep_crawl vip] {str(e)[:80]}")
     # 入库
-    conn = get_conn()
-    added = 0
-    for plat, items in results.items():
-        for it in items:
-            it["_source"] = "browser"
-            if upsert_product_item(conn, it, category or ""):
-                added += 1
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        added = 0
+        for plat, items in results.items():
+            for it in items:
+                it["_source"] = "browser"
+                if upsert_product_item(conn, it, category or ""):
+                    added += 1
+        conn.commit()
     total = sum(len(v) for v in results.values())
     return {
         "ok": True,
@@ -346,6 +347,7 @@ async def api_deep_crawl(
 
 @router.get("/search_sse")
 async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（Python 3.3+），pyright 严格模式误报
+    request: Request,
     keyword: str = "",
     category: str = "",
     guide_round: int = 0,
@@ -353,10 +355,18 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
     user_name: str = "",
     session_id: str = "",
 ):
-    """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）"""
+    """搜索 SSE。mode=history 看以往数据（读库秒出）；mode=live 实时报告（绕过缓存现场抓）
+    2026-08-13 小布🟡3：客户端断开检测——不挂死生成器"""
 
     async def gen():
         nonlocal keyword, category
+
+        async def _aborted() -> bool:
+            # 客户端断开 → 提前退出（不挂死慢通道）
+            try:
+                return await request.is_disconnected()
+            except Exception:
+                return False
 
         def sse(data):
             return "data: " + _json.dumps(data, ensure_ascii=False) + chr(10) + chr(10)
@@ -520,6 +530,8 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
             # 慢通道自动补搜：快通道结果少（<5 条）→ 全网补搜；或拼多多 API 被限（返回空）→ 拼多多浏览器兜底
             slow_items = []
             if len(all_items) < 5:
+                if await _aborted():
+                    return
                 yield sse(
                     {
                         "type": "progress",
@@ -680,12 +692,11 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
                     }
                 )
 
-            conn = get_conn()
-            for it in all_items:
-                save_search_result(conn, it, category or "未分类")
-                upsert_product_item(conn, it, category or "")
-            conn.commit()
-            conn.close()
+            with closing(get_conn()) as conn:
+                for it in all_items:
+                    save_search_result(conn, it, category or "未分类")
+                    upsert_product_item(conn, it, category or "")
+                conn.commit()
 
             # 对话式导购：触发条件（WorkBuddy 审核）——先导购后补搜
             options = []
@@ -760,6 +771,8 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
             # v5.2 来源受限标注（购物研究助手案例）：内容数据 <5 条时诚实标注
             content_limited = len(content.get("items", [])) < 5
             subsidies = await asyncio.to_thread(find_subsidies, keyword, search_cat)
+            if await _aborted():
+                return
             yield step("内容联动", "done")
             yield sse(
                 {
@@ -786,11 +799,13 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 
-# ===== 遗留入口：前端已全部改走 /search_sse（SSE 版含慢通道补搜/导购/内容联动）=====
-# 此 POST /search 保留供直接调用/测试，逻辑与 SSE 版存在分叉，改动优先改 SSE 版
+# ===== 遗留入口（DEPRECATED，2026-08-13 小布🟡4）=====
+# 前端已全部改走 /search_sse；此 POST /search 仅保留供直接调用/测试，
+# 逻辑与 SSE 版存在分叉——新功能只改 SSE 版，本入口不再维护，后续版本删除
 
 @router.post("/search", response_class=HTMLResponse)
 def search(request: Request, keyword: str = Form(...), category: str = Form("")):
+    request.state.deprecated = True  # 标记：日志/监控可识别遗留入口调用
     keyword = keyword.strip()
     if not keyword:
         return templates.TemplateResponse(
@@ -865,12 +880,11 @@ def search(request: Request, keyword: str = Form(...), category: str = Form(""))
         )
 
     # 存库
-    conn = get_conn()
-    for it in all_items:
-        save_search_result(conn, it, category or "未分类")
-        upsert_product_item(conn, it, category or "")
-    conn.commit()
-    conn.close()
+    with closing(get_conn()) as conn:
+        for it in all_items:
+            save_search_result(conn, it, category or "未分类")
+            upsert_product_item(conn, it, category or "")
+        conn.commit()
 
     # 国补/优惠标注
     subsidies = find_subsidies(keyword, category)
