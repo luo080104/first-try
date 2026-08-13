@@ -10,3 +10,59 @@
   - 简介: 这里是GitHub的草场，也是戈戈圈爱好者的交流地，主要讨论动漫、游戏、科技、人文、生活等所有话题，欢迎各位小伙伴们在此讨论趣事。This is GitHub grassland, and the c
   - 地址: https://github.com/gege-circle/.github
   - 本地: ~/_github_ref
+- **amitshekhariitbhu/llm-internals**（1463星，2026-08-13 自动收录）
+  - 简介: Learn LLM internals step by step - from tokenization to attention to inference optimization.
+  - 地址: https://github.com/amitshekhariitbhu/llm-internals
+  - 本地: ~/llm-internals_ref
+- **russelleNVy/three-man-team**（929星，2026-08-13 自动收录）
+  - 简介: A structured 3-agent AI dev team — Architect, Builder, Reviewer. Built from production use. Token-op
+  - 地址: https://github.com/russelleNVy/three-man-team
+  - 本地: ~/three-man-team_ref
+- **tonl-dev/tonl**（837星，2026-08-13 自动收录）
+  - 简介: TONL (Token-Optimized Notation Language)
+  - 地址: https://github.com/tonl-dev/tonl
+  - 本地: ~/tonl_ref
+- **ooples/token-optimizer-mcp**（479星，2026-08-13 自动收录）
+  - 简介: Measure token savings per AI coding agent, optimize context, and share a live local knowledge graph 
+  - 地址: https://github.com/ooples/token-optimizer-mcp
+  - 本地: ~/token-optimizer-mcp_ref
+- **Paritok-official/paritok-4b-v1**（1106星，2026-08-13 自动收录）
+  - 简介: Non-destructive compression gateway for AI coding agents. Cuts token bills 25% on turn 1 to past 85%
+  - 地址: https://github.com/Paritok-official/paritok-4b-v1
+  - 本地: ~/paritok-4b-v1_ref
+- **juyterman1000/entroly**（435星，2026-08-13 自动收录）
+  - 简介: AI context optimization platform for files, conversations, RAG, code, logs and AI agents with contex
+  - 地址: https://github.com/juyterman1000/entroly
+  - 本地: ~/entroly_ref
+- **HKUSTDial/DeepFund**（290星，2026-08-13 自动收录）
+  - 简介: 🔥[NeurIPS'25] DeepFund: Pilot for Your Next Fund Investment
+  - 地址: https://github.com/HKUSTDial/DeepFund
+  - 本地: ~/DeepFund_ref
+- **saidsurucu/borsaci**（278星，2026-08-13 自动收录）
+  - 简介: AI Agent for Istanbul Stock Exchange and Turkish Investment Fund Data
+  - 地址: https://github.com/saidsurucu/borsaci
+  - 本地: ~/borsaci_ref
+- **Drakkar-Software/OctoBot-AI**（10星，2026-08-13 自动收录）
+  - 简介: A complete Crypto AI Hedge Fund Team framework. A multi-agent system covering all from data analysis
+  - 地址: https://github.com/Drakkar-Software/OctoBot-AI
+  - 本地: ~/OctoBot-AI_ref
+- **CarlosVecina/your_AIgentic_fund**（9星，2026-08-13 自动收录）
+  - 简介: Dystopian/Utopian investments 📈 managed by AI agents 🤖. Envision the future and invest in it at a di
+  - 地址: https://github.com/CarlosVecina/your_AIgentic_fund
+  - 本地: ~/your_AIgentic_fund_ref
+- **DiLiuNEUexpresscompany/LLM-Based-Multi-Agent-Stock-Analysis-and-Investment-Advisor**（25星，2026-08-13 自动收录）
+  - 简介: This project leverages Large Language Models (LLMs) and a multi-agent framework to analyze stock pri
+  - 地址: https://github.com/DiLiuNEUexpresscompany/LLM-Based-Multi-Agent-Stock-Analysis-and-Investment-Advisor
+  - 本地: ~/LLM-Based-Multi-Agent-Stock-Analysis-and-Investment-Advisor_ref
+- **evalops/orbit-agent**（25星，2026-08-13 自动收录）
+  - 简介: A brutally honest "high‑orbit" startup advisor you can text or run from the CLI. Built with DSPy, it
+  - 地址: https://github.com/evalops/orbit-agent
+  - 本地: ~/orbit-agent_ref
+- **ferozk0333/Multi-AI-Agent-Based-Agentic-Financial-Advisor-for-Stock-Analysis**（11星，2026-08-13 自动收录）
+  - 简介: Developed an Agentic AI system for financial analysis, leveraging LLMs (DistilBERT, Groq), Phidata F
+  - 地址: https://github.com/ferozk0333/Multi-AI-Agent-Based-Agentic-Financial-Advisor-for-Stock-Analysis
+  - 本地: ~/Multi-AI-Agent-Based-Agentic-Financial-Advisor-for-Stock-Analysis_ref
+- **cookieclicker123/Expert-Agent**（9星，2026-08-13 自动收录）
+  - 简介: financial advisor LLM using llama 3.2 3B and RAG with PDF file compatibility.
+  - 地址: https://github.com/cookieclicker123/Expert-Agent
+  - 本地: ~/Expert-Agent_ref

@@ -45,12 +45,32 @@ SPECIFY ──→ PLAN ──→ TASKS ──→ IMPLEMENT
 - 风险点（改了 A 会不会影响 B）
 - 验证方式（改完后怎么确认修好了）
 
+**计划头固定格式**（学 writing-plans，Superpowers）：
+
+```markdown
+# [功能名] 实施计划
+
+**Goal:** [一句话：做什么]
+**Architecture:** [2-3 句：怎么实现]
+**Tech Stack:** [关键技术/库]
+**Spec:** [对应 spec 文档路径]
+
+## Global Constraints
+[spec 里的全局约束逐字复制——版本下限/依赖限制/命名规则，每条一行]
+```
+
+**No Placeholders 铁律**（学 writing-plans）：
+- 每个任务必须包含**实际内容**——真正的代码、真正的测试、真正的命令
+- 禁止：`TBD` / `TODO` / "写适当的错误处理" / "类似 Task N" / "添加验证"（不写具体代码）
+- 工程师可能只看到自己的任务——Interfaces 块要写清楚 Consumes/Produces 的**精确签名**
+
 ### Phase 3: TASKS（拆成任务）
 
 每个任务：
-- 一次能做完的粒度
+- 一次能做完的粒度（**2-5 分钟一步**）
 - 有明确的验收条件
 - 有验证命令
+- **每步是 TDD 循环**：写失败测试 → 跑确认失败 → 写最小实现 → 跑确认通过 → commit
 
 ```markdown
 - [ ] 改 start_server.vbs：python.exe → pythonw.exe
