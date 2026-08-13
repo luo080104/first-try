@@ -91,6 +91,8 @@
     </div>
 
     <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
         var POLLING = false;
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
         var ST = {pending:['待采集','st-pending'], doing:['采集中','st-doing'], done:['已完成','st-done'], failed:['失败','st-failed'], paused:['已暂停(经验)','st-paused']};
@@ -175,7 +177,7 @@
         }
 
         function resumePaused() {
-            fetch('/api/resume_tasks', {method: 'POST'}).then(r => r.json()).then(d => {
+            fetch(pinUrl('/api/resume_tasks', {method: 'POST'}).then(r => r.json()).then(d => {
                 alert(d.msg);
                 loadTasks();
             });

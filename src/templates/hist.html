@@ -35,6 +35,8 @@
     <button class="clear-all" onclick="clearAll()" id="clear-btn" style="display:none">🗑 清空全部历史</button>
 </div>
 <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
     function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
     function curUser() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
 
@@ -49,7 +51,7 @@
     }
 
     function load() {
-        fetch('/api/search_history?user_name=' + encodeURIComponent(curUser()))
+        fetch(pinUrl('/api/search_history?user_name=' + encodeURIComponent(curUser()))
             .then(r => r.json()).then(d => {
                 var list = d.items || [];
                 var box = document.getElementById('hist-box');
@@ -82,14 +84,14 @@
     }
 
     function delOne(kw) {
-        fetch('/api/search_history_del', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        fetch(pinUrl('/api/search_history_del', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: 'keyword=' + encodeURIComponent(kw) + '&user_name=' + encodeURIComponent(curUser())})
             .then(r => r.json()).then(d => { if (d.ok) load(); });
     }
 
     function clearAll() {
         if (!confirm('确定清空全部搜索历史？')) return;
-        fetch('/api/search_history_clear', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        fetch(pinUrl('/api/search_history_clear', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
             body: 'user_name=' + encodeURIComponent(curUser())})
             .then(r => r.json()).then(d => { if (d.ok) load(); });
     }

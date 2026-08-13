@@ -47,6 +47,8 @@
     </div>
 
     <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function curUser() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
         var PLAT = {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会'};
@@ -55,7 +57,7 @@
         function loadWander() {
             var box = document.getElementById('w-list');
             box.innerHTML = '<div class="empty-tip">🎡 正在逛…</div>';
-            fetch('/api/wander?user=' + encodeURIComponent(curUser()) + '&size=12')
+            fetch(pinUrl('/api/wander?user=' + encodeURIComponent(curUser()) + '&size=12')
                 .then(r => r.json()).then(d => {
                     if (!d.cards || !d.cards.length) {
                         box.innerHTML = '<div class="empty-tip">逛完了！换个词搜搜，或去采集中心多采点商品吧</div>';
@@ -86,7 +88,7 @@
             fd.append('user', curUser());
             fd.append('item_id', itemId);
             fd.append('action', action);
-            fetch('/api/wander_feedback', {method: 'POST', body: fd});
+            fetch(pinUrl('/api/wander_feedback', {method: 'POST', body: fd});
             var card = btn.closest('.w-card');
             card.style.opacity = '0.3';
             if (action === 'dislike') {
@@ -109,7 +111,7 @@
         function fav(id, btn) { feedback(id, 'fav', btn); }
 
         function showFavs() {
-            fetch('/api/wander_favs?user=' + encodeURIComponent(curUser())).then(r => r.json()).then(d => {
+            fetch(pinUrl('/api/wander_favs?user=' + encodeURIComponent(curUser())).then(r => r.json()).then(d => {
                 if (!d.items || !d.items.length) { alert('还没有收藏～点卡片上的 ❤️ 收藏'); return; }
                 alert(d.items.map(function(it) {
                     return '❤️ ' + (it.title || '').slice(0, 24) + '  ¥' + it.price + '  [' + (PLAT[it.platform] || it.platform) + ']';

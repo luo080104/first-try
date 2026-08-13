@@ -142,7 +142,7 @@
         <a class="btn-guide" href="/guide">🤖 陪你出发 — 拿不准买啥？跟我聊聊</a>
         <div class="more-menu" style="margin:6px 0 16px;text-align:center;font-size:14px">
             <a class="mm" href="/items">🛍️ 商品库</a><a class="mm" href="/crawl">📥 采集中心</a>
-            <a class="mm" href="javascript:openPrefs()">⚙️ 偏好</a><a class="mm" href="javascript:showUsage()">💰 AI费用</a>
+            <a class="mm" href="javascript:openPrefs()">⚙️ 偏好</a><a class="mm" href="javascript:openPin()">🔒 密码</a><a class="mm" href="javascript:showUsage()">💰 AI费用</a>
             <a class="mm" href="/submit">📝 录入好价</a><a class="mm" href="/hist">🕘 搜索历史</a>
         </div>
         {% if error %}<div class="error">{{ error }}</div>{% endif %}
@@ -330,12 +330,33 @@
             if (gb) gb.remove();
             doSearch();
         }
+        function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+        function openPin() {
+            // 2026-08-13 family_pin（小布🔴2）：设置/修改/清除访问密码
+            var np = prompt('设置访问密码（家人共用时防误操作；留空=清除）：', '');
+            if (np === null) return;
+            var fd = new FormData();
+            fd.append('pin', np);
+            fd.append('old_pin', '');
+            fetch('/api/set_pin', {method: 'POST', body: fd}).then(r => r.json()).then(function(d) {
+                if (d.ok) { alert(d.msg); if (np) { localStorage.setItem('gobuy_pin', np); } else { localStorage.removeItem('gobuy_pin'); } return; }
+                var op = prompt('需要旧密码（首次设置可跳过）：', '');
+                if (op === null) return;
+                var fd2 = new FormData();
+                fd2.append('pin', np);
+                fd2.append('old_pin', op);
+                fetch('/api/set_pin', {method: 'POST', body: fd2}).then(r => r.json()).then(function(d2) {
+                    alert(d2.msg);
+                    if (d2.ok) { if (np) { localStorage.setItem('gobuy_pin', np); } else { localStorage.removeItem('gobuy_pin'); } }
+                });
+            });
+        }
         function openPrefs() {
             var p = prompt('排除平台（逗号分隔，如：拼多多,京东；留空清除）：', '');
             if (p === null) return;
             var fd = new FormData();
             fd.append('prefs', p);
-            fetch('/api/prefs', {method: 'POST', body: fd}).then(r => r.json()).then(d => alert(d.msg));
+            fetch(pinUrl('/api/prefs', {method: 'POST', body: fd}).then(r => r.json()).then(d => alert(d.msg));
         }
         function showUsage() {
             fetch('/api/usage').then(r => r.json()).then(d => {
@@ -355,7 +376,7 @@
         function getCurrent() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
         function setCurrent(n) { localStorage.setItem('gobuy_current', n); }
         function loadFamily() {
-            fetch('/api/family').then(r => r.json()).then(d => {
+            fetch(pinUrl('/api/family').then(r => r.json()).then(d => {
                 FAMILY = d.categories || [];
                 renderRole();
             });
@@ -482,7 +503,7 @@
             if (picked.length) {
                 var fd = new FormData();
                 fd.append('categories', picked.join(','));
-                fetch('/api/family_tasks', {method: 'POST', body: fd}).then(r => r.json());
+                fetch(pinUrl('/api/family_tasks', {method: 'POST', body: fd}).then(r => r.json());
             }
         }
         function showLoading() {

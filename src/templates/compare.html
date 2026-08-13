@@ -98,6 +98,8 @@
     </div>
 
     <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
         // 默认盯价 = 当前价 × 9 折（WorkBuddy P2-4：配置化）
         const WATCH_DEFAULT_RATIO = 0.9;
         var currentKw = '', currentCat = '';
@@ -250,7 +252,7 @@
             var fd = new FormData();
             fd.append('title', title); fd.append('current_price', price);
             fd.append('target_price', parseFloat(target));
-            fetch('/watch', {method: 'POST', body: fd})
+            fetch(pinUrl('/watch', {method: 'POST', body: fd})
                 .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
                 .catch(() => alert('盯价失败'));
         }

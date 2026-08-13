@@ -64,6 +64,8 @@
     </div>
 
     <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
         var SESSION = '';
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function curUser() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
@@ -128,7 +130,7 @@
             fd.append('keyword', curUser());
             fd.append('action', 'adopt');
             fd.append('variant', localStorage.getItem('gobuy_variant') || 'a');
-            fetch('/api/event', {method: 'POST', body: fd});
+            fetch(pinUrl('/api/event', {method: 'POST', body: fd});
         }
 
         function doChat(text) {
@@ -137,7 +139,7 @@
             fd.append('session_id', SESSION);
             fd.append('user_name', curUser());
             fd.append('message', text);
-            fetch('/api/chat', {method: 'POST', body: fd})
+            fetch(pinUrl('/api/chat', {method: 'POST', body: fd})
                 .then(r => r.json()).then(d => {
                     document.getElementById('typing').style.display = 'none';
                     if (!d.ok) { addMsg('ai', d.msg || '出错了'); return; }

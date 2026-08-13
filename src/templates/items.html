@@ -105,6 +105,8 @@
     </div>
 
     <script>
+function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+
         var page = 1, totalPages = 1;
         function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
         function platName(p) { return {tb:'淘宝',jd:'京东',pdd:'拼多多',dy:'抖音'}[p] || p; }
@@ -198,7 +200,7 @@
             fd.append('title', title); fd.append('platform', platform);
             fd.append('item_id', itemId); fd.append('current_price', price);
             fd.append('target_price', parseFloat(target));
-            fetch('/watch', {method: 'POST', body: fd})
+            fetch(pinUrl('/watch', {method: 'POST', body: fd})
                 .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
                 .catch(() => alert('盯价失败'));
         }
