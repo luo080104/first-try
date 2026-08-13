@@ -10925,7 +10925,7 @@ shared/
 
 ## 🟡 建议项
 
-3. ✅ SSE 断线检测：request 注入 + _aborted()（is_disconnected）+ 3 个关键点提前退出（慢通道前/done 前）
+1. ✅ SSE 断线检测：request 注入 + _aborted()（is_disconnected）+ 3 个关键点提前退出（慢通道前/done 前）
 2. ✅ 遗留 POST /search 标记 DEPRECATED（request.state.deprecated + 注释）
 3. ✅ crawl 竞态确认：@_crawl_single 装饰器确实包住 run_crawl_round（crawl.py:171）——API/**main** 双路径覆盖
 
@@ -10943,8 +10943,9 @@ shared/
 # 📤 同步：2026-08-13（小布审查落实 + family_pin + 待办状态）
 
 ## 一、小布三角色审查落实（全部完成 ✅）
+
 | 项 | 状态 |
-|---|---|
+| --- | --- |
 | 🔴1 SQLite 连接泄漏（22 处） | ✅ 全部转 `with closing(get_conn()) as conn:`——异常路径自动关（api.py 19 + search.py 3）——脚本精确转换 + 编译 + 路由 8/8 验证 |
 | 🔴2 user_name 无认证 | ✅ **family_pin 后端完成**（见下）——前端设置入口待补 |
 | 🟡3 SSE 无超时保护 | ✅ request 注入 + `_aborted()`（is_disconnected）+ 3 关键点提前退出 |
@@ -10955,6 +10956,7 @@ shared/
 | 💭 缓存层 | ✅ price_trend 加 10 分钟 TTL 缓存 |
 
 ## 二、family_pin（🔴2）后端完成 ✅
+
 - db.py：`PREF_PIN` + set_family_pin/get_family_pin/verify_pin（**未设置=放行**——向后兼容零影响）
 - routes/api.py：12 个敏感端点加 pin 参数 + `_pin_guard` 校验（历史查/删/清/盯价/家庭任务/漫游/会话/偏好）+ 新增 `/api/set_pin`（首次设置免旧 PIN/修改需旧 PIN/空=清除）
 - routes/search.py：search_sse 历史模式校验 PIN（live 模式不校验——防日常搜索卡壳）
@@ -10962,14 +10964,83 @@ shared/
 - ⏳ 前端设置入口（⚙️ 加"访问密码"按钮 + localStorage 带 pin）——待补（回家做）
 
 ## 三、今日状态
+
 - ✅ 今日 AI 日报已推送（08:30 任务因电脑关机未触发——手动补跑）
 - ✅ Git 升级 2.55.0（卡进程是我 push 重试循环造成的——已清+教训）
 - ⏸️ **git push 4 个提交未推**（手机热点 TLS 卡死——本地安全——回家 WiFi 推）
 - ✅ 服务运行中（路由拆分后正常）
 
 ## 四、待办
+
 1. push（回家）
 2. family_pin 前端入口（回家）
 3. BGE-M3 / 采集重跑（回家 WiFi）
 4. 雕龙恢复（等用户）
 5. 手机端验证（等用户测试反馈）
+
+## 小布验证：Pi 今日清单 8/8 全过（2026-08-13 上午）
+
+| 项 | 验证结果 |
+| ---- | --------- |
+| 🔴1 连接泄漏 22 处 | ✅ with closing：api.py 19 + search.py 3。剩余 search.py:743 一处为 try/finally 兜底形式（_c.close() 在 finally），安全不漏 |
+| 🟡3 SSE 断线 | ✅ search.py:368 `request.is_disconnected()` |
+| 🟡4 遗留入口 | ✅ search.py:803 DEPRECATED 标记 + request.state 可识别 |
+| 🟡5 crawl 竞态 | ✅ 装饰器双路径覆盖（Pi 确认） |
+| 💭 price_trend 缓存 | ✅ api.py:25 10 分钟 TTL 缓存 |
+| #2 family_pin | ✅ 后端 9 项测试通过，未设 PIN 不影响日常 |
+| #3 今日日报 | ✅ 已推微信 |
+| Git 升级 | ✅ 2.55.0（进程清理后装好） |
+
+### 留到回家（Pi 已列）
+
+1. git push 4 个提交（热点 TLS 卡死，本地安全）
+2. family_pin 前端入口（设置页按钮）
+
+### 备注
+
+- 手机访问 IP 10.74.245.200 回家会变，回家重新查
+- 下一步建议：Go购 收尾后回归雕龙 P0（爬虫 URL 验证 + 风格规范文件）
+
+## 小布今日同步（2026-08-13 上午 10 点）
+
+### 已完成
+
+- ✅ Pi 今日清单 8/8 验证全过（详见上一条：连接泄漏/SSE/DEPRECATED/crawl/缓存/family_pin/日报/Git 2.55.0）
+- ✅ Go购 审查报告存档
+
+### 今日检索计划（主题：节省 token + 观复相关）
+
+- 三轮检索：① 节省 token ② 观复/基金/金融 Agent ③ 补充交叉
+- 流程：先标记 → 汇总 → 精读 → 判（装/不装/参考）
+- 产出：SYNC.md 汇总 + 行动项
+
+### 待办（不变）
+
+- 回家：git push 4 提交 + family_pin 前端
+- 雕龙暂停中：lightnovel-crawler 已装 17 中文源，待 URL 验证
+
+# 📤 今日案例检索精读（2026-08-13：token 节省 + 观复/基金）
+
+## 标记候选（10 个，已收录 case_index.md）
+- token 主题：Paritok-4B(1106)/llm-internals(1463)/three-man-team(929)/tonl(837)/token-optimizer-mcp(479)/entroly(435)
+- 基金主题：DeepFund(290)/borsaci(278)/LLM多Agent股票分析(25)/Agentic金融顾问(11)
+
+## 精读结论
+### 1. Paritok-4B（token 压缩网关）——三杠杆
+| 杠杆 | 机制 | 实测 |
+|---|---|---|
+| ① 工具 schema 过滤 | embedding 语义过滤：70+ 工具只留相关几个全 schema，其余 stub（本地 bge-small CPU 零成本）——**prompt-cache 友好**（每会话冻结，tools 块字节稳定不破坏 KV 缓存）——核心工具永不 stub——可恢复 | 29K→8K（单轮最大节省） |
+| ② 内容压缩 | 4B 模型压到 26%（[REF:id] 标签，保护标识符/路径/错误串，丢噪音）——read_original 可恢复 | 4.6%→22%（5 轮） |
+| ③ 历史摘要 | 长会话窗口溢出时摘要旧轮 | 全栈 25%→39% |
+
+**对 Pi 的启示**：
+- ①与我们 `pi_lens_activate_tools`（按需激活工具）设计**同思路**——验证方向正确 ✅
+- ②可恢复压缩 ≠ headroom 有损（用户已否决）——Paritok 的 REF:id+read_original 模式是"无损+可恢复"——**RTK/context-mode 已覆盖等价能力**，无需新装
+- 结论：不装（引擎 Qwen3-4B 本地跑成本/复杂度高，我们已有无损方案）
+
+### 2. DeepFund（港科大，NeurIPS 2025，最佳开源奖）——基金交易 agent 评估
+- 统一环境评估 LLM 交易能力（多 agent + 外部信息摄取 + 交易决策 + Trading Arena 多维对比）
+- 研究用途不实盘；与 Paradoox AI 合作
+- **对观复/金融的启示**：评估环境设计（多 agent 决策 + 多维 arena 对比 + 可复现）——记入金融 Agent 蓝本（AI Berkshire 之外的第二参考）
+
+## 结论：无新装——两个候选都转化为"设计验证/蓝本记录"
