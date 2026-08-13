@@ -11864,3 +11864,53 @@ memory-bank/
 - Python 工具 → 进 tools/ + 编入业务管线（如雕龙质检），不占 skill 名额
 - 提示词 skill → 进 skills/ + 编入路由表
 - 两者区分：**代码能力进项目，提示词能力进技能库**
+
+
+## 技能分类检查完成（2026-08-13 中午）
+
+### 用户发现的系统问题
+"很多优秀案例只变成了 skill 没用起来"——检查确认成立。
+
+### 检查结果（39 skill 全分类）
+- 🔴 9 个代码/数据工具被误装成角色 skill（a-stock-data/westock-data/futuapi/stock-analysis/stock-analyzer/us-stock-analysis/macro-monitor/earnings-tracker）→ 观复启动时迁入数据层，清单已写观复规划
+- 🟢 29 个提示词角色放对（humanizer 是编辑角色，保留；与 tools/humanizer_scorer.py 互补）
+- ⚪ darwin-skill 管理工具保留
+
+### 原则固化（已写入 MEMORY.md 技能安装规范）
+**安装前先分拣**：代码工具 → 进项目 tools/ + 业务管线；提示词角色 → 进 skills/ + 路由表。判断标准：给 Agent 的是"能跑的代码"还是"该怎么想的指导"。
+
+
+## avoid-ai-writing 精读+落地（2026-08-13 中午）
+
+### 精读结论（conorbronsdon/avoid-ai-writing，2.6k⭐，MIT）
+- 注意：用户给的 mainick 地址 404，正确仓库是 conorbronsdon
+- 纯提示词 skill：21 类 AI 模式 + 43 条替换表（leverage→use 等）
+- 与 humanizer/shuorenhua/scorer 高度重叠 → **不装**（分拣原则：不重复堆叠）
+
+### 两个独特设计已抄进雕龙 ⑥ 质检
+1. **检测/改写分离**：先 detect 按 P0/P1/P2 分级（必改/应改/可保留）→ 再只改 P0/P1——避免"为改而改"误伤
+2. **second-pass audit 二遍自查**：改写后重读改稿抓残留 AI 痕迹——一遍不够二遍才算验证（呼应 Iron Law）
+
+### 去 AI 味工具全家福（雕龙质检层）
+- humanizer（角色指导，Wikipedia 29 特征）
+- shuorenhua（210+ 中文句式库）
+- humanizer_scorer.py（6 维量化评分，质检第 14 项）
+- avoid-ai-writing 设计（P0/P1/P2 分级 + 二遍自查）
+
+# 📤 小P 同步：小布待办清单核对结果（2026-08-13 晚）
+
+## 核对发现 4 处搞错（已修正 progress.md）
+| 小布的待办 | 实际状态 | 处理 |
+|---|---|---|
+| Langfuse 接入"待办" | ✅ 8/12 已完成（key+@observe+shared/llm.py+验证+skill） | progress 改 [x] |
+| diao-long 仓库改名 | ✅ 已改名 luo080104/diao-long | progress 改 [x] |
+| Paseo "装了没配" | ❌ **实际未装**（progress 误记） | progress 改为"未装——如需要再装" |
+| tldr 3.4.4 已装 | ❌ 实际未装（progress 误记） | 同上 |
+
+## 核对属实（无需改）
+- 实验室简历 8/17 截止（用户个人——小布建议优先——同意）
+- 暑假作业照片 / git push / Headroom 压缩验证 / 采集重跑 / 手机验证 / 极道天魔爬取 / codebase-memory-mcp / BGE-M3 / tech-stack FTS5
+
+## 说明
+- 规则十三（memory-bank 启动读）+ 规则十四（Iron Law）已确认存在（另一会话落地）——PI_RULES 现 15 条
+- 我的建议：实验室简历优先（硬截止+个人事务）——材料已备（Go购/雕龙/ETF 报告）——用户点头即开写
