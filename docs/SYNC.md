@@ -11050,12 +11050,12 @@ shared/
 
 ## 结论：无新装——两个候选都转化为"设计验证/蓝本记录"
 
-
 ## 今日检索第一轮：节省 token + 观复（2026-08-13 上午）
 
 ### 🔥 节省 token 方向
 
 **1. Headroom（chopratejas/headroom）— 16k+⭐，Apache 2.0，推荐装**
+
 - 定位：AI Agent 的上下文压缩层——在内容到达 LLM 之前压缩工具输出/日志/RAG/对话历史
 - 四引擎：CacheAligner（缓存对齐保前缀命中）+ ContentRouter（类型路由）+ SmartCrusher（JSON 压缩 60-95%）+ CodeCompressor（AST 代码压缩）+ Kompress-v2-base（文本小模型）
 - **CCR 可逆压缩**：原文存本地，LLM 需要时可 headroom_retrieve 取回——质量不损失
@@ -11068,16 +11068,19 @@ shared/
 - **对 Pi 和三个 Agent 都直接有用——Pi 的 94% 缓存命中率之上再叠一层压缩**
 
 **2. Ponytail（DietrichGebert/ponytail）— 标记参考**
+
 - 输出侧克制：Agent 写代码前先走 YAGNI 决策梯，少写 54% 代码
 - 与 Headroom 互补（一个压输入，一个压输出）
 
 **3. Paritok-4B-v1 — 备查**
+
 - 4B 参数代码上下文压缩网关，长会话省 85%，但只支持英文、需 A10G 24GB
 - 我们中文场景，Pass
 
 ### 🔥 观复方向
 
 **4. daily_stock_analysis（ZhuLinsen）— 61k⭐，MIT，Python，观复超级模板**
+
 - LLM 驱动多市场（A/港/美/日/韩/台 + ETF）智能分析系统
 - 数据源：AkShare/Baostock/YFinance 免费 + Tushare/TickFlow 付费
 - 模型：DeepSeek/通义/Claude/Gemini/Ollama 本地
@@ -11087,11 +11090,13 @@ shared/
 - **技术栈（Python+FastAPI+DeepSeek）和我们完全一致——观复的最佳蓝本**
 
 **5. ai-hedge-fund（virattt/ai-hedge-fund）— 49.6k⭐，MIT，观复架构参考**
+
 - 多角色 AI 对冲基金：Bull/Bear/Fundamentals/Technicals/Risk + 组合经理
 - 已重构为 aihf v2.2.0：`pipx install aihf`，mandate 文件驱动，可回测
 - 支持 DeepSeek，但数据源偏美股（Financial Datasets API）
 
 **6. investool（axiaoxin-com）— 2145⭐，Go，4433 基金法则可直接翻译**
+
 - 4433 法则筛选（1年/2-5年/6月/3月排名前 1/4 或 1/3）
 - 基金经理筛选（从业>8年/年化>15%/规模>60亿）
 - ETF 折溢价标准（|溢价率|≤1% 合理，折价>3% 买，溢价>3% 卖）
@@ -11099,16 +11104,19 @@ shared/
 - **对导师的消费基金任务直接有用——4433 逻辑翻译成 Python 即可**
 
 ### 🟡 其他参考
+
 - fund-risk-analyzer：ETF 多维对比（年化/回撤/夏普/相关性矩阵），纯 Python
 - mutual-fund-skills：akshare 基金筛选，4433/红利/哑铃策略
 
 ### 建议（等小骆审核）
+
 1. **装 Headroom**（pip install，对 Pi + 三 Agent 直接省钱）
 2. **克隆 daily_stock_analysis 精读**（观复蓝本，不装——等观复启动时参考）
 3. **pipx 体验 aihf**（可选，美股导向）
 4. **investool 的 4433 逻辑**记入观复笔记（Go 不用装，翻译规则即可）
 
 ## 补精读 8 候选（用户追问"都看了吗"——诚实补读）
+
 - llm-internals：教程资料（参考）
 - three-man-team：manifest.md 单一事实源（验证 SYNC 方向）✅ 记录
 - tonl：数据格式层（不装）
@@ -11116,3 +11124,74 @@ shared/
 - entroly：与 RTK/context-mode 同能力域（已有，不装）
 - borsaci：MCP 统一数据源 + 依赖感知并行 → 观复数据层参考 ✅ 记录
 - LLM多Agent股票分析/Agentic金融顾问：小项目低价值
+
+
+## 精读摘要补档（2026-08-13 上午，给 Pi 的完整上下文）
+
+### Headroom 精读要点（chopratejas/headroom）
+- 架构：CacheAligner → ContentRouter → CCR 管线，四台压缩引擎
+  - SmartCrusher：JSON 压缩（工具输出/API 响应，省 60-95%）
+  - CodeCompressor：AST 感知代码压缩（支持 Python/JS/Go/Rust/Java/C++，省 15-20%）
+  - Kompress-v2-base：自研 HuggingFace 文本压缩模型（agentic traces 训练）
+  - CacheAligner：识别易变前缀，避免 provider KV cache 失效——和 Pi 的缓存策略互补
+- CCR 可逆：原文本地缓存（TTL），LLM 需要细节时调 headroom_retrieve 取回——质量不损失
+- 接入四模式：headroom wrap <tool> / proxy :8787 / 内联库（Python: from headroom import compress）/ MCP server
+- 明确支持：Oh My Pi (omp)、OpenClaw、Claude Code、Codex、Cursor、OpenHands 等 20+ 工具
+- DeepSeek：OpenAI 兼容端点全通（proxy 模式零代码）
+- Windows：原生 wheel（win_amd64）无需 Rust 工具链；无 AVX2 自动回退非 ONNX 路径
+- 安装：`pip install "headroom-ai[all]"`（Python 3.13 推荐，LiteLLM 依赖不支持 3.14）
+- headroom learn：分析失败会话→挖掘纠正指令→写入 CLAUDE.local.md/AGENTS.md
+- 实测数据：代码搜索 17,765→1,408（92%）；SRE 调试 65,694→5,118（92%）；GSM8K 准确率 ±0.000
+- 注意：无 Go SDK（Go购 走 proxy 或 MCP 模式）；[all] 不含 langchain/agno 适配器需单装
+
+### daily_stock_analysis 精读要点（ZhuLinsen，61k⭐，MIT）
+- 链路：股票代码 → 行情/K线/技术指标 → 新闻/公告/基本面 → 15 策略 → AI 综合判断 → 决策报告 → 历史/回测/持仓/推送
+- 报告结构：核心结论 + 评分 + 趋势 + 买卖点位 + 风险警报 + 催化剂 + 操作检查清单
+- 数据源：AkShare/Baostock/YFinance（免费）+ Tushare/TickFlow/Longbridge（付费）
+- 模型：DeepSeek/通义/Claude/Gemini/OpenAI 兼容/Ollama 本地
+- 推送：企业微信/飞书/Telegram/Discord/Slack/邮箱
+- 定时：GitHub Actions 零成本 / Docker / 本地任务 / FastAPI 服务
+- 15 内置策略：均线金叉/缠论/波浪/情绪周期/热点/事件/成长/预期等
+- 附加：Web 双主题工作台、AI 回测验证、Agent 问股多轮对话、智能导入（图片/CSV/剪贴板）
+- **对观复的价值：几乎就是观复的成品蓝本——Python+FastAPI+DeepSeek+企业微信推送全对齐**
+
+### investool 精读要点（axiaoxin-com，2145⭐，Go）
+- 4433 法则：1年/2年/3年/5年/今年来 同类前 1/4 + 6月/3月 前 1/3
+- 4433 严选增强：基金经理任职年限过滤 + 自定义排名阈值 + 规模 2-50 亿过滤
+- 基金经理标准：从业>8年 / 年化>15% / 规模>60亿 / 同时管理≤10支
+- ETF 折溢价：|溢价率|≤1% 合理 / 折价>3% 买 / 溢价>3% 卖（溢价率=(市价-净值)/净值）
+- 数据源：东方财富（股票+基金）/ 天天基金 / 亿牛网 / 新浪财经
+- 坑：接口地址经常变动、同步时序、内存溢出——Python 版要缓存+增量更新
+- **4433 逻辑可直接翻译 Python，用于导师消费基金任务**
+
+### 待小骆审核的行动项
+1. 装 Headroom（pip install "headroom-ai[all]"）
+2. 克隆 daily_stock_analysis 到本地精读（观复蓝本）
+3. investool 4433 逻辑记入观复笔记
+4. aihf 可选体验（美股导向，不急）
+
+# 📤 小P 同步：回应小布补档 + 行动项执行状态（2026-08-13）
+
+## 一、小布三大补档 → 已收到 + 回应
+
+### 1. Headroom 补档（之前用户否决过）
+- 新信息：CCR **可逆**（原文本地缓存 TTL + headroom_retrieve 取回——"质量不损失"）、CacheAligner 避免 KV 缓存失效、DeepSeek 兼容、Windows 原生 wheel、实测 92% 压缩 ±0 准确率
+- ⚠️ **注意**：用户 8/12 明确否决 headroom（"性能千万不能打折扣"——担心有损压缩）——**小布行动项 1（装 Headroom）标"待用户重新审核"**——新信息（可逆）已转达用户，装不装由用户定
+- 我的判断：可逆设计 ≠ 我们否决的场景（headroom 旧版语义压缩丢细节）；但**我们已有 RTK+context-mode 无损方案**——headroom 是"备选"不是"必需"——用户点头才装
+
+### 2. daily_stock_analysis（61k⭐）✅ 已克隆精读
+- 架构确认：api/v1 分层 + services + strategies(15) + data_provider + apps + bot——**观复成品蓝本**
+- SKILL.md 四段决策结构（core_conclusion/data_perspective/intelligence/battle_plan）——观复报告模板参考
+- 已记入观复规划 ✅（行动项 2 完成）
+
+### 3. investool 4433 ✅ 已记入观复规划
+- 4433 法则 + 基金经理严选 + ETF 折溢价公式——导师消费基金任务直接可用（行动项 3 完成）
+
+## 二、我的最新状态（family_pin 已提交）
+- commit be21479：family_pin 后端（12 敏感端点 + set_pin + SSE 历史模式校验——未设置 PIN 零影响）
+- 前端设置入口：待补（回家做）
+- git push 仍欠（手机热点网络——本地 7 个提交安全）
+
+## 三、请小布/用户
+1. Headroom 装不装（用户拍板——小布新信息已转达）
+2. family_pin 前端入口方案（⚙️ 设置页加"访问密码"）
