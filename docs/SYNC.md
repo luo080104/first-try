@@ -12107,14 +12107,15 @@ memory-bank/
 - 对照：多 agent 并行（我们有 pi-subagents runs.all）✅ / 持久记忆（hermes-memory）✅ / 自学习（darwin 进化近似）✅ / 联邦（不需要）/ 314 工具（不需要——轻量路线）
 - 判断：生态不同装不了 + 核心能力已覆盖——概念验证通过
 
-
 ## NewsNow 精读+落地（2026-08-13 中午）
 
 ### 精读结论（ourongxing/newsnow，21k⭐，Node/Nitro）
+
 - 多源热点聚合 + Streamable HTTP MCP Server——热点数据做成标准接口给 AI 查
 - 判：**不装**——技术栈不匹配（Node vs 我们 Python），功能与 agents-radar 重叠（radar 已解决"AI 盯热点"）
 
 ### 落地（架构参考入 memory-bank/architecture.md）
+
 - source 插件化（每平台一文件，加源不加核心）
 - MCP 暴露数据（印证 mcp-builder 方法论）
 - 聚合先行、数据层与消费层解耦
@@ -12123,9 +12124,47 @@ memory-bank/
 # 📤 补精读落地（2026-08-13 晚）
 
 ## avoid-ai-writing（conorbronsdon 2965⭐——视频地址404，真仓库已找到）
+
 - 落地：shuorenhua 加 **Voice Profiles 5 档**（随和/正式/技术/亲切/直接——目标语气维度）+ **Edit-in-Place 模式**（就地最小修改+修改报告）
 - 已覆盖确认：Detect 模式（审计清单已有）/第二遍复查（残留味回读已有）
 
 ## codebase-memory-mcp（38.7k⭐ 纯C引擎）
+
 - 精读完成：毫秒级索引/158语言/Hybrid LSP/10×少token基准（arXiv）
 - **不装**（Go购规模 pi-lens 已覆盖）——**记入大项目候选**（>50万行或查询瓶颈时评估——用户提示以后可能有更大项目）
+
+
+## 简历 v4：角色审 + 去 AI 感（2026-08-13 中午）
+
+### 三角色审（内容创作者/图书联合作者/产品经理）
+- 🔴 必改：删"没有竞赛奖"（与奋进杯自相矛盾）✅
+- 🟡 建议：雕龙压缩、重复段合并、"两条线"指代修正 ✅
+- 新增：高中担任班长（用户确认）
+
+### 去 AI 感（content-humanizer 评分器实测）
+- 初稿 84/100 → 清理 12 处破折号后 **92/100 "Sounds human"** ✅
+- Em-Dash 维度 0/10 → 8/10（剩 2 处为标题，合理保留）
+- 其他维度全满：AI 词汇 25/25、句长方差 20/20、被动 0%、hedging 0
+
+### 用户档案已补录 MEMORY.md
+班长/高考650/杭州/联系方式——之前漏记，已补
+
+### 简历 v4 完成，可投递
+
+# 📤 codebase-memory-mcp 安装（2026-08-13 晚，用户拍板"先装了"）
+
+## 状态：装好 + 验证通过 ✅
+- 位置：`~/codebase-memory/codebase-memory-mcp.exe`（v0.10.3，37MB，纯 C 无依赖）
+- **Go购 实测**：索引 6 秒（2366 节点/5217 边——.env/pdd_profile 正确排除）| search_code 1.1 秒（get_conn 73 结果含签名/行号/调用）
+- 15 个 MCP 工具（search_code/trace_call_path/get_architecture/query_graph/check_index_coverage 等）
+- 定位：**备用引擎**（日常 pi-lens；它用于大项目/性能场景——用户提示以后可能有更大项目）
+
+## 用法备忘
+- 索引：`cli index_repository --repo-path <路径> --mode fast|moderate|full`
+- 查询：`echo '{"project":"<项目名>","pattern":"xxx"}' | cli search_code`（项目名=路径连字符化）
+- UI：`--ui=true` 开 HTTP 图谱可视化
+- Pi MCP 接入：待研究（CLI 已可用不阻塞）——记待办
+
+## 待办更新
+- ~~codebase-memory-mcp 补精读~~ ✅ 已装已测
+- 新增：Pi MCP 接入 codebase-memory（需要时）
