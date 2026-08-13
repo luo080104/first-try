@@ -11022,25 +11022,97 @@ shared/
 # 📤 今日案例检索精读（2026-08-13：token 节省 + 观复/基金）
 
 ## 标记候选（10 个，已收录 case_index.md）
+
 - token 主题：Paritok-4B(1106)/llm-internals(1463)/three-man-team(929)/tonl(837)/token-optimizer-mcp(479)/entroly(435)
 - 基金主题：DeepFund(290)/borsaci(278)/LLM多Agent股票分析(25)/Agentic金融顾问(11)
 
 ## 精读结论
+
 ### 1. Paritok-4B（token 压缩网关）——三杠杆
+
 | 杠杆 | 机制 | 实测 |
-|---|---|---|
+| --- | --- | --- |
 | ① 工具 schema 过滤 | embedding 语义过滤：70+ 工具只留相关几个全 schema，其余 stub（本地 bge-small CPU 零成本）——**prompt-cache 友好**（每会话冻结，tools 块字节稳定不破坏 KV 缓存）——核心工具永不 stub——可恢复 | 29K→8K（单轮最大节省） |
 | ② 内容压缩 | 4B 模型压到 26%（[REF:id] 标签，保护标识符/路径/错误串，丢噪音）——read_original 可恢复 | 4.6%→22%（5 轮） |
 | ③ 历史摘要 | 长会话窗口溢出时摘要旧轮 | 全栈 25%→39% |
 
 **对 Pi 的启示**：
+
 - ①与我们 `pi_lens_activate_tools`（按需激活工具）设计**同思路**——验证方向正确 ✅
 - ②可恢复压缩 ≠ headroom 有损（用户已否决）——Paritok 的 REF:id+read_original 模式是"无损+可恢复"——**RTK/context-mode 已覆盖等价能力**，无需新装
 - 结论：不装（引擎 Qwen3-4B 本地跑成本/复杂度高，我们已有无损方案）
 
 ### 2. DeepFund（港科大，NeurIPS 2025，最佳开源奖）——基金交易 agent 评估
+
 - 统一环境评估 LLM 交易能力（多 agent + 外部信息摄取 + 交易决策 + Trading Arena 多维对比）
 - 研究用途不实盘；与 Paradoox AI 合作
 - **对观复/金融的启示**：评估环境设计（多 agent 决策 + 多维 arena 对比 + 可复现）——记入金融 Agent 蓝本（AI Berkshire 之外的第二参考）
 
 ## 结论：无新装——两个候选都转化为"设计验证/蓝本记录"
+
+
+## 今日检索第一轮：节省 token + 观复（2026-08-13 上午）
+
+### 🔥 节省 token 方向
+
+**1. Headroom（chopratejas/headroom）— 16k+⭐，Apache 2.0，推荐装**
+- 定位：AI Agent 的上下文压缩层——在内容到达 LLM 之前压缩工具输出/日志/RAG/对话历史
+- 四引擎：CacheAligner（缓存对齐保前缀命中）+ ContentRouter（类型路由）+ SmartCrusher（JSON 压缩 60-95%）+ CodeCompressor（AST 代码压缩）+ Kompress-v2-base（文本小模型）
+- **CCR 可逆压缩**：原文存本地，LLM 需要时可 headroom_retrieve 取回——质量不损失
+- 实测：SRE 调试 65,694→5,118 token（省 92%），代码搜索 92%，编码 Agent 整体 15-20%
+- **明确支持 Oh My Pi (omp)！** 也支持 OpenClaw/Claude Code/Codex/Cursor 等
+- DeepSeek：通过 OpenAI 兼容 API 完全可用（代理模式零改动）
+- Windows：原生 wheel 支持（无需 Rust 工具链）
+- 安装：`pip install "headroom-ai[all]"`（Python 3.13 推荐）
+- 接入三模式：wrap 包装 / proxy 代理 / 内联库
+- **对 Pi 和三个 Agent 都直接有用——Pi 的 94% 缓存命中率之上再叠一层压缩**
+
+**2. Ponytail（DietrichGebert/ponytail）— 标记参考**
+- 输出侧克制：Agent 写代码前先走 YAGNI 决策梯，少写 54% 代码
+- 与 Headroom 互补（一个压输入，一个压输出）
+
+**3. Paritok-4B-v1 — 备查**
+- 4B 参数代码上下文压缩网关，长会话省 85%，但只支持英文、需 A10G 24GB
+- 我们中文场景，Pass
+
+### 🔥 观复方向
+
+**4. daily_stock_analysis（ZhuLinsen）— 61k⭐，MIT，Python，观复超级模板**
+- LLM 驱动多市场（A/港/美/日/韩/台 + ETF）智能分析系统
+- 数据源：AkShare/Baostock/YFinance 免费 + Tushare/TickFlow 付费
+- 模型：DeepSeek/通义/Claude/Gemini/Ollama 本地
+- 推送：企业微信/飞书/Telegram/Discord/Slack/邮件
+- 定时：GitHub Actions 零成本 / Docker / FastAPI
+- 15 种内置策略（均线/缠论/波浪/情绪周期）+ 回测 + Web 工作台 + 多轮问股
+- **技术栈（Python+FastAPI+DeepSeek）和我们完全一致——观复的最佳蓝本**
+
+**5. ai-hedge-fund（virattt/ai-hedge-fund）— 49.6k⭐，MIT，观复架构参考**
+- 多角色 AI 对冲基金：Bull/Bear/Fundamentals/Technicals/Risk + 组合经理
+- 已重构为 aihf v2.2.0：`pipx install aihf`，mandate 文件驱动，可回测
+- 支持 DeepSeek，但数据源偏美股（Financial Datasets API）
+
+**6. investool（axiaoxin-com）— 2145⭐，Go，4433 基金法则可直接翻译**
+- 4433 法则筛选（1年/2-5年/6月/3月排名前 1/4 或 1/3）
+- 基金经理筛选（从业>8年/年化>15%/规模>60亿）
+- ETF 折溢价标准（|溢价率|≤1% 合理，折价>3% 买，溢价>3% 卖）
+- 数据源：东方财富/天天基金/新浪/亿牛
+- **对导师的消费基金任务直接有用——4433 逻辑翻译成 Python 即可**
+
+### 🟡 其他参考
+- fund-risk-analyzer：ETF 多维对比（年化/回撤/夏普/相关性矩阵），纯 Python
+- mutual-fund-skills：akshare 基金筛选，4433/红利/哑铃策略
+
+### 建议（等小骆审核）
+1. **装 Headroom**（pip install，对 Pi + 三 Agent 直接省钱）
+2. **克隆 daily_stock_analysis 精读**（观复蓝本，不装——等观复启动时参考）
+3. **pipx 体验 aihf**（可选，美股导向）
+4. **investool 的 4433 逻辑**记入观复笔记（Go 不用装，翻译规则即可）
+
+## 补精读 8 候选（用户追问"都看了吗"——诚实补读）
+- llm-internals：教程资料（参考）
+- three-man-team：manifest.md 单一事实源（验证 SYNC 方向）✅ 记录
+- tonl：数据格式层（不装）
+- token-optimizer-mcp：**可审计结论（claim→evidence 追溯）→ 观复可问责设计补强** ✅ 记录
+- entroly：与 RTK/context-mode 同能力域（已有，不装）
+- borsaci：MCP 统一数据源 + 依赖感知并行 → 观复数据层参考 ✅ 记录
+- LLM多Agent股票分析/Agentic金融顾问：小项目低价值
