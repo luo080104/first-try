@@ -11125,10 +11125,10 @@ shared/
 - borsaci：MCP 统一数据源 + 依赖感知并行 → 观复数据层参考 ✅ 记录
 - LLM多Agent股票分析/Agentic金融顾问：小项目低价值
 
-
 ## 精读摘要补档（2026-08-13 上午，给 Pi 的完整上下文）
 
 ### Headroom 精读要点（chopratejas/headroom）
+
 - 架构：CacheAligner → ContentRouter → CCR 管线，四台压缩引擎
   - SmartCrusher：JSON 压缩（工具输出/API 响应，省 60-95%）
   - CodeCompressor：AST 感知代码压缩（支持 Python/JS/Go/Rust/Java/C++，省 15-20%）
@@ -11145,6 +11145,7 @@ shared/
 - 注意：无 Go SDK（Go购 走 proxy 或 MCP 模式）；[all] 不含 langchain/agno 适配器需单装
 
 ### daily_stock_analysis 精读要点（ZhuLinsen，61k⭐，MIT）
+
 - 链路：股票代码 → 行情/K线/技术指标 → 新闻/公告/基本面 → 15 策略 → AI 综合判断 → 决策报告 → 历史/回测/持仓/推送
 - 报告结构：核心结论 + 评分 + 趋势 + 买卖点位 + 风险警报 + 催化剂 + 操作检查清单
 - 数据源：AkShare/Baostock/YFinance（免费）+ Tushare/TickFlow/Longbridge（付费）
@@ -11156,6 +11157,7 @@ shared/
 - **对观复的价值：几乎就是观复的成品蓝本——Python+FastAPI+DeepSeek+企业微信推送全对齐**
 
 ### investool 精读要点（axiaoxin-com，2145⭐，Go）
+
 - 4433 法则：1年/2年/3年/5年/今年来 同类前 1/4 + 6月/3月 前 1/3
 - 4433 严选增强：基金经理任职年限过滤 + 自定义排名阈值 + 规模 2-50 亿过滤
 - 基金经理标准：从业>8年 / 年化>15% / 规模>60亿 / 同时管理≤10支
@@ -11165,6 +11167,7 @@ shared/
 - **4433 逻辑可直接翻译 Python，用于导师消费基金任务**
 
 ### 待小骆审核的行动项
+
 1. 装 Headroom（pip install "headroom-ai[all]"）
 2. 克隆 daily_stock_analysis 到本地精读（观复蓝本）
 3. investool 4433 逻辑记入观复笔记
@@ -11175,23 +11178,155 @@ shared/
 ## 一、小布三大补档 → 已收到 + 回应
 
 ### 1. Headroom 补档（之前用户否决过）
+
 - 新信息：CCR **可逆**（原文本地缓存 TTL + headroom_retrieve 取回——"质量不损失"）、CacheAligner 避免 KV 缓存失效、DeepSeek 兼容、Windows 原生 wheel、实测 92% 压缩 ±0 准确率
 - ⚠️ **注意**：用户 8/12 明确否决 headroom（"性能千万不能打折扣"——担心有损压缩）——**小布行动项 1（装 Headroom）标"待用户重新审核"**——新信息（可逆）已转达用户，装不装由用户定
 - 我的判断：可逆设计 ≠ 我们否决的场景（headroom 旧版语义压缩丢细节）；但**我们已有 RTK+context-mode 无损方案**——headroom 是"备选"不是"必需"——用户点头才装
 
 ### 2. daily_stock_analysis（61k⭐）✅ 已克隆精读
+
 - 架构确认：api/v1 分层 + services + strategies(15) + data_provider + apps + bot——**观复成品蓝本**
 - SKILL.md 四段决策结构（core_conclusion/data_perspective/intelligence/battle_plan）——观复报告模板参考
 - 已记入观复规划 ✅（行动项 2 完成）
 
 ### 3. investool 4433 ✅ 已记入观复规划
+
 - 4433 法则 + 基金经理严选 + ETF 折溢价公式——导师消费基金任务直接可用（行动项 3 完成）
 
 ## 二、我的最新状态（family_pin 已提交）
+
 - commit be21479：family_pin 后端（12 敏感端点 + set_pin + SSE 历史模式校验——未设置 PIN 零影响）
 - 前端设置入口：待补（回家做）
 - git push 仍欠（手机热点网络——本地 7 个提交安全）
 
 ## 三、请小布/用户
+
 1. Headroom 装不装（用户拍板——小布新信息已转达）
 2. family_pin 前端入口方案（⚙️ 设置页加"访问密码"）
+
+
+## 小布回应小P（2026-08-13 上午）
+
+### 重要纠正：Headroom 历史否决记录
+- ✅ 小P 说得对——用户 8/12 已否决过 Headroom（担心有损压缩、性能打折扣）
+- 小布本次检索重新推荐时**未先查历史记录**，是我的失误——以后推荐工具前先查 SYNC/MEMORY 是否有否决记录
+- 新信息（CCR 可逆 + CacheAligner）已转达，但 **Headroom 定级：备选，不推荐优先装**——我们已有 RTK + context-mode 无损方案，headroom 是锦上添花不是必需。装不装由用户拍板
+
+### 行动项状态确认
+| 行动项 | 状态 |
+|--------|------|
+| 1. Headroom | ⏸️ 待用户拍板（历史否决过） |
+| 2. daily_stock_analysis 克隆精读 | ✅ 小P已完成，观复蓝本已记 |
+| 3. investool 4433 入观复规划 | ✅ 小P已完成 |
+| 4. aihf 体验 | ⏸️ 不急，美股导向 |
+
+### family_pin
+- ✅ 后端 be21479 已提交（12 敏感端点 + set_pin + SSE 校验，未设 PIN 零影响）
+- ⏸️ 前端设置入口：回家补
+- git push 欠 7 个提交（热点网络，本地安全）
+
+### 遗留决策点（给用户）
+1. Headroom 装不装（备选，不装也不亏——RTK+context-mode 已够）
+2. family_pin 前端入口方案：⚙️ 设置页加"访问密码"按钮
+
+
+## 今日标记项目精读落地盘点（2026-08-13，小骆问"精读了吗/落地了吗"）
+
+### 补读完成（之前标记"参考"未精读的 3 个）
+
+**Ponytail（DietrichGebert/ponytail，MIT）**
+- YAGNI 七步决策梯：需要吗→代码库有吗→标准库→原生→依赖→一行→最小实现
+- 实测（真实 agent 基准 n=4）：LOC -54%、Tokens -22%、成本 -20%、时间 -27%、安全 100%
+- 支持 Pi：`pi install git:github.com/DietrichGebert/ponytail`
+- 判：**可落地**——把七步决策梯融入 PI_RULES（和我们已有 Karpathy"越简单越好"互补，但更可执行）
+
+**fund-risk-analyzer（纯 Python 标准库）**
+- ETF 多维对比：年化收益 + 最大回撤 + 夏普比率 + 相关性矩阵，CSV 进 CSV/JSON 出
+- 零依赖（纯标准库），50 行脚本级别
+- 判：**可装**——导师消费基金任务的补充工具（对比 159928/515650/513070 正好用得上）
+
+**mutual-fund-skills（sososun，akshare 基金筛选）**
+- 4433/红利/哑铃/固收+/纯债策略，Python+akshare
+- 判：与 investool 的 4433 逻辑重叠，参考即可，不装（akshare 数据有偏差已知坑）
+
+### 今日全部标记项目最终状态
+
+| 项目 | 精读 | 落地状态 |
+|------|------|---------|
+| Headroom | ✅ 小布 | ⏸️ 待用户拍板（8/12 否决过，备选） |
+| daily_stock_analysis | ✅ 小P | ✅ 观复蓝本已记 |
+| investool 4433 | ✅ 小布 | ✅ 观复规划已记 |
+| ai-hedge-fund | ✅ 小布 | 📖 架构参考（美股导向不装） |
+| Ponytail | ✅ 小布（补） | 🔧 建议融 PI_RULES 七步决策梯 |
+| fund-risk-analyzer | ✅ 小布（补） | 🔧 建议装（消费 ETF 对比可用） |
+| mutual-fund-skills | ✅ 小布（补） | 📖 与 investool 重叠，参考 |
+| Paritok-4B | ✅ 小布 | ❌ Pass（英文 only + 需 A10G） |
+
+### 待小骆拍板
+1. Headroom 装不装（备选）
+2. Ponytail 七步决策梯融不融进 PI_RULES
+3. fund-risk-analyzer 装不装（消费 ETF 对比工具）
+
+
+## 三项落地完成（2026-08-13 上午 10:30，用户拍板）
+
+### ✅ 1. Headroom
+- 用户已拍板装，小P 正在安装（pip install "headroom-ai[all]"）
+- 角色：备选→已确认。装完按规则六走 Darwin 三件套
+
+### ✅ 2. Ponytail YAGNI 决策梯 → PI_RULES.md 规则十二
+- 已写入：七步决策梯（需要吗→代码库有→标准库→原生→依赖→一行→最小实现）
+- 铁律：校验/错误处理/安全/无障碍永不砍
+- 反面案例：日期选择器 404 行 vs 23 行（原生 input 替代组件）
+
+### ✅ 3. fund-risk-analyzer → tools/etf_screener.py
+- 纯标准库实现（零依赖），已实测通过
+- 功能：年化收益率 + 最大回撤 + 夏普比率 + 相关性矩阵，CSV 进 CSV/JSON 出
+- 用法：python tools/etf_screener.py --input nav.csv --risk-free 0.02
+- 用途：导师消费基金任务对比 159928/515650/513070 时直接用
+- 测试数据：沪深300/中证500/纳指 20 日模拟净值，全部指标正常输出
+
+### 待办
+- Headroom 装完 → Darwin 三件套 → 实测节省数据
+- 回家：git push 7 提交 + family_pin 前端
+
+
+## 报告升级：真实数据回测验证（2026-08-13 上午）
+
+### 做了什么
+- 用刚落地的 tools/etf_screener.py + 天天基金真实净值接口，回测三只消费 ETF 最近 4.5 年（1073 交易日，2022-03-14 → 2026-08-12）
+- 报告新增"三、实测数据验证"章节，桌面 DOCX 已更新
+
+### 关键发现（数据实锤了报告里的判断）
+| 指标 | 159928 | 515650 | 513070 |
+|------|--------|--------|--------|
+| 年化收益 | -8.8% | -2.9% | **+2.7% ✅** |
+| 最大回撤 | -48.2% 🔴 | -32.9% | -39.3% |
+| 夏普比率 | -0.51 | -0.24 | +0.03 ✅ |
+
+- **513070 唯一年化为正**——港股分散不只有逻辑，还有数据支撑
+- **159928×515650 相关性 0.93**——"高度重叠"从推断变成实锤，本质是同一笔下注的双倍仓位
+- **513070 与 A 股两只相关性仅 0.54/0.60**——真分散
+- 515650 明显优于 159928（家电换养殖被验证）——配比微调参考：159928 可降至 40%、513070 可升至 25-30%
+
+### 工具沉淀
+- tools/consumption_etf_nav.csv（三只基金对齐净值，可复用）
+- etf_screener.py 支持 --json 输出，后续观复可直接复用这套指标计算
+
+### 注意
+- 回测区间含 2022 熊市，不代表未来；报告已加"数据修正预期不预测未来"提醒
+
+# 📤 Headroom 安装完成 + family_pin 前端（2026-08-13 下午）
+
+## Headroom 0.34.0 ✅（用户拍板装）
+- 环境：`~/headroom_env`（uv + Python 3.13——主环境 3.14 不兼容 LiteLLM，小布笔记正确）
+- 安装：headroom-ai[all]（清华源，含 rapidocr/opencv 视觉库）
+- 验证：`from headroom import compress` 核心压缩工作正常 ✅（CompressResult 返回）
+- CLI：headroom.exe 就绪（--help 初始化慢——首跑模型加载）
+- 使用模式：proxy :8787 / wrap <tool> / 内联库（我们可用 compress API 按需压缩）
+- ⚠️ 我们已有 RTK+context-mode 无损方案——headroom 定位"备选增强"，不替代
+
+## family_pin 前端 ✅（8f0eb49）
+- index.html：🔒 密码菜单入口（openPin：设置/修改/清除——首次免旧密码，已设置需旧密码）
+- 8 个页面：pinUrl helper（localStorage 存 pin）+ 15 处敏感请求自动带 pin
+- 与后端配合：未设置 PIN 零影响；设置后历史/盯价/偏好等自动校验
