@@ -11345,49 +11345,92 @@ shared/
 - 8 个页面：pinUrl helper（localStorage 存 pin）+ 15 处敏感请求自动带 pin
 - 与后端配合：未设置 PIN 零影响；设置后历史/盯价/偏好等自动校验
 
-
 ## 报告终版（2026-08-13，发给老师用）
+
 - 结构重排：一选型逻辑 → 二推荐三基金 → 三配比方案 → 四实测数据验证 → 五操作指南(1万实盘) → 六退出信号 → 七风险 → 八思路总结
 - 新增：4.1 数据与方法（数据源/区间/指标口径）、配比调整依据明确化（40/30/30）、5.1 一万拆解表
 - 配比从 50/30/20 更新为 40/30/30（按回测微调，报告内写明依据）
 - 桌面文件：消费行业指数基金选型报告_终版.docx（原文件被预览锁住，新名保存）
 
-
 ## 新工具落地：tldr（2026-08-13 上午）
 
 ### 精读结论（tldr-pages，57.4k⭐）
+
 - 协作式命令行速查表：每个命令给 3-5 个最常用真实案例，告别 man 文档
 - 支持中文、Windows、离线缓存；Python/Node/Rust 多客户端
 - 判断：**工具类，直接装**——Pi 写代码查命令参数、小布跑命令都能用
 
 ### 安装
+
 - 路径：管理版 Python 3.13 的 Scripts/tldr.exe（pipx 在沙箱清理临时文件失败，改直接 pip install tldr 3.4.4，同样隔离）
 - 实测：`tldr git rebase` 正常输出 5 条用例 ✅
 
 ### 用法备忘
+
 ```
 tldr git rebase        # 查命令常用用法
 tldr tar               # 示例式速查
 ```
 
 ### awesome-llm-apps（87k⭐）—— 之前已精读（8/12 第 19 案例）
+
 - 结论不变：模板库不整体装，用到哪个模板时去对应子目录拿
 - 已标记：Deepseek Local RAG（雕龙向量检索）、Headroom（已定）、Scope Creep Detector（Pi）
 
 # 📤 Headroom 接入 Go购（2026-08-13 下午，老师教的 token 节省方案）
 
 ## 接入完成
+
 - **架构**：Go购 LLM 调用 → headroom proxy(127.0.0.1:8787) → DeepSeek → dashboard 记账
 - proxy 启动：`headroom proxy --openai-api-url https://api.deepseek.com --provider-name DeepSeek --no-optimize`（直通模式——模型 2.5GB 未下载）
 - Go购 5 处 API_URL 改读 env `LLM_API_URL`（默认直连——不设 env 零影响）
-- start_server.vbs 设 LLM_API_URL=http://127.0.0.1:8787/v1/chat/completions
+- start_server.vbs 设 LLM_API_URL=<http://127.0.0.1:8787/v1/chat/completions>
 - **验证**：parse_intent 走 proxy 成功（"石头岛 外套/服饰"）+ dashboard 记账（3 请求/321 tokens）
 
 ## 待回家
+
 - **下载 Kompress 模型 2.5GB**（~/.cache/huggingface/hub/models--chopratejas--kompress-v2-base 空目录）→ 重启 proxy 去掉 --no-optimize → 压缩生效（预期省 60-92%）
-- dashboard 地址：http://127.0.0.1:8787/dashboard
+- dashboard 地址：<http://127.0.0.1:8787/dashboard>
 
 ## 坑
+
 - Windows curl 发 GBK 被 proxy 拒（400 invalid UTF-8）——用 Python 测
 - 首次请求 timed out = 模型下载尝试（直通模式无此问题）
 - LiteLLM 拉远程 cost map 超时（手机热点）——自动 fallback 本地 ✅
+
+
+## Vibe Coding 专题精读（2026-08-13 上午，4 项目）
+
+### 1. easy-vibe（DataWhale，5.9k+⭐，免费）
+- vibe coding 101 中文入门课程，零基础友好，三阶段：小游戏/单页应用 → 全栈 → MCP+Claude Code+Agent 协作
+- 80+ 交互式练习 + 微信小程序/Android/iOS 多平台 + 可导出 PDF/EPUB
+- 判：**装（克隆本地）**——编程小白入门教材，比买课强，Stage 3 讲 MCP+Skills 正好对应我们的路线
+
+### 2. vibe-coding-cn（tradecatlabs，~10k⭐，MIT）—— 本批最有价值
+- 核心公式：Vibe Coding = 规划驱动 + 上下文固定 + AI 结对执行
+- **Workflow 六步**：GDD/PRD 设计文档 → 技术栈+AGENTS.md 规则（强制模块化禁巨石文件）→ 实施计划（每步带测试、不含代码）→ memory-bank 记忆库（gdd/tech-stack/plan/progress/architecture）→ 分步执行（一步一测、每步新建会话隔离上下文）→ 功能/修复
+- 判：**方法论与我们 PI_RULES/SDD 高度同源但更系统**——memory-bank 模式值得抄（我们的 SYNC.md 太长了，memory-bank 分文件更清晰）；"每步新建会话+progress.md 传上下文"正是 Pi 上下文管理的解法
+
+### 3. Vibe Kanban（BloopAI，26.9k⭐）—— ⚠️ 正在关停
+- 用看板管理多个 coding agent（workspace=分支+终端+dev server，diff 内联评审，10+ agent 切换）
+- **官方宣布 sunsetting（shutdown）**——不装，也不建议任何新用户接入
+- 结论：pass。但它验证了"多 Agent 可视化编排"是刚需——以后需要时找替代品
+
+### 4. awesome-vibe-coding（filipecalegario，4.7k⭐）
+- 127+ 条目的 Vibe Coding 生态总目录（CLI/IDE/云 Agent/任务管理/MCP/学习资源）
+- 判：📖 备查——需要找某个具体工具时再翻，不整体读
+
+### 行动项
+1. 🔥 vibe-coding-cn 的 memory-bank 模式 → 对照 PI_RULES 评估是否引入（解决 SYNC.md 过长问题）
+2. 🟡 easy-vibe 克隆到本地（用户自学的入门教材）
+3. Vibe Kanban pass（关停），awesome-vibe-coding 备查
+
+# 📤 mattpocock/skills 精读（2026-08-13，21.5万星）
+
+## 结论
+- 哲学：小/易改/可组合（反 GSD/BMAD 流程框架）
+- 三个可抄设计已落地：
+  1. **code-reviewer 双轴升级**（Standards+Spec 并行子代理 + Fowler smells 基线 + 固定点 diff 流程）——已写入 skill
+  2. **反馈循环纪律**（tight pass/fail 信号优先于读代码——Redact 脱敏纪律）——已写入 code-reviewer
+  3. git-guardrails 概念与 CONSTITUTION Never 一致（验证）
+- 不装仓库（Claude Code 插件格式 + 与我们 16 skills 重叠度高）——抄设计
