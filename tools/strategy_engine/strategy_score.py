@@ -10,6 +10,7 @@
 硬否决（不买清单 N + 红线 R——filters 复用）→ 直接 0 分（烂票永远不买）
 输出：ScoreResult{total, parts[], vetoed, veto_reasons, threshold, pass}
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -92,25 +93,35 @@ def _score_source(s: dict[str, Any]) -> list[tuple[float, str]]:
     return parts
 
 
-def score_stock(f: dict[str, Any], v: dict[str, Any],
-                t: dict[str, Any], s: dict[str, Any],
-                quote: dict[str, Any] | None = None,
-                market_status: str = "正常") -> ScoreResult:
+def score_stock(
+    f: dict[str, Any],
+    v: dict[str, Any],
+    t: dict[str, Any],
+    s: dict[str, Any],
+    quote: dict[str, Any] | None = None,
+    market_status: str = "正常",
+                redlines: dict[str, bool] | None = None,
+) -> ScoreResult:
     """动态打分总入口——输出 0-100 总分 + 分项 + 否决 + 门槛判定"""
     result = ScoreResult(total=0.0, market_status=market_status)
     result.threshold = THRESHOLD_MAP.get(market_status, 80)
 
     # 硬否决（不买清单 N + 红线 R——filters 复用——烂票永远 0 分）
     result.veto_reasons.extend(fl.check_no_buy(quote or {}))
-    result.veto_reasons.extend(fl.check_redlines({}))
+    # 红线检查（传入真实状态——持仓/资金推导——不再空跑桩）
+    result.veto_reasons.extend(fl.check_redlines(redlines or {}))
     if result.veto_reasons:
         result.vetoed = True
         result.total = 0.0
         return result
 
     all_parts, total_parts = [], []
-    for name, parts in [("价值", _score_value(f)), ("估值", _score_valuation(v)),
-                        ("技术", _score_technical(t)), ("票源", _score_source(s))]:
+    for name, parts in [
+        ("价值", _score_value(f)),
+        ("估值", _score_valuation(v)),
+        ("技术", _score_technical(t)),
+        ("票源", _score_source(s)),
+    ]:
         sub_total = sum(p for p, _ in parts)
         for p, note in parts:
             if p > 0:
