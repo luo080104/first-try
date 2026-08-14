@@ -108,14 +108,15 @@ def score_stock(f: dict[str, Any], v: dict[str, Any],
         result.total = 0.0
         return result
 
-    all_parts = []
+    all_parts, total_parts = [], []
     for name, parts in [("价值", _score_value(f)), ("估值", _score_valuation(v)),
                         ("技术", _score_technical(t)), ("票源", _score_source(s))]:
         sub_total = sum(p for p, _ in parts)
         for p, note in parts:
             if p > 0:
                 all_parts.append((f"{name}:{note}", p))
+                total_parts.append(p)
         all_parts.append((f"{name}小计", sub_total))
-    result.total = round(sum(p for _, p in all_parts), 1)
+    result.total = round(sum(total_parts), 1)
     result.parts = all_parts
     return result
