@@ -35,10 +35,11 @@ def main():
             continue  # 已跑过（断点续跑）
         r = subprocess.run(
             ['textsnap', os.path.join(src, f), '-o', out_txt],
-            capture_output=True, text=True, timeout=300,
+            capture_output=True, timeout=300,
         )
         if r.returncode != 0 or not os.path.exists(out_txt):
-            print(f'  ! 失败: {f} {r.stderr[-100:]}', flush=True)
+            err = r.stderr.decode('utf-8', errors='replace')[-100:]
+            print(f'  ! 失败: {f} {err}', flush=True)
             continue
         size = os.path.getsize(out_txt)
         if size < 50:
