@@ -1341,10 +1341,10 @@ prompt-engineer（提示词）/ study-planner（学习规划）/ finance-investm
 
 ## 待办
 
-- [ ] 用户拍照（每张纸 1 张）
-- [ ] 切图脚本写好（PIL 2×2——随时可写）
-- [ ] VL 提取（GLM-4V 通道——观复 VL 选型已定）
-- [ ] 归档 + 策略翻译（与父母策略样例合并）
+- [x] 用户拍照 ✅（主书 134 + 讲义 45 + 手册 24 全拍）
+- [x] 切图脚本 ✅（ppt_splitter v2——检测+矫正+横竖归一）
+- [x] VL 方案定 ✅（本地 qwen2.5-vl——GLM-4V 注册不了已绕开——回家下载）
+- [x] 归档 ✅（主书/讲义/手册/表格 4 文档全齐）——策略翻译待提炼
 
 ## 小布补充：与 Pi 方案的分歧 + 我的建议（2026-08-13 晚）
 
@@ -1553,9 +1553,9 @@ shopping-agent/tools/
 ## 六、待办
 
 - [ ] 集思录 cookie（用户会给）→ 7扩展策略全可用
-- [ ] 父母策略书数字化（Pi textsnap 直读已打通，134张后台跑着）→ 策略引擎填槽位
-- [ ] risk.py / style_drift.py / monte_carlo.py 实测（Pi 可以跑）
-- [ ] 大V爬取案例精读（xueqiu-scraper + weiboSpider）
+- [x] 书数字化 ✅（134+45+24 全完成——4 文档入档）——策略提炼待做
+- [x] risk 实测 ✅（signal.py 补齐——13 指标+3 检查器全通）
+- [x] 大V 爬取精读 ✅（Pi 接手——xueqiu-scraper 半自动触发/weiboSpider 备选——源链确认）
 - [ ] 回测框架精读（backtrader/VectorBT）
 - [ ] 用户确认 MVP 开工指令
 
