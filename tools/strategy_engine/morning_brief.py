@@ -2,9 +2,10 @@
 """观复晨报雏形（9:00——书体系：大盘状态+估值百分位+策略信号）
 
 MVP 内容组装：大盘状态（M 系列）+ 龙头股池估值扫描（B5 过滤）+ 候选讲解
+Q1 落地：利率隐含合理 PE 对比
+Q5 落地：建议现金比例（状态 → 仓位映射——低潮满仓/高潮防守）
 推送：输出文本——企业微信通道复用 Go购 notify（后续接入——MVP 先出内容）
 """
-
 from __future__ import annotations
 
 import datetime
@@ -13,18 +14,11 @@ from tools.strategy_engine import data
 from tools.strategy_engine import market_status as ms
 
 # 龙头股池（B2 票源——书 A股龙头池——MVP 前 12 只）
-LEADER_POOL = [
-    "600519",
-    "600036",
-    "601088",
-    "601857",
-    "600900",
-    "601988",
-    "601398",
-    "600028",
-    "601318",
-    "600030",
-]
+LEADER_POOL = ["600519", "600036", "601088", "601857", "600900",
+               "601988", "601398", "600028", "601318", "600030"]
+
+# Q5 现金纪律：大盘状态 → 建议现金比例（书 M 系列 + Q5 定案表）
+CASH_MAP = {"低潮": 0.10, "正常": 0.45, "高潮": 0.75}
 
 
 def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
@@ -36,47 +30,43 @@ def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
         if pe <= 0 or pb <= 0:
             continue
         if pe < 15 or pb < 2:
-            candidates.append(
-                {
-                    "code": code,
-                    "name": q["name"],
-                    "pe": pe,
-                    "pb": pb,
-                    "price": q["price"],
-                    "change_pct": q["change_pct"],
-                    "mcap_yi": q["mcap_yi"],
-                }
-            )
+            candidates.append({
+                "code": code, "name": q["name"], "pe": pe, "pb": pb,
+                "price": q["price"], "change_pct": q["change_pct"],
+                "mcap_yi": q["mcap_yi"],
+            })
     candidates.sort(key=lambda x: (x["pe"] > 0, x["pe"]))
     return candidates[:top_n]
 
 
 def build_brief() -> str:
-    """组装晨报文本（MVP——大盘+估值候选+讲解）"""
+    """组装晨报文本（大盘+利率校准+现金纪律+估值候选+讲解）"""
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
     lines = [f"📋 观复晨报 {now}", "=" * 30]
-    # 大盘状态（M 系列）
+    # 大盘状态（M 系列 + Q1 利率校准 + Q5 现金纪律）
     m = ms.market_status()
     lines.append(f"\n【大盘状态】{m['status']}")
     lines.append(f"沪深300 PE={m.get('pe')}（百分位≈{m.get('pe_percentile_approx')}%）")
+    fp = m.get("fair_pe_rate_calibrated")
+    if fp:
+        verdict = "便宜" if (m.get("pe") or 0) < fp else "偏贵"
+        lines.append(f"Q1 利率校准: 隐含合理PE≈{fp}——当前{verdict}")
     for e in m.get("evidence", []):
         lines.append(f"  • {e}")
     if not m.get("evidence"):
         lines.append("  • 无极端信号（估值/技术均中性）")
+    cash = CASH_MAP.get(m["status"], 0.45)
+    lines.append(f"Q5 现金纪律: 建议现金 {cash*100:.0f}%（股票仓 {(1-cash)*100:.0f}%——低潮满仓/高潮防守）")
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
     if cands:
         for c in cands:
             mark = "✅" if (c["pe"] < 15 and c["pb"] < 2) else "🟡"
-            lines.append(
-                f"  {mark} {c['name']}({c['code']}) PE={c['pe']} "
-                f"PB={c['pb']} 今{c['change_pct']:+.1f}%"
-            )
-        lines.append(
-            "\n【讲解】低估只是第一关——还需价值 8 标准（ROE>10%/现金流/负债率）"
-            "和基本面检查（不买清单）——观复会继续过滤"
-        )
+            lines.append(f"  {mark} {c['name']}({c['code']}) PE={c['pe']} "
+                         f"PB={c['pb']} 今{c['change_pct']:+.1f}%")
+        lines.append("\n【讲解】低估只是第一关——还需价值 8 标准（ROE>10%/现金流/负债率）"
+                     "和基本面检查（不买清单）——观复会继续过滤")
     else:
         lines.append("  今日龙头池无达标候选（市场整体不便宜——持币等待是纪律）")
     lines.append("\n—— 观复 · 书体系执行器（半自动：信号需你确认）")
