@@ -17,6 +17,19 @@ import cv2
 import numpy as np
 
 
+def imread_utf8(path):
+    """中文路径安全读取（cv2.imread 不支持中文路径）"""
+    data = np.fromfile(path, np.uint8)
+    return cv2.imdecode(data, cv2.IMREAD_COLOR)
+
+
+def imwrite_utf8(path, img, quality=95):
+    """中文路径安全写入"""
+    ok, buf = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if ok:
+        buf.tofile(path)
+
+
 def detect_page(img):
     """检测页面矩形（最大轮廓）。返回四点（左上/右上/右下/左下）或 None"""
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -101,7 +114,7 @@ def split_quad(page, out_dir, idx):
     for i, (x, y) in enumerate(quads, 1):
         crop = page[y : y + ch, x : x + cw]
         p = os.path.join(out_dir, f"page_{idx * 4 + i:04d}.jpg")
-        cv2.imwrite(p, crop, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        imwrite_utf8(p, crop)
         saved.append(p)
     return saved
 
@@ -133,14 +146,14 @@ def main():
     print(f"共 {len(files)} 张照片 → 输出 {out}")
     ok, warn = 0, 0
     for idx, f in enumerate(files):
-        img = cv2.imread(os.path.join(src, f))
+        img = imread_utf8(os.path.join(src, f))
         if img is None:
-            print(f"  ⚠️ 读不了: {f}")
+            print(f"  ! 读不了: {f}")
             continue
         assert img is not None
         pts = detect_page(img)
         if pts is None:
-            print(f"  ⚠️ 未检测到页面: {f}（照片可能没拍全/背景复杂）——按全图 2×2 切")
+            print(f"  ! 未检测到页面: {f}（照片可能没拍全/背景复杂）——按全图 2×2 切")
             page = img
             warn += 1
         else:

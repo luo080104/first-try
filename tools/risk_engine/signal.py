@@ -1,4 +1,5 @@
 """信号层 — Signal, Order, Fill, Position, Direction"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -8,6 +9,7 @@ from enum import Enum
 
 class Direction(str, Enum):
     """交易方向 — 资产不可知"""
+
     LONG = "long"
     SHORT = "short"
     CLOSE_LONG = "close_long"
@@ -17,17 +19,19 @@ class Direction(str, Enum):
 
 class OrderStatus(str, Enum):
     """订单状态机"""
-    PENDING = "pending"      # 待处理
-    ACCEPTED = "accepted"    # 风控通过
-    REJECTED = "rejected"    # 风控拒绝
-    PARTIAL = "partial"      # 部分成交
-    FILLED = "filled"        # 全部成交
+
+    PENDING = "pending"  # 待处理
+    ACCEPTED = "accepted"  # 风控通过
+    REJECTED = "rejected"  # 风控拒绝
+    PARTIAL = "partial"  # 部分成交
+    FILLED = "filled"  # 全部成交
     CANCELLED = "cancelled"  # 撤销
 
 
 @dataclass
 class Signal:
     """策略输出信号"""
+
     id: str
     strategy: str
     symbol: str
@@ -45,6 +49,7 @@ class Signal:
 @dataclass
 class Order:
     """订单 — 执行引擎内部状态"""
+
     id: str
     signal_id: str
     symbol: str
@@ -60,6 +65,7 @@ class Order:
 @dataclass
 class Fill:
     """成交记录"""
+
     order_id: str
     price: float
     volume: float
@@ -71,6 +77,7 @@ class Fill:
 @dataclass
 class Position:
     """持仓快照"""
+
     symbol: str
     direction: Direction
     volume: float
@@ -89,6 +96,7 @@ class SignalLifecycle:
     >>> sl.stats["generated"]
     1
     """
+
     def __init__(self):
         self._state: dict[str, set[str]] = {
             "generated": set(),
@@ -120,13 +128,25 @@ class SignalLifecycle:
 
 def demo():
     """数据模型自检"""
-    s = Signal(id="s1", strategy="momentum", symbol="AU0",
-               direction=Direction.LONG, price=600.0, volume=1)
+    s = Signal(
+        id="s1",
+        strategy="momentum",
+        symbol="AU0",
+        direction=Direction.LONG,
+        price=600.0,
+        volume=1,
+    )
     assert s.direction == Direction.LONG
     assert s.confidence == 0.0  # default
 
-    o = Order(id="o1", signal_id="s1", symbol="AU0",
-              direction=Direction.LONG, price=600.0, volume=1)
+    o = Order(
+        id="o1",
+        signal_id="s1",
+        symbol="AU0",
+        direction=Direction.LONG,
+        price=600.0,
+        volume=1,
+    )
     assert o.status == OrderStatus.PENDING
 
     f = Fill(order_id="o1", price=600.5, volume=1, commission=10.0)

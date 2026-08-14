@@ -10,6 +10,7 @@
     2. 分数 < 阈值（默认 70）→ DeepSeek 按去 AI 味 prompt 改写
     3. 改写后重新评分 → 输出（含分数报告）
 """
+
 import json
 import os
 import sys
@@ -19,11 +20,32 @@ THRESHOLD = 70
 
 # 中文 AI 味套话（humanizer_scorer 词表偏英文——补中文盲区）
 CHINESE_AI_PHRASES = [
-    '综上所述', '总而言之', '值得注意的是', '众所周知', '毋庸置疑',
-    '赋能', '助力', '加持', '抓手', '闭环', '颗粒度', '底层逻辑',
-    '显著提升', '大幅提升', '有效提升', '奠定基础', '保驾护航',
-    '积极响应', '深入贯彻落实', '取得了阶段性成果', '意义重大',
-    '全面覆盖', '深度赋能', '多维度', '全方位', '一站式',
+    "综上所述",
+    "总而言之",
+    "值得注意的是",
+    "众所周知",
+    "毋庸置疑",
+    "赋能",
+    "助力",
+    "加持",
+    "抓手",
+    "闭环",
+    "颗粒度",
+    "底层逻辑",
+    "显著提升",
+    "大幅提升",
+    "有效提升",
+    "奠定基础",
+    "保驾护航",
+    "积极响应",
+    "深入贯彻落实",
+    "取得了阶段性成果",
+    "意义重大",
+    "全面覆盖",
+    "深度赋能",
+    "多维度",
+    "全方位",
+    "一站式",
 ]
 
 
@@ -36,14 +58,14 @@ def chinese_ai_score(text: str) -> float:
 
 
 def read_env_key():
-    env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
     try:
-        for line in open(env_path, encoding='utf-8'):
-            if line.startswith('DEEPSEEK_API_KEY='):
-                return line.split('=', 1)[1].strip()
+        for line in open(env_path, encoding="utf-8"):
+            if line.startswith("DEEPSEEK_API_KEY="):
+                return line.split("=", 1)[1].strip()
     except OSError:
         pass
-    return os.environ.get('DEEPSEEK_API_KEY', '')
+    return os.environ.get("DEEPSEEK_API_KEY", "")
 
 
 def llm_rewrite(text: str, api_key: str) -> str:
@@ -59,20 +81,25 @@ def llm_rewrite(text: str, api_key: str) -> str:
         "6. 语气自然、克制，不夸大不煽情\n"
         "只输出改写后的文本，不要解释。"
     )
-    payload = json.dumps({
-        "model": "deepseek-chat",
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": text},
-        ],
-        "max_tokens": 2000,
-        "temperature": 0.4,
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": text},
+            ],
+            "max_tokens": 2000,
+            "temperature": 0.4,
+        }
+    ).encode()
     req = urllib.request.Request(
         "https://api.deepseek.com/chat/completions",
         data=payload,
-        headers={"Authorization": f"Bearer {api_key}",
-                 "Content-Type": "application/json"})
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+    )
     with urllib.request.urlopen(req, timeout=120) as r:
         d = json.loads(r.read())
         return d["choices"][0]["message"]["content"].strip()
@@ -80,49 +107,55 @@ def llm_rewrite(text: str, api_key: str) -> str:
 
 def main():
     src = sys.argv[1]
-    score_only = '--score-only' in sys.argv
+    score_only = "--score-only" in sys.argv
     try:
-        with open(src, encoding='utf-8') as f:
+        with open(src, encoding="utf-8") as f:
             text = f.read().strip()
     except OSError as e:
-        print(f'读文件失败: {e}')
+        print(f"读文件失败: {e}")
         sys.exit(1)
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
     import humanizer_scorer as hs
 
-    if hasattr(hs, 'score_humanity'):
-        base = float(hs.score_humanity(text)['humanity_score'])
+    if hasattr(hs, "score_humanity"):
+        base = float(hs.score_humanity(text)["humanity_score"])
     else:  # 兼容：取组合评分
-        base = float(hs.score_ai_vocabulary(text)['score']
-                     + hs.score_sentence_variance(text)['score'])
+        base = float(
+            hs.score_ai_vocabulary(text)["score"]
+            + hs.score_sentence_variance(text)["score"]
+        )
     score = min(base, chinese_ai_score(text))
-    print(f'原文本人性化评分: {score:.0f}/100（中文套话检测 {chinese_ai_score(text):.0f}）')
+    print(
+        f"原文本人性化评分: {score:.0f}/100（中文套话检测 {chinese_ai_score(text):.0f}）"
+    )
 
     if score_only:
         return
     if score >= THRESHOLD:
-        print(f'✅ 已达标（≥{THRESHOLD}）——无需改写')
+        print(f"✅ 已达标（≥{THRESHOLD}）——无需改写")
         return
 
     api_key = read_env_key()
     if not api_key:
-        print('❌ 未找到 DEEPSEEK_API_KEY（.env 或环境变量）')
+        print("❌ 未找到 DEEPSEEK_API_KEY（.env 或环境变量）")
         sys.exit(1)
-    print('⚠️ 低于阈值——DeepSeek 改写中...')
+    print("⚠️ 低于阈值——DeepSeek 改写中...")
     rewritten = llm_rewrite(text, api_key)
-    if hasattr(hs, 'score_humanity'):
-        base2 = float(hs.score_humanity(rewritten)['humanity_score'])
+    if hasattr(hs, "score_humanity"):
+        base2 = float(hs.score_humanity(rewritten)["humanity_score"])
     else:
-        base2 = float(hs.score_ai_vocabulary(rewritten)['score']
-                      + hs.score_sentence_variance(rewritten)['score'])
+        base2 = float(
+            hs.score_ai_vocabulary(rewritten)["score"]
+            + hs.score_sentence_variance(rewritten)["score"]
+        )
     score2 = min(base2, chinese_ai_score(rewritten))
-    print(f'改写后评分: {score2:.0f}/100')
+    print(f"改写后评分: {score2:.0f}/100")
     out = sys.argv[2] if len(sys.argv) > 2 and not score_only else src
-    with open(out, 'w', encoding='utf-8') as f:
+    with open(out, "w", encoding="utf-8") as f:
         f.write(rewritten)
-    print(f'输出: {out}')
+    print(f"输出: {out}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

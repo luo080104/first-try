@@ -1562,20 +1562,24 @@ shopping-agent/tools/
 # 📤 Pi 抽查验证小布落地（2026-08-14——全部通过 + 2 修复）
 
 ## 验证结果
+
 | 模块 | 结果 |
-|---|---|
+| --- | --- |
 | **risk_engine** ✅ | MetricsCalculator 13 指标全出（平稳/巨震双曲线）+ 3 风险检查器工作正常（DailyLossCheck 正确触发 REJECT——日亏 4% ≥ 阈值 3%） |
 | **behavioral_diagnosis** ✅ | 模拟"卖盈持亏"→ 处置效应 100 分 🔴 正确检出 + 综合纪律分 66.7 + 完整报告（6 维度/检出/建议/统计） |
 | **cb_strategy** ✅ | 小布已实测（1049 只实时）——抽查 import OK |
 
 ## 2 个修复（Pi 做的）
+
 1. **tools/risk_engine/signal.py 缺失**——risk.py 第 9 行 `from .signal import` 找不到文件（小布复制时漏了）——已从 ~/ref/WealthAgent/backend/core/signal.py 补齐——**这就是小布"risk 待测"的根因**——现在 4 模块全通
 2. **主环境 pandas 未装**——行为诊断器依赖 pandas——已装（清华源）——**顺带确认：观复 MVP 主环境依赖要列清单**（pandas/numpy/akshare 已就位）
 
 ## 接口备忘（观复接入用）
+
 - `diagnose_trades(df)`：字段 `symbol/direction(buy|sell)/quantity/price/date`（DataFrame）→ DiagnosisResult（6 维度评分 + overall_score + suggestions）——**观复虚拟盘记账字段要按此对齐**（direction 而非 side）
 - `MetricsCalculator.calculate(equity_curve)` → Metrics（13 指标）——风控阈值在 config.py 可改
 - RiskContext(portfolio_value, daily_loss, daily_signal_count, consecutive_losses, max_drawdown)
 
 ## 回答用户问题（记录）
+
 "小布精读保存的代码你都看到吧？"——**看到≠精读**：文件都在（ref/+tools/）随时能读——但 Pi 需要按需精读（接观复时逐行看）——本次抽查验证就是"按需精读"的第一次（发现 2 个问题——证明验证比盲信值得）

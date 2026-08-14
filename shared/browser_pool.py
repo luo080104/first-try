@@ -8,19 +8,19 @@ import time
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-EDGE = r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
+EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 if not os.path.exists(EDGE):
-    EDGE = r'C:\Program Files\Microsoft\Edge\Application\msedge.exe'
+    EDGE = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
 
 PROFILES = {
     # 2026-08-11 小布方案：淘宝切 headless。
     # tb_profile_h = headless 专用副本（原 tb_profile 与 headless 不兼容——保留原目录做备份，回退有头时改回 data/tb_profile 即可）
-    'tb': ('data/tb_profile_h', 9300),
-    'jd': ('data/jd_profile', 9301),
-    'vip': ('data/vip_profile', 9302),
-    'pdd': ('data/pdd_profile', 9303),
+    "tb": ("data/tb_profile_h", 9300),
+    "jd": ("data/jd_profile", 9301),
+    "vip": ("data/vip_profile", 9302),
+    "pdd": ("data/pdd_profile", 9303),
 }
-HEADLESS = {'tb'}  # 已验证 headless 通的平台；其余保留有头隐藏（逐个验证逐个切）
+HEADLESS = {"tb"}  # 已验证 headless 通的平台；其余保留有头隐藏（逐个验证逐个切）
 _pool = {}
 _lock = threading.Lock()
 _serial_locks = {p: threading.Lock() for p in PROFILES}  # 同平台搜索串行锁
@@ -28,11 +28,14 @@ _serial_locks = {p: threading.Lock() for p in PROFILES}  # 同平台搜索串行
 
 def serialize(platform: str):
     """装饰器：同平台搜索串行（避免并发抢同一 tab → 探活误判重建）"""
+
     def deco(fn):
         def wrapper(*a, **kw):
             with _serial_locks[platform]:
                 return fn(*a, **kw)
+
         return wrapper
+
     return deco
 
 
@@ -40,6 +43,7 @@ def _force_hide_windows(pid: int):
     """ctypes 强制隐藏指定 PID 的所有可见窗口（终极手段，等窗口出现）"""
     import ctypes
     from ctypes import wintypes
+
     user32 = ctypes.windll.user32
 
     @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -76,19 +80,20 @@ def _hide_browser(b):
 def _new_browser(platform: str):
     """新建浏览器并立即隐藏；headless 平台无窗口无任务栏"""
     from DrissionPage import Chromium, ChromiumOptions
+
     prof, port = PROFILES[platform]
     co = ChromiumOptions()
     co.set_browser_path(EDGE)
     co.set_local_port(port)
-    co.set_user_data_path(os.path.join(os.path.dirname(__file__), '..', prof))
+    co.set_user_data_path(os.path.join(os.path.dirname(__file__), "..", prof))
     if platform in HEADLESS:
         co.headless()  # 无窗口无任务栏（小布方案：逐个验证逐个切）
     else:
         # 有头隐藏：窗口移出屏幕 + 极小尺寸 + 禁会话恢复
-        co.set_argument('--window-position=-32000,-32000')
-        co.set_argument('--window-size=1,1')
-        co.set_argument('--disable-session-crashed-bubble')
-        co.set_argument('--no-first-run')
+        co.set_argument("--window-position=-32000,-32000")
+        co.set_argument("--window-size=1,1")
+        co.set_argument("--disable-session-crashed-bubble")
+        co.set_argument("--no-first-run")
     b = Chromium(co)
     if platform not in HEADLESS:
         _hide_browser(b)
@@ -101,7 +106,9 @@ def get_browser(platform: str):
         b = _pool.get(platform)
         if b is not None:
             try:
-                b.run_cdp('Browser.getVersion')  # 小布方案：只测CDP不碰tab（导航期不误判）
+                b.run_cdp(
+                    "Browser.getVersion"
+                )  # 小布方案：只测CDP不碰tab（导航期不误判）
                 return b
             except Exception:
                 try:
@@ -153,6 +160,7 @@ def rehide_loop(platform: str, rounds: int = 6, interval: float = 4.0):
                 time.sleep(interval)
         finally:
             _rehiding.discard(platform)
+
     threading.Thread(target=_r, daemon=True).start()
 
 
@@ -170,16 +178,19 @@ def warmup():
         for plat in PROFILES:
             try:
                 get_browser(plat)
-                print(f'[pool] 预热 {plat} OK')
+                print(f"[pool] 预热 {plat} OK")
             except Exception as e:
-                print(f'[pool] 预热 {plat} 失败: {str(e)[:50]}')
+                print(f"[pool] 预热 {plat} 失败: {str(e)[:50]}")
             time.sleep(1)
         time.sleep(3)  # 等窗口全部创建
         _sweep_hide()  # 补一轮隐藏（首次隐藏可能漏掉启动慢的窗口）
+
     threading.Thread(target=_w, daemon=True).start()
 
 
-def act_with_retry(action, verify=None, retries: int = 2, delay: float = 1.0, desc: str = '动作'):
+def act_with_retry(
+    action, verify=None, retries: int = 2, delay: float = 1.0, desc: str = "动作"
+):
     """执行动作→验证→失败重试（2026-08-13 Kimi WebBridge v2 VerifyCondition/RetryPolicy 借鉴）
 
     参数:
@@ -195,20 +206,20 @@ def act_with_retry(action, verify=None, retries: int = 2, delay: float = 1.0, de
             r = action()
         except Exception as e:
             if i >= retries:
-                return False, f'{desc}异常: {str(e)[:80]}'
-            print(f'[browser_pool] {desc}异常，重试 {i + 1}/{retries}: {str(e)[:60]}')
+                return False, f"{desc}异常: {str(e)[:80]}"
+            print(f"[browser_pool] {desc}异常，重试 {i + 1}/{retries}: {str(e)[:60]}")
             time.sleep(delay)
             continue
         if verify is None or verify(r):
             return True, r
         if i >= retries:
-            return False, f'{desc}验证失败'
-        print(f'[browser_pool] {desc}验证未过，重试 {i + 1}/{retries}')
+            return False, f"{desc}验证失败"
+        print(f"[browser_pool] {desc}验证未过，重试 {i + 1}/{retries}")
         time.sleep(delay)
-    return False, '未知错误'
+    return False, "未知错误"
 
 
-if __name__ == '__main__':
-    p = sys.argv[1] if len(sys.argv) > 1 else 'tb'
+if __name__ == "__main__":
+    p = sys.argv[1] if len(sys.argv) > 1 else "tb"
     b = get_browser(p)
-    print(f'{p} 浏览器就绪:', b.latest_tab.url[:50])
+    print(f"{p} 浏览器就绪:", b.latest_tab.url[:50])
