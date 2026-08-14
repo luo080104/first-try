@@ -112,11 +112,12 @@ def main():
     print('⚠️ 低于阈值——DeepSeek 改写中...')
     rewritten = llm_rewrite(text, api_key)
     if hasattr(hs, 'score_humanity'):
-        score2 = hs.score_humanity(rewritten)
+        base2 = float(hs.score_humanity(rewritten)['humanity_score'])
     else:
-        score2 = hs.score_ai_vocabulary(rewritten)['score'] + \
-            hs.score_sentence_variance(rewritten)['score']
-    print(f'改写后评分: {score2}/100')
+        base2 = float(hs.score_ai_vocabulary(rewritten)['score']
+                      + hs.score_sentence_variance(rewritten)['score'])
+    score2 = min(base2, chinese_ai_score(rewritten))
+    print(f'改写后评分: {score2:.0f}/100')
     out = sys.argv[2] if len(sys.argv) > 2 and not score_only else src
     with open(out, 'w', encoding='utf-8') as f:
         f.write(rewritten)
