@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """market_status 大盘状态单测（mock 数据层——不依赖网络——验证判定逻辑）"""
+
 import os
 import sys
 from collections.abc import Sequence
@@ -15,8 +16,16 @@ def _fake_kline(prices: list[float]) -> list[dict]:
         p = base + i * 0.05
         if i >= 250 - len(prices):
             p = prices[i - (250 - len(prices))]
-        out.append({"date": f"2026-01-{i % 28 + 1:02d}", "open": p,
-                    "close": p, "high": p, "low": p, "volume": 1000.0})
+        out.append(
+            {
+                "date": f"2026-01-{i % 28 + 1:02d}",
+                "open": p,
+                "close": p,
+                "high": p,
+                "low": p,
+                "volume": 1000.0,
+            }
+        )
     return out
 
 
@@ -25,8 +34,15 @@ def _run(pe: float, prices: Sequence[float]):
     import tools.strategy_engine.market_status as mod
 
     def fake_quote(codes):
-        return {"000300": {"name": "沪深300", "price": 100.0,
-                           "pe_ttm": pe, "pb": 1.0, "change_pct": 0.0}}
+        return {
+            "000300": {
+                "name": "沪深300",
+                "price": 100.0,
+                "pe_ttm": pe,
+                "pb": 1.0,
+                "change_pct": 0.0,
+            }
+        }
 
     def fake_kline(code, days=250):
         return _fake_kline(prices)
@@ -72,9 +88,9 @@ def test_evidence_explainable():
     assert all(len(e) > 5 for e in s["evidence"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_normal_market()
     test_low_market()
     test_high_market()
     test_evidence_explainable()
-    print('✅ 大盘状态单测全过')
+    print("✅ 大盘状态单测全过")

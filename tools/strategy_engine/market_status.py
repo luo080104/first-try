@@ -5,6 +5,7 @@
 输出：{status: 低潮/正常/高潮, temperature, evidence[]}——证据可解释（讲解模式联动）
 MVP 简化：日 K 重采样周线（书用周/月级别）——估值温度用沪深300 PE 百分位近似
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -17,7 +18,7 @@ def _resample_weekly(kline: list[dict[str, Any]]) -> list[float]:
     """日 K → 周线收盘价序列（每 5 日取最后收盘）"""
     closes = []
     for i in range(0, len(kline), 5):
-        week = kline[i:i + 5]
+        week = kline[i : i + 5]
         if week:
             closes.append(week[-1]["close"])
     return closes
@@ -68,7 +69,11 @@ def market_status() -> dict[str, Any]:
     if tech.get("rsi_oversold"):
         low_hits += 1
         evidence.append(f"周 RSI(6)={tech['rsi6']} 超卖（书：<20——中期买点）")
-    if tech.get("td") and tech["td"].get("setup") == "sell" and tech["td"].get("completed"):
+    if (
+        tech.get("td")
+        and tech["td"].get("setup") == "sell"
+        and tech["td"].get("completed")
+    ):
         high_hits += 1
         evidence.append("周九转上九转完成（书：趋势终结拐点）")
     if low_hits >= 2:

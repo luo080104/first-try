@@ -5,6 +5,7 @@
 → akshare（已装——东财节流规则）
 指数代码显式前缀（sh000300——避免自动 sz 前缀坑——findings 记录）
 """
+
 from __future__ import annotations
 
 import time
@@ -17,9 +18,9 @@ def tencent_quote(codes: list[str]) -> dict[str, dict[str, Any]]:
     """批量实时行情（个股/指数/ETF——含 PE/PB/市值）——指数必须显式 sh/sz 前缀"""
     prefixed = []
     for c in codes:
-        if c.startswith(('sh', 'sz', 'bj')) or c.startswith(('6', '9')):
-            prefixed.append(c if c.startswith(('sh', 'sz', 'bj')) else f"sh{c}")
-        elif c.startswith('8'):
+        if c.startswith(("sh", "sz", "bj")) or c.startswith(("6", "9")):
+            prefixed.append(c if c.startswith(("sh", "sz", "bj")) else f"sh{c}")
+        elif c.startswith("8"):
             prefixed.append(f"bj{c}")
         else:
             prefixed.append(f"sz{c}")
@@ -55,13 +56,14 @@ def tencent_kline(code: str, days: int = 250) -> list[dict[str, Any]]:
     code 需显式前缀（sh600519/sz000001/sh000300）
     返回 [{date, open, close, high, low, volume}]——按时间升序
     """
-    if not code.startswith(('sh', 'sz', 'bj')):
-        code = f"sh{code}" if code.startswith('6') else f"sz{code}"
+    if not code.startswith(("sh", "sz", "bj")):
+        code = f"sh{code}" if code.startswith("6") else f"sz{code}"
     url = f"https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param={code},day,,,{days},qfq"
     req = urllib.request.Request(url)
     req.add_header("User-Agent", "Mozilla/5.0")
     resp = urllib.request.urlopen(req, timeout=15)
     import json
+
     d = json.loads(resp.read().decode("utf-8"))
     node = d.get("data", {}).get(code, {})
     rows = node.get("day") or node.get("qfqday") or []
@@ -69,12 +71,16 @@ def tencent_kline(code: str, days: int = 250) -> list[dict[str, Any]]:
     for r in rows:
         if len(r) < 6:
             continue
-        out.append({
-            "date": r[0],
-            "open": float(r[1]), "close": float(r[2]),
-            "high": float(r[3]), "low": float(r[4]),
-            "volume": float(r[5]),
-        })
+        out.append(
+            {
+                "date": r[0],
+                "open": float(r[1]),
+                "close": float(r[2]),
+                "high": float(r[3]),
+                "low": float(r[4]),
+                "volume": float(r[5]),
+            }
+        )
     return out
 
 
@@ -92,6 +98,7 @@ _EM_MIN_INTERVAL = 1.0
 def _em_throttle() -> None:
     """东财节流（≥1s + 随机抖动——a-stock-data 防封铁律）"""
     import random
+
     wait = _EM_MIN_INTERVAL - (time.time() - _em_last_call[0])
     if wait > 0:
         time.sleep(wait + random.uniform(0.1, 0.5))
@@ -105,9 +112,13 @@ def _baidu_valuation_series(code: str, indicator: str) -> list[tuple[str, float]
     """
     _em_throttle()
     import akshare as ak
+
     df = ak.stock_zh_valuation_baidu(symbol=code, indicator=indicator)
-    return [(str(r["date"])[:10], float(r["value"]))
-            for _, r in df.iterrows() if r.get("value") is not None]
+    return [
+        (str(r["date"])[:10], float(r["value"]))
+        for _, r in df.iterrows()
+        if r.get("value") is not None
+    ]
 
 
 def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
@@ -123,8 +134,11 @@ def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
         by_date.setdefault(d, {})["pe"] = v
     for d, v in pbs:
         by_date.setdefault(d, {})["pb"] = v
-    out = [{"date": d, "pe": v.get("pe"), "pb": v.get("pb")}
-           for d, v in sorted(by_date.items()) if "pe" in v and "pb" in v]
+    out = [
+        {"date": d, "pe": v.get("pe"), "pb": v.get("pb")}
+        for d, v in sorted(by_date.items())
+        if "pe" in v and "pb" in v
+    ]
     return out[-days:]
 
 
@@ -140,6 +154,7 @@ def valuation_percentile(code: str) -> dict[str, float]:
     pes = sorted(h["pe"] for h in hist)
     pbs = sorted(h["pb"] for h in hist)
     import bisect
+
     i = bisect.bisect_left(pes, cur_pe)
     j = bisect.bisect_left(pbs, cur_pb)
     return {
