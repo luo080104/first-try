@@ -5,6 +5,7 @@
 MVP：①-③ 真实运行（数据/打分/信号）——④-⑥ 骨架（推送/记账/账本——后接）
 调用已有模块：market_status / strategy_score / data / indicators
 """
+
 from __future__ import annotations
 
 import datetime
@@ -16,8 +17,21 @@ from tools.strategy_engine import market_status as ms
 from tools.strategy_engine import strategy_score as ss
 
 # 龙头股池（书 B2——A股龙头池——MVP 前 12 只——待建静态 YAML 全量清单）
-LEADER_POOL = ["600519", "600036", "601088", "601857", "600900",
-               "601988", "601398", "600028", "601318", "600030"]
+LEADER_POOL = [
+    "600519",
+    "600036",
+    "601088",
+    "601857",
+    "600900",
+    "601988",
+    "601398",
+    "600028",
+    "601318",
+    "600030",
+]
+
+# 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"）
+_FINANCIAL_EXEMPT = {"600036", "601318", "600030", "601398", "601988"}
 
 
 def _technical_signals(code: str) -> dict[str, Any]:
@@ -72,19 +86,27 @@ def run_daily_loop() -> dict[str, Any]:
         if fair_pe:
             v["fair_pe"] = fair_pe
         t = _technical_signals(code)
-        # 基本面 MVP 占位（待财务数据管线——a-stock-data 三表后接）
-        f = {"roe": 0, "sales_margin": 0, "debt_ratio": 0, "ocf_gt_profit": False,
-             "dividend_yield": 0, "growth_ok": False}
+        # 基本面真实数据（fundamentals 管线——价值面 40 分）
+        from tools.strategy_engine import fundamentals as fd
+        f = fd.get_fundamentals(code, q.get("price") or 0,
+                                debt_exempt=code in _FINANCIAL_EXEMPT)
         s = {"is_leader": True, "bigv_holding": False}
         score = ss.score_stock(f, v, t, s, quote=q, market_status=status)
-        candidates.append({
-            "code": code, "name": q["name"], "price": q["price"],
-            "pe": q.get("pe_ttm"), "pb": q.get("pb"),
-            "score": score.total, "threshold": threshold,
-            "passed": score.passed, "vetoed": score.vetoed,
-            "parts": score.parts[-4:],  # 四维小计
-            "tech": t,
-        })
+        candidates.append(
+            {
+                "code": code,
+                "name": q["name"],
+                "price": q["price"],
+                "pe": q.get("pe_ttm"),
+                "pb": q.get("pb"),
+                "score": score.total,
+                "threshold": threshold,
+                "passed": score.passed,
+                "vetoed": score.vetoed,
+                "parts": score.parts[-4:],  # 四维小计
+                "tech": t,
+            }
+        )
     candidates.sort(key=lambda x: -x["score"])
 
     return {
@@ -95,16 +117,18 @@ def run_daily_loop() -> dict[str, Any]:
         "threshold": threshold,
         "candidates": candidates,
         "signals": [c for c in candidates if c["passed"] and not c["vetoed"]],
-        "note": "MVP：基本面占位（待财务管线）——技术面日线近似（书用周线）——"
-                "确认/记账/账本环节后接（半自动交互）",
+        "note": "MVP：基本面真实（新浪三表）——技术面日线近似（书用周线）——"
+        "确认/记账/账本环节后接（半自动交互）",
     }
 
 
 def format_report(r: dict[str, Any]) -> str:
     """循环报告文本（晨报衔接——讲解模式三阶原则）"""
     lines = [f"📋 观复每日循环 {r['date']}", "=" * 30]
-    lines.append(f"\n【大盘】{r['market_status']}（PE={r.get('pe')}——"
-                 f"利率隐含合理≈{r.get('fair_pe')}）——门槛 {r['threshold']}")
+    lines.append(
+        f"\n【大盘】{r['market_status']}（PE={r.get('pe')}——"
+        f"利率隐含合理≈{r.get('fair_pe')}）——门槛 {r['threshold']}"
+    )
     lines.append("\n【候选打分 Top5】（四维：价值/估值/技术/票源）")
     for c in r["candidates"][:5]:
         parts = " | ".join(f"{p[0].split(':')[0]}:{p[1]:.0f}" for p in c["parts"])
