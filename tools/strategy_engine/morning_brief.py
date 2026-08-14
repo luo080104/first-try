@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+"""观复晨报雏形（9:00——书体系：大盘状态+估值百分位+策略信号）
+
+MVP 内容组装：大盘状态（M 系列）+ 龙头股池估值扫描（B5 过滤）+ 候选讲解
+推送：输出文本——企业微信通道复用 Go购 notify（后续接入——MVP 先出内容）
+"""
+from __future__ import annotations
+
+import datetime
+
+from tools.strategy_engine import data
+from tools.strategy_engine import market_status as ms
+
+# 龙头股池（B2 票源——书 A股龙头池——MVP 前 12 只）
+LEADER_POOL = ["600519", "600036", "601088", "601857", "600900",
+               "601988", "601398", "600028", "601318", "600030"]
+
+
+def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
+    """龙头池估值扫描（B5——PE<15 或 PB<2——返回达标候选）"""
+    quotes = data.tencent_quote(codes)
+    candidates = []
+    for code, q in quotes.items():
+        pe, pb = q.get("pe_ttm") or 0, q.get("pb") or 0
+        if pe <= 0 or pb <= 0:
+            continue
+        if pe < 15 or pb < 2:
+            candidates.append({
+                "code": code, "name": q["name"], "pe": pe, "pb": pb,
+                "price": q["price"], "change_pct": q["change_pct"],
+                "mcap_yi": q["mcap_yi"],
+            })
+    candidates.sort(key=lambda x: (x["pe"] > 0, x["pe"]))
+    return candidates[:top_n]
+
+
+def build_brief() -> str:
+    """组装晨报文本（MVP——大盘+估值候选+讲解）"""
+    now = datetime.datetime.now().strftime("%Y-%m-%d %A")
+    lines = [f"📋 观复晨报 {now}", "=" * 30]
+    # 大盘状态（M 系列）
+    m = ms.market_status()
+    lines.append(f"\n【大盘状态】{m['status']}")
+    lines.append(f"沪深300 PE={m.get('pe')}（百分位≈{m.get('pe_percentile_approx')}%）")
+    for e in m.get("evidence", []):
+        lines.append(f"  • {e}")
+    if not m.get("evidence"):
+        lines.append("  • 无极端信号（估值/技术均中性）")
+    # 龙头池估值候选（B5）
+    lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
+    cands = _valuation_scan(LEADER_POOL)
+    if cands:
+        for c in cands:
+            mark = "✅" if (c["pe"] < 15 and c["pb"] < 2) else "🟡"
+            lines.append(f"  {mark} {c['name']}({c['code']}) PE={c['pe']} "
+                         f"PB={c['pb']} 今{c['change_pct']:+.1f}%")
+        lines.append("\n【讲解】低估只是第一关——还需价值 8 标准（ROE>10%/现金流/负债率）"
+                     "和基本面检查（不买清单）——观复会继续过滤")
+    else:
+        lines.append("  今日龙头池无达标候选（市场整体不便宜——持币等待是纪律）")
+    lines.append("\n—— 观复 · 书体系执行器（半自动：信号需你确认）")
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    print(build_brief())
