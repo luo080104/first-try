@@ -33,9 +33,10 @@ def _mk_portfolio_with_holding():
 def _patch_env(score_total):
     """模拟环境：假行情 + 假打分（只测 Q14 判定逻辑——不测打分本身）"""
     path = _mk_portfolio_with_holding()
+    real_portfolio = hr.pf.Portfolio  # patch 前保存原类（避免 lambda 自递归）
     patches = [
         patch("tools.strategy_engine.portfolio.Portfolio",
-              lambda p=path: hr.pf.Portfolio(p)),
+              lambda p=path: real_portfolio(p)),
         patch("tools.strategy_engine.holdings_review.data.tencent_quote",
               lambda codes: {"600036": {"code": "600036", "name": "招商银行",
                                         "price": 38.0}}),
