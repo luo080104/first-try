@@ -85,7 +85,10 @@ class Portfolio:
     def buy(self, code, price, shares, track="base", reason="", name="", grid=None):
         """建仓/加仓——扣现金+记持仓+事件日志。track: base(底仓)/swing(波段)"""
         if price <= 0 or shares <= 0 or not isinstance(shares, int):
-            return False, f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）"
+            return (
+                False,
+                f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）",
+            )
         cost = round(price * shares, 2)
         if cost > self.data["cash"]:
             return False, f"现金不足（需要 {cost}——现有 {self.data['cash']}）"
@@ -122,7 +125,10 @@ class Portfolio:
     def sell(self, code, shares, price, reason=""):
         """卖出——回现金+减持仓+事件日志"""
         if price <= 0 or shares <= 0 or not isinstance(shares, int):
-            return False, f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）"
+            return (
+                False,
+                f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）",
+            )
         h = self.data["holdings"].get(code)
         if not h:
             return False, f"无持仓 {code}"
@@ -174,7 +180,10 @@ class Portfolio:
         return out, round(total, 2)
 
     def summary(self, quotes=None):
-        """总览：总资产/现金/持仓数/权重/现金比例/约束检查"""
+        """总览：总资产/现金/持仓数/权重/现金比例/约束检查
+
+        附带：equity_curve 净值记录（每日收盘调用——gate_check'4 周跑赢'数据基础）
+        """
         positions, total = self.positions(quotes)
         cash_pct = round(self.data["cash"] / total * 100, 1) if total else 0
         cash_ok = MIN_CASH_PCT <= cash_pct <= MAX_CASH_PCT
@@ -187,6 +196,26 @@ class Portfolio:
             "positions": positions,
             "init_cash": self.data.get("init_cash", INIT_CASH),
         }
+
+    def record_equity(self, quotes=None) -> float:
+        """记录当日净值点（equity_curve——WealthAgent paper_trader 借鉴）
+
+        每日收盘调用：总资产 → 追加到 equity_curve（日期/总资产）——gate_check 用
+        同一日重复调用不重复记录（幂等）
+        """
+        _, total = self.positions(quotes)
+        curve = self.data.setdefault("equity_curve", [])
+        today = datetime.now().strftime("%Y-%m-%d")
+        if curve and curve[-1].get("date") == today:
+            curve[-1]["total"] = round(total, 2)  # 当日覆盖（盘中多次调用取最新）
+        else:
+            curve.append({"date": today, "total": round(total, 2)})
+        self.save()
+        return total
+
+    def equity_series(self) -> list[dict]:
+        """净值序列（date/total 列表——空仓也有值）——gate_check/周报用"""
+        return list(self.data.get("equity_curve", []))
 
     # ---- 约束检查（P1/Q4/Q5——买入前检查）----
     def check_constraints(self, code, price, shares, total=None):
