@@ -30,6 +30,7 @@ def _ths_fallback(code: str) -> dict[str, Any] | None:
         if row.empty:
             return None
         r = row.iloc[0]
+
         # 列：流入资金/流出资金/净额/成交额——值为字符串带单位（"17.20亿"）
         def _to_yi(v: str) -> float:
             s = str(v).strip().replace("+", "")
