@@ -15,6 +15,7 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta
+from typing import Any
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
 LEDGER_FILE = os.path.join(DATA_DIR, "signal_ledger.jsonl")
@@ -178,6 +179,116 @@ def main():
     print(f"账本: 总信号 {r['total']} | 已验证 {r['verified']} | 待验证 {r['pending']}")
     for t, g in r["groups"].items():
         print(f"  {t}: N={g['n']} 胜率 {g['win_rate']}% 平均 {g['avg_pct']}%")
+
+
+# ============================================================================
+# 信号在线评分（整改② 2026-08-15——评测发现：策略好坏无量化反馈——漂移检测）
+# 目标：每信号触发后 N 日（20/60 交易日）收益——月度汇总胜率/期望值——
+#       连续 2 月胜率下滑 >10pt → 标记 strategy_drift（不自动禁用——等甲方）
+# ============================================================================
+
+ONLINE_WINDOWS = (20, 60)  # 触发后 N 交易日评估窗
+DRIFT_MONTHS = 2  # 连续下滑月数阈值
+DRIFT_POINTS = 10.0  # 胜率下滑点数阈值
+
+
+def _kline_close(code: str, days: int = 90):
+    """获取个股最近 K 线收盘（腾讯——失败返回 None——不静默）"""
+    try:
+        from tools.strategy_engine import data
+
+        k = data.tencent_kline(code, days=days)
+        if not k:
+            return None
+        return [(x.get("date", "")[:10], x.get("close", 0.0)) for x in k]
+    except Exception:
+        return None
+
+
+def online_score(
+    kline_provider=None, window: int = 20, months_back: int = 6
+) -> dict[str, Any]:
+    """信号在线评分（整改②）
+
+    对账本中每个已触发信号：触发日后第 window 个交易日的收盘价 vs 触发价
+    → 收益 → 按触发月份聚合胜率/期望 → 漂移检测（连续 2 月下滑 >10pt）
+
+    kline_provider(code) -> [(date, close)]（测试注入——默认腾讯 K 线）
+    返回 {monthly: {YYYY-MM: {n, wins, win_rate, avg}}, drift: bool, note}
+    """
+    if not os.path.exists(LEDGER_FILE):
+        return {"monthly": {}, "drift": False, "note": "账本为空"}
+    try:
+        raw = open(LEDGER_FILE, encoding="utf-8").readlines()
+    except OSError:
+        return {"monthly": {}, "drift": False, "note": "账本读取失败"}
+    rows = []
+    for l in raw:
+        try:
+            rows.append(json.loads(l))
+        except (json.JSONDecodeError, ValueError):
+            continue
+    # 按月聚合：{YYYY-MM: [(win, ret)...]}
+    monthly: dict[str, list[tuple[bool, float]]] = {}
+    for ev in rows:
+        code = ev.get("code")
+        ts = (ev.get("ts") or "")[:7]  # YYYY-MM
+        price = ev.get("price") or 0
+        direction = ev.get("direction", "buy")
+        if not code or not ts or price <= 0:
+            continue
+        if kline_provider:
+            k = kline_provider(code)
+        else:
+            k = _kline_close(code)
+        if not k:
+            continue  # K 线不可得——跳过（不静默——note 统计）
+        # 找触发日之后的第 window 个交易日
+        trigger_date = (ev.get("ts") or "")[:10]
+        after = [c for d, c in k if d >= trigger_date]
+        if len(after) <= window:
+            continue  # 数据不足 window 日——等积累
+        future_px = after[window]
+        if future_px <= 0:
+            continue
+        ret = (future_px - price) / price * 100
+        # 卖出信号：下跌为胜
+        win = (ret < 0) if direction == "sell" else (ret > 0)
+        monthly.setdefault(ts, []).append((win, ret))
+    out = {}
+    rates = []
+    for m in sorted(monthly):
+        items = monthly[m]
+        n = len(items)
+        wins = sum(1 for w, _ in items if w)
+        avg = sum(r for _, r in items) / n
+        wr = wins / n * 100
+        out[m] = {"n": n, "wins": wins, "win_rate": round(wr, 1), "avg": round(avg, 2)}
+        rates.append((m, wr))
+    # 漂移检测：连续 DRIFT_MONTHS 月胜率下滑超过 DRIFT_POINTS 点
+    drift = False
+    if len(rates) >= DRIFT_MONTHS + 1:
+        declines = 0
+        for i in range(1, len(rates)):
+            if rates[i - 1][1] - rates[i][1] > DRIFT_POINTS:
+                declines += 1
+                if declines >= DRIFT_MONTHS:
+                    drift = True
+                    break
+            else:
+                declines = 0
+    note = (
+        f"⚠️ 策略漂移：连续 {DRIFT_MONTHS} 月胜率下滑 >{DRIFT_POINTS:.0f}pt——建议降级候选（等甲方）"
+        if drift
+        else f"在线评分 {window} 日窗——{len(out)} 个月数据"
+    )
+    return {"monthly": out, "drift": drift, "note": note}
+
+
+def drift_flag() -> str:
+    """漂移标记摘要（周报信号质量段用）——无漂移返回空"""
+    r = online_score()
+    return r["note"] if r.get("drift") else ""
 
 
 if __name__ == "__main__":

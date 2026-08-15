@@ -96,7 +96,7 @@ def build_report() -> str:
             f"{pos.get('shares', 0)}股 盈亏 {pos.get('pnl', 0):+.0f}（{pos.get('pnl_pct', 0):+.1f}%）"
         )
 
-    # ③ 策略表现（signal_ledger 信号回顾）
+    # ③ 策略表现（signal_ledger 信号回顾 + 在线评分——整改② 2026-08-15）
     lines.append("\n【信号表现】本周信号记录：")
     try:
         from tools.strategy_engine import signal_ledger as sl
@@ -106,6 +106,19 @@ def build_report() -> str:
             lines.append(f"  累计信号 {rep['total']} 笔——回填验证随 Q11 积累")
         else:
             lines.append("  （账本采集中——3/6/12 月后回填验证）")
+        # 在线评分（20 日窗——漂移检测——整改②）
+        try:
+            oscore = sl.online_score(window=20)
+            if oscore.get("monthly"):
+                for m, st in list(oscore["monthly"].items())[-3:]:
+                    lines.append(
+                        f"  在线评分 {m}: N={st['n']} 胜率 {st['win_rate']}% "
+                        f"均{st['avg']:+.1f}%"
+                    )
+            if oscore.get("drift"):
+                lines.append(f"  {oscore['note']}")
+        except Exception:
+            pass  # 在线评分失败不阻塞周报（红线③容错）
     except Exception:
         lines.append("  （账本采集中——3/6/12 月后回填验证）")
 
