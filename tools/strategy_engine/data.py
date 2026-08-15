@@ -18,7 +18,9 @@ from typing import Any
 # baostock 估值/历史主源（2026-08-13 方案定稿——数据层升级：AkShare 统一层 + baostock 历史主源）
 # Sequoia-X 验证方案：免费/无需注册/无限流/后复权——彻底规避东财反爬
 # SQLite 本地缓存（Sequoia-X 架构：日增量拉取 → 本地库 → 估值随积累变准）
-_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "valuation_cache.db")
+_DB_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "valuation_cache.db"
+)
 
 
 def _bs_prefix(code: str) -> str:
@@ -46,7 +48,9 @@ def _bs_conn() -> sqlite3.Connection:
     return conn
 
 
-def _bs_fetch(code: str, fields: str, start: str, end: str, freq: str, adj: str) -> list[list[str]]:
+def _bs_fetch(
+    code: str, fields: str, start: str, end: str, freq: str, adj: str
+) -> list[list[str]]:
     """baostock 查询封装（返回行列表——失败/无结果返回 []）
 
     start/end 需 YYYY-MM-DD 格式（baostock 要求横线分隔）
@@ -58,7 +62,12 @@ def _bs_fetch(code: str, fields: str, start: str, end: str, freq: str, adj: str)
     try:
         bs.login()
         rs = bs.query_history_k_data_plus(
-            _bs_prefix(code), fields, start_date=start, end_date=end, frequency=freq, adjustflag=adj
+            _bs_prefix(code),
+            fields,
+            start_date=start,
+            end_date=end,
+            frequency=freq,
+            adjustflag=adj,
         )
         if rs is None:
             bs.logout()
@@ -84,7 +93,14 @@ def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
     out = []
     for r in rows:
         try:
-            out.append({"date": r[0], "close": float(r[1]), "high": float(r[2]), "low": float(r[3])})
+            out.append(
+                {
+                    "date": r[0],
+                    "close": float(r[1]),
+                    "high": float(r[2]),
+                    "low": float(r[3]),
+                }
+            )
         except (ValueError, IndexError):
             continue
     return out
@@ -114,11 +130,15 @@ def bs_pe_pb_history(code: str, years: int = 10) -> list[dict[str, Any]]:
                 (code,),
             ).fetchall()
             conn.close()
-            return [{"date": d, "pe": pe, "pb": pb} for d, pe, pb in rows][-years * 250 :]
+            return [{"date": d, "pe": pe, "pb": pb} for d, pe, pb in rows][
+                -years * 250 :
+            ]
     except sqlite3.Error as e:
         print(f"[data] ⚠️ 缓存读取失败（{e}——网络源继续）")
     # 缓存缺失/覆盖不足 → 拉取（起点取更早者——补历史缺口；终点到今天——补新数据）
-    fetch_start = min(min_d or start, start)  # 缺历史往前补，缺新数据靠 INSERT OR REPLACE
+    fetch_start = min(
+        min_d or start, start
+    )  # 缺历史往前补，缺新数据靠 INSERT OR REPLACE
     rows = _bs_fetch(
         code,
         "date,peTTM,pbMRQ",
@@ -137,7 +157,9 @@ def bs_pe_pb_history(code: str, years: int = 10) -> list[dict[str, Any]]:
             continue
     if new_rows:
         try:
-            conn.executemany("INSERT OR REPLACE INTO valuation VALUES (?,?,?,?,?)", new_rows)
+            conn.executemany(
+                "INSERT OR REPLACE INTO valuation VALUES (?,?,?,?,?)", new_rows
+            )
             conn.commit()
         except sqlite3.Error as e:
             print(f"[data] ⚠️ 缓存写入失败（{e}——本次不持久化）")
@@ -281,9 +303,7 @@ def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
         try:
             bd = [
                 {"date": d, "pe": v.get("pe"), "pb": v.get("pb")}
-                for d, v in (
-                    _baidu_series_merged(code) or {}
-                ).items()
+                for d, v in (_baidu_series_merged(code) or {}).items()
                 if v.get("pe") and v.get("pb")
             ]
             if bd:
@@ -334,7 +354,9 @@ def _cross_check(
                 conflicts += 1
         out.append(h)
     if conflicts:
-        print(f"[data] ⚠️ 2 源冲突 {conflicts} 日（{primary[0].get('date','')[:7]} 段——人工确认）")
+        print(
+            f"[data] ⚠️ 2 源冲突 {conflicts} 日（{primary[0].get('date', '')[:7]} 段——人工确认）"
+        )
     return out
 
 
@@ -361,5 +383,7 @@ def valuation_percentile(code: str) -> dict[str, float]:
     return {
         "pe_percentile": round(i / len(pes) * 100, 1),
         "pb_percentile": round(j / len(pbs) * 100, 1),
-        "pe_median": round(pes[len(pes) // 2], 1),  # 个股 PE 历史中位数（Q1 个股 fair_pe）
+        "pe_median": round(
+            pes[len(pes) // 2], 1
+        ),  # 个股 PE 历史中位数（Q1 个股 fair_pe）
     }
