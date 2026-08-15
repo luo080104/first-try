@@ -2,8 +2,9 @@
 """观复核心循环（agent loop 骨架——agents-best-practices 视角补缺）
 
 每日闭环：数据 → 打分 → 信号 → 确认 → 执行 → 反馈
-MVP：①-③ 真实运行（数据/打分/信号）——④-⑥ 骨架（推送/记账/账本——后接）
-调用已有模块：market_status / strategy_score / data / indicators
+闭环状态：①-⑤ 真实运行（数据/打分/信号/入队/记账——半自动确认）——
+⑥ 反馈（Q11 账本 3/6/12 月回填——signal_ledger）——推送 = M3 vpush 阶段
+调用已有模块：market_status / strategy_score / data / indicators / confirm
 """
 
 from __future__ import annotations
@@ -108,6 +109,15 @@ def run_daily_loop() -> dict[str, Any]:
             }
         )
     candidates.sort(key=lambda x: -x["score"])
+    signals = [c for c in candidates if c["passed"] and not c["vetoed"]]
+
+    # ⑤ 达标信号自动入待确认队列（半自动——confirm 交互消费——1确认/2改/3忽略）
+    from tools.strategy_engine import confirm as cf
+    for sig in signals:
+        try:
+            cf.append_pending(sig)
+        except Exception:
+            pass  # 入队失败不阻塞循环（红线：不因边缘错误中断每日闭环）
 
     return {
         "date": now,
@@ -116,9 +126,10 @@ def run_daily_loop() -> dict[str, Any]:
         "fair_pe": fair_pe,
         "threshold": threshold,
         "candidates": candidates,
-        "signals": [c for c in candidates if c["passed"] and not c["vetoed"]],
+        "signals": signals,
         "note": "MVP：基本面真实（新浪三表）——技术面日线近似（书用周线）——"
-        "确认/记账/账本环节后接（半自动交互）",
+        "确认交互已接（confirm）——Q11 账本采集已开（signal_ledger）——"
+        "企业微信推送 = M3 vpush 阶段",
     }
 
 

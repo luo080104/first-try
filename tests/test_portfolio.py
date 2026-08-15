@@ -38,7 +38,9 @@ def test_buy_and_sell():
 def test_track_accounting():
     p = pf.Portfolio(os.path.join(TMP, "t3.json"))
     p.buy("600036", 38.46, 1000, track="base", name="招行")
-    p.buy("600519", 1341.99, 40, track="swing", name="茅台")  # 40 股 53679.6 < 剩余 61540
+    p.buy(
+        "600519", 1341.99, 40, track="swing", name="茅台"
+    )  # 40 股 53679.6 < 剩余 61540
     assert p.data["track"]["base"] == 38460
     assert p.data["track"]["swing"] == 53679.6
 
@@ -52,7 +54,9 @@ def test_constraints():
     ok, msg = p.buy("600519", 100000, 2, track="base")
     assert not ok and "现金不足" in msg
     # Q4：5 只上限
-    for i, code in enumerate(["600036", "600519", "601318", "600028", "601088", "600900"]):
+    for i, code in enumerate(
+        ["600036", "600519", "601318", "600028", "601088", "600900"]
+    ):
         p.buy(code, 10 + i, 100, track="base")
     issues = p.check_constraints("601857", 10, 100)
     assert any("Q4" in i for i in issues)
