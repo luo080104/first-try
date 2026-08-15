@@ -1,4 +1,5 @@
 """notify_gf 晨报入口单测（2026-08-15——晨报顺带 record_equity 修复）"""
+
 import os
 import sys
 
@@ -25,10 +26,13 @@ def test_push_brief_records_equity(monkeypatch, tmp_path):
     def _fake_record(self, quotes=None):
         recorded.append(quotes)
         return 100000.0
+
     monkeypatch.setattr("tools.strategy_engine.notify_gf.push_wechat", _fake_push)
     monkeypatch.setattr("tools.strategy_engine.notify_gf._throttled", lambda text: True)
     monkeypatch.setattr(pf.Portfolio, "record_equity", _fake_record)
-    monkeypatch.setattr(ng, "mb", type("MB", (), {"build_brief": lambda self: "test"})())
+    monkeypatch.setattr(
+        ng, "mb", type("MB", (), {"build_brief": lambda self: "test"})()
+    )
     ok = ng.push_brief()
     assert ok is True
     assert len(recorded) == 1  # record_equity 被调用了一次
@@ -47,5 +51,7 @@ def test_push_brief_equity_failure_does_not_block(monkeypatch):
     monkeypatch.setattr("tools.strategy_engine.notify_gf.push_wechat", _fake_push)
     monkeypatch.setattr("tools.strategy_engine.notify_gf._throttled", lambda text: True)
     monkeypatch.setattr(pf.Portfolio, "record_equity", _boom_record)
-    monkeypatch.setattr(ng, "mb", type("MB", (), {"build_brief": lambda self: "test"})())
+    monkeypatch.setattr(
+        ng, "mb", type("MB", (), {"build_brief": lambda self: "test"})()
+    )
     assert ng.push_brief() is True  # 净值失败不阻塞晨报
