@@ -175,7 +175,7 @@ def run_daily_loop() -> dict[str, Any]:
                 "threshold": threshold,
                 "passed": score.passed,
                 "vetoed": score.vetoed,
-                "parts": score.parts[-4:],  # 四维小计
+                "parts": score.parts,  # 完整分项（修复截断：原 parts[-4:] 只留技术/票源段）
                 "tech": t,
             }
         )
@@ -239,9 +239,11 @@ def format_report(r: dict[str, Any]) -> str:
         f"\n【大盘】{r['market_status']}（PE={r.get('pe')}——"
         f"利率隐含合理≈{r.get('fair_pe')}）——门槛 {r['threshold']}"
     )
-    lines.append("\n【候选打分 Top5】（四维：价值/估值/技术/票源）")
+    lines.append("\n【候选打分 Top5】（四维小计：价值/估值/技术/票源）")
     for c in r["candidates"][:5]:
-        parts = " | ".join(f"{p[0].split(':')[0]}:{p[1]:.0f}" for p in c["parts"])
+        # 四维小计（parts 里 label 含"小计"的项——显示修复）
+        subs = {p[0].replace("小计", ""): p[1] for p in c["parts"] if "小计" in p[0]}
+        parts = " | ".join(f"{k}:{v:.0f}" for k, v in subs.items())
         mark = "✅" if c["passed"] else ("⛔" if c["vetoed"] else "—")
         lines.append(f"  {mark} {c['name']}({c['code']}) {c['score']}分 [{parts}]")
     sig = r["signals"]
