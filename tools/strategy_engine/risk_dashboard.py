@@ -70,7 +70,9 @@ def dashboard() -> dict[str, Any]:
         # 净值序列不足时用盈亏兜底（v0 行为）
         max_dd = abs(pnl_pct)
     if max_dd > MAX_DRAWDOWN_PCT:
-        alerts.append(f"🔴 回撤超线：最大回撤 {max_dd:.1f}% > {MAX_DRAWDOWN_PCT}%（触发防守）")
+        alerts.append(
+            f"🔴 回撤超线：最大回撤 {max_dd:.1f}% > {MAX_DRAWDOWN_PCT}%（触发防守）"
+        )
 
     # ④ 持仓数（Q4：3-5 只）
     n = s.get("n_holdings", 0)

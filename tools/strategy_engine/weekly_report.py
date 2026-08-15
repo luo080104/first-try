@@ -172,7 +172,9 @@ def _equity_curve_png() -> str | None:
         norm = [(t / init - 1) * 100 for t in totals]
         ax.plot(dates, norm, label="观复组合", color="#2563eb", linewidth=2)
         if len(bench) == len(norm):
-            ax.plot(dates, bench, label="沪深300", color="#d97706", linewidth=1.5, alpha=0.8)
+            ax.plot(
+                dates, bench, label="沪深300", color="#d97706", linewidth=1.5, alpha=0.8
+            )
         ax.axhline(0, color="#999", linewidth=0.8, linestyle="--")
         ax.set_title("观复虚拟盘净值（相对初始 %）")
         ax.legend(fontsize=9)
