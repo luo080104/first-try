@@ -16,9 +16,9 @@ def test_b3_requires_both():
             "bollinger",
             lambda c, n, k: {"lower": 10.0, "upper": 20.0, "mid": 15.0},
         ),
-        patch.object(sg.ind, "rsi", lambda c, n: 25.0),
+        patch.object(sg.ind, "rsi", lambda c, n: 35.0),
     ):
-        r = sg.b3_triple_confirm([9.5] * 40, None)  # 布林触发（9.5<10）但 RSI 25 未超卖
+        r = sg.b3_triple_confirm([9.5] * 40, None)  # 布林触发（9.5<10）但 RSI 35 未超卖
         assert not r["signal"]  # 只有布林——不触发
         assert len(r["reasons"]) == 1
 
