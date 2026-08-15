@@ -45,8 +45,9 @@ def _score_value(f: dict[str, Any]) -> list[tuple[float, str]]:
     s2 = 5.0 if (f.get("sales_margin") or 0) > 10 else 0
     parts.append((s2, f"利润率{(f.get('sales_margin') or 0):.0f}%"))
     debt = f.get("debt_ratio") or 0
-    s3 = 5.0 if debt < 50 else 0
-    parts.append((s3, f"负债率{debt:.0f}%"))
+    # 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"——exempt 时不惩罚）
+    s3 = 5.0 if (f.get("debt_exempt", False) or debt < 50) else 0
+    parts.append((s3, f"负债率{debt:.0f}%" + ("（金融豁免）" if f.get("debt_exempt") else "")))
     s4 = 5.0 if f.get("ocf_gt_profit", False) else 0
     parts.append((s4, "现金流"))
     dy = f.get("dividend_yield") or 0
@@ -61,7 +62,8 @@ def _score_valuation(v: dict[str, Any]) -> list[tuple[float, str]]:
     """估值面 0-30（B5 + Q1 利率校准）"""
     parts = []
     pe, pb = v.get("pe_ttm") or 0, v.get("pb") or 0
-    s1 = 10.0 if (0 < pe < 15) or (0 < pb < 2) else (5.0 if pe < 25 else 0)
+    # 绝对估值（PE<15 或 PB<2 满分；PE 25-40 半分——修复死代码：pe<25 分支不可达）
+    s1 = 10.0 if (0 < pe < 15) or (0 < pb < 2) else (5.0 if pe < 40 else 0)
     parts.append((s1, f"PE={pe} PB={pb}"))
     pct = v.get("pe_percentile") or 50
     s2 = max(0.0, 10.0 - pct / 10)
@@ -76,7 +78,12 @@ def _score_valuation(v: dict[str, Any]) -> list[tuple[float, str]]:
 
 
 def _score_technical(t: dict[str, Any]) -> list[tuple[float, str]]:
-    """技术面 0-20（B3 三重确认——每项 5 分）"""
+    """技术面 0-20（布林/RSI/九转/量能——每项 5 分）
+
+    注：九转 5 分与 B3 回测否决的关系（2026-08-15 审查标注）：
+    回测否决的是"九转买入信号"（B3 组合——急跌接刀）——此处九转是打分"加分项"
+    （5/100 小权重——非信号）——暂保留——虚拟盘数据后 Q11 校准再判
+    """
     parts = []
     parts.append((5.0 if t.get("boll_lower", False) else 0.0, "布林下轨"))
     parts.append((5.0 if t.get("rsi_bottom", False) else 0.0, "RSI底背离/超卖"))
@@ -100,7 +107,7 @@ def score_stock(
     s: dict[str, Any],
     quote: dict[str, Any] | None = None,
     market_status: str = "正常",
-                redlines: dict[str, bool] | None = None,
+    redlines: dict[str, bool] | None = None,
 ) -> ScoreResult:
     """动态打分总入口——输出 0-100 总分 + 分项 + 否决 + 门槛判定"""
     result = ScoreResult(total=0.0, market_status=market_status)

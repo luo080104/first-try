@@ -20,8 +20,9 @@ def _fresh():
 
 def test_record_and_disclosure():
     _fresh()
-    ev = bv.record_trade("超级鹿鼎公", "600036", "买", 38.0,
-                         "高息股逻辑未变——银行低估加仓")
+    ev = bv.record_trade(
+        "超级鹿鼎公", "600036", "买", 38.0, "高息股逻辑未变——银行低估加仓"
+    )
     assert ev["disclosed"]
     ev2 = bv.record_trade("超级鹿鼎公", "600519", "卖")
     assert not ev2["disclosed"]
@@ -50,12 +51,25 @@ def test_follow_cap_check():
     real_portfolio = pf.Portfolio  # patch 前保存原类（防 lambda 自递归）
     path = os.path.join(TMP, "portfolio.json")
     with open(path, "w", encoding="utf-8") as f:
-        json.dump({"init_cash": 100000, "cash": 85000,
-                   "holdings": {"600028": {"code": "600028", "name": "中国石化",
-                                           "shares": 3000, "avg_cost": 5.0,
-                                           "track": "bigv"}},
-                   "track": {"base": 0.0, "swing": 0.0, "bigv": 15000}}, f)
-    with patch("tools.strategy_engine.portfolio.Portfolio",
-               lambda p=None: real_portfolio(path)):
+        json.dump(
+            {
+                "init_cash": 100000,
+                "cash": 85000,
+                "holdings": {
+                    "600028": {
+                        "code": "600028",
+                        "name": "中国石化",
+                        "shares": 3000,
+                        "avg_cost": 5.0,
+                        "track": "bigv",
+                    }
+                },
+                "track": {"base": 0.0, "swing": 0.0, "bigv": 15000},
+            },
+            f,
+        )
+    with patch(
+        "tools.strategy_engine.portfolio.Portfolio", lambda p=None: real_portfolio(path)
+    ):
         cap = bv.follow_cap_check()
         assert cap["ok"] and cap["follow_pct"] <= 20.0

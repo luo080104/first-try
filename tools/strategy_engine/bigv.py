@@ -25,7 +25,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", 
 TRADES_FILE = os.path.join(DATA_DIR, "bigv_trades.jsonl")
 LIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bigv_list.yaml")
 FOLLOW_CAP = 0.20  # 跟随仓 ≤20%（v1.5 定案——风险隔离红线）
-DECAY_DAYS = 30     # X 证据链衰减窗（30 天无记录 → 权重 ×0.9——v0 待校准）
+DECAY_DAYS = 30  # X 证据链衰减窗（30 天无记录 → 权重 ×0.9——v0 待校准）
 REASON_MIN_LEN = 10  # 披露质量：有实质理由（≥10 字——v0 待校准）
 
 
@@ -33,6 +33,7 @@ def load_list() -> list[dict[str, Any]]:
     """读大V 清单 YAML（书里明确名单——全量 60+ 待 vpush 数据）"""
     try:
         import yaml
+
         with open(LIST_FILE, encoding="utf-8") as f:
             d = yaml.safe_load(f)
         return d.get("bigvs", [])
@@ -49,15 +50,21 @@ def _append_trade(ev: dict[str, Any]) -> None:
         print(f"[bigv] 记录失败: {e}")
 
 
-def record_trade(bigv: str, code: str, action: str, price: float = 0.0,
-                 reason: str = "") -> dict[str, Any]:
+def record_trade(
+    bigv: str, code: str, action: str, price: float = 0.0, reason: str = ""
+) -> dict[str, Any]:
     """记录大V 调仓事件（vpush 部署后自动——MVP 手动/半自动）"""
     if action not in ("买", "卖"):
         raise ValueError(f"动作需 买/卖——got {action}")
-    ev = {"ts": datetime.now().isoformat(timespec="seconds"),
-          "bigv": bigv, "code": code, "action": action,
-          "price": price, "reason": reason,
-          "disclosed": len(reason.strip()) >= REASON_MIN_LEN}
+    ev = {
+        "ts": datetime.now().isoformat(timespec="seconds"),
+        "bigv": bigv,
+        "code": code,
+        "action": action,
+        "price": price,
+        "reason": reason,
+        "disclosed": len(reason.strip()) >= REASON_MIN_LEN,
+    }
     _append_trade(ev)
     return ev
 
@@ -84,8 +91,12 @@ def score_bigv(bigv: str) -> dict[str, Any]:
     """X 证据链评分（Q17——披露质量/逻辑一致性/时间衰减——不提前分级）"""
     trades = _load_trades(bigv)
     if not trades:
-        return {"name": bigv, "score": None, "n_trades": 0,
-                "evidence": ["无调仓记录——不评分（Q3：不提前分级——数据驱动）"]}
+        return {
+            "name": bigv,
+            "score": None,
+            "n_trades": 0,
+            "evidence": ["无调仓记录——不评分（Q3：不提前分级——数据驱动）"],
+        }
     score = 0.0
     evidence: list[str] = []
     # 披露质量（每次调仓：有实质理由 +1 / 无 -0.5）
@@ -99,9 +110,13 @@ def score_bigv(bigv: str) -> dict[str, Any]:
     if days > DECAY_DAYS:
         score *= 0.9
         evidence.append(f"衰减：{days} 天无新记录（权重 ×0.9——Q17 时间衰减）")
-    return {"name": bigv, "score": round(score, 1), "n_trades": len(trades),
-            "evidence": evidence,
-            "note": "X 证据链——只评证据不评名气——持续积累（vpush 自动后样本↑）"}
+    return {
+        "name": bigv,
+        "score": round(score, 1),
+        "n_trades": len(trades),
+        "evidence": evidence,
+        "note": "X 证据链——只评证据不评名气——持续积累（vpush 自动后样本↑）",
+    }
 
 
 def follow_candidates() -> list[dict[str, Any]]:
@@ -110,8 +125,15 @@ def follow_candidates() -> list[dict[str, Any]]:
     out = []
     for t in trades:
         if t["action"] == "买":
-            out.append({"bigv": t["bigv"], "code": t["code"], "price": t["price"],
-                        "ts": t["ts"][:10], "reason": t.get("reason", "")})
+            out.append(
+                {
+                    "bigv": t["bigv"],
+                    "code": t["code"],
+                    "price": t["price"],
+                    "ts": t["ts"][:10],
+                    "reason": t.get("reason", ""),
+                }
+            )
     return out
 
 
@@ -123,9 +145,13 @@ def follow_cap_check() -> dict[str, Any]:
     positions, total = p.positions()
     follow_mv = sum(x["market"] for x in positions if x["track"] == "bigv")
     pct = round(follow_mv / total * 100, 1) if total else 0.0
-    return {"follow_mv": round(follow_mv, 2), "total": round(total, 2),
-            "follow_pct": pct, "cap": FOLLOW_CAP * 100,
-            "ok": pct <= FOLLOW_CAP * 100}
+    return {
+        "follow_mv": round(follow_mv, 2),
+        "total": round(total, 2),
+        "follow_pct": pct,
+        "cap": FOLLOW_CAP * 100,
+        "ok": pct <= FOLLOW_CAP * 100,
+    }
 
 
 def main():
@@ -138,12 +164,16 @@ def main():
             price = 0.0  # 价格输入非法 → 不记价（安全降级）
         reason = " ".join(sys.argv[6:])
         ev = record_trade(bigv, code, action, price, reason)
-        print(f"已记录 {ev['bigv']} {ev['action']} {ev['code']}"
-              f"{f' @ {ev[chr(112)+chr(114)+chr(105)+chr(99)+chr(101)]}' if ev['price'] else ''}"
-              f"（披露质量: {'✅' if ev['disclosed'] else '⚠️ 无理由'}）")
+        print(
+            f"已记录 {ev['bigv']} {ev['action']} {ev['code']}"
+            f"{f' @ {ev[chr(112) + chr(114) + chr(105) + chr(99) + chr(101)]}' if ev['price'] else ''}"
+            f"（披露质量: {'✅' if ev['disclosed'] else '⚠️ 无理由'}）"
+        )
         cap = follow_cap_check()
         if not cap["ok"]:
-            print(f"⚠️ 跟随仓 {cap['follow_pct']}% 超红线 {cap['cap']}%——不再新增跟随建议")
+            print(
+                f"⚠️ 跟随仓 {cap['follow_pct']}% 超红线 {cap['cap']}%——不再新增跟随建议"
+            )
     elif cmd == "score" and len(sys.argv) >= 3:
         s = score_bigv(sys.argv[2])
         print(f"{s['name']}: 可信度 {s['score']}（{s['n_trades']} 次调仓记录）")
@@ -151,7 +181,9 @@ def main():
             print(f"  - {e}")
     elif cmd == "follow":
         cap = follow_cap_check()
-        print(f"跟随仓: {cap['follow_pct']}% / 红线 {cap['cap']}%——{'✅' if cap['ok'] else '⚠️ 超限'}")
+        print(
+            f"跟随仓: {cap['follow_pct']}% / 红线 {cap['cap']}%——{'✅' if cap['ok'] else '⚠️ 超限'}"
+        )
         for c in follow_candidates():
             print(f"  {c['bigv']} 买 {c['code']}（{c['ts']}）{c['reason'][:40]}")
     else:
