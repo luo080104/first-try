@@ -1,0 +1,108 @@
+# 卖出规则库（2026-08-15——策略库 v2 卖出 7 条 → 引擎 YAML——"开工第一道坎"落地）
+# 来源：docs/观复策略库_父母样例.md 卖出规则（父母理念翻译——书原文引用）
+# 状态：S2 已回测达标启用（signals.py）——其余待虚拟盘验证（Q11——未验证不落地红线）
+# 结构：core_rules 保持书原文——engine_params 为可执行参数（v0 先验——Q11 校准）
+
+rules:
+  - id: S1
+    name: technical_top_sell
+    display: 技术逃顶（个股——分牛熊）
+    category: sell
+    source: 主书42/手册55-56
+    core_rules:
+      - 熊市（周布林中轨下跌趋势）中期波段卖出：周Boll上轨(主)/周上九转(辅)/周RSI(6)到80+顶背离(辅)/周量能顶背离(辅)
+      - 牛市（周布林中轨上升趋势）——周/月Boll上轨不是好卖出指标：估值70百分位之上/月上九转/周RSI80+顶背离/周量能顶背离
+    engine_params:
+      enabled: false          # 未回测——不启用（红线）
+      note: 待虚拟盘验证——与 S2 互补（S2 只管波段仓）
+
+  - id: S2
+    name: weekly_boll_reduce_cost
+    display: 周布林波段降本（大V票专用）
+    category: sell
+    source: 主书64/95/手册62
+    core_rules:
+      - 成功票：周布林上轨卖三分之一（口子小→至少涨20%才卖）——卖出留现金
+      - 成功票大涨因业绩：要更多涨幅才卖三分之一降本
+      - 失败票：周布林上轨全部卖（亏钱也卖）——卖出留现金
+      - 失败票（基本面没变化）补仓一次（20%仓位）——杀逻辑的不补
+      - 失败过的票：不到周布林线下轨不买回
+      - 成功票基本面显著改善：可考虑周布林中轨就买回
+      - 底部起来个股涨幅一倍则退出投资
+    engine_params:
+      enabled: true           # 回测达标（2026-08-15）——signals.s2_weekly_upper_exit
+      trigger: 周线收盘 > 布林上轨（20,2）
+      scope: swing 波段仓（Q16）
+      note: 上轨卖出已启用——补仓/买回规则待 Q11 验证
+
+  - id: S3
+    name: valuation_premium_sell
+    display: 估值溢价卖
+    category: sell
+    source: 主书46/95/98
+    core_rules:
+      - 估值70%分位以上逐步卖出（雪球个股历史百分位）
+      - PE百分位66-80 + 月上九转 → 逐步卖50%
+      - PE百分位>80 + 月上九转 → 全部卖
+      - PE百分位>80 + 月上九转未现 → 逐步卖出
+      - PE百分位<66 → 不动
+      - 股价大涨因业绩且估值仍便宜 → 估值到溢价才卖
+    engine_params:
+      enabled: false          # 未回测——不启用
+      trigger: PE/PB 历史百分位（baostock 10 年窗口）
+      note: 与 signals.s3_valuation_exit 对应——阈值待回测
+
+  - id: S4
+    name: market_top_sell
+    display: 组合同步大盘小牛卖
+    category: sell
+    source: 手册63/主书97
+    core_rules:
+      - 先大盘后个股：大盘小牛（月上九转+估值高）→ 个股大部分或全部卖出
+      - 特殊情况：少数个股绝对低估 + 顶级大V也持有 → 可适度少量持有
+      - 大盘小牛逃顶7指标：估值中上(PB/PE百分位>80)/月上九转/牛市五浪/周RSI顶背离/周量能顶背离/沪深300涨超一倍/牛市长≤2.4年
+    engine_params:
+      enabled: false
+      note: 依赖 market_status 大盘判定——待 Q11
+
+  - id: S5
+    name: stop_loss_kill_logic
+    display: 止损与杀逻辑
+    category: sell
+    source: 主书64/95
+    core_rules:
+      - 买完亏10点以内=建仓成功；亏10点以上或亏损超半年=失败（失败票20%补仓一次——基本面没变时）
+      - 长期基本面严重恶化=择机卖出不再买回（杀逻辑）
+      - 中短期基本面恶化（长期没问题）→ 换马同低位且基本面变强的标的
+      - 价值投资者止损核心=长期基本面的恶化（投资逻辑），不是价格止损
+    engine_params:
+      enabled: false
+      note: 需持仓成本+基本面——虚拟盘联动（portfolio + fundamentals）
+
+  - id: S6
+    name: graham_rotation
+    display: 格雷厄姆卖出轮动
+    category: sell
+    source: 主书94/136
+    core_rules:
+      - 买入极低估值标的（每只≤2.5%仓位）
+      - 两年内涨幅超50%卖出；未超50%两年末也卖出
+      - 卖出后换入新极低估值标的——找不到留现金
+    engine_params:
+      enabled: false
+      note: 与观复集中组合（3-5只）不同——组合风格冲突——仅记录
+
+  - id: S7
+    name: buffett_sell
+    display: 巴菲特卖出三原则
+    category: sell
+    source: 主书94
+    core_rules:
+      - 标的价格大幅超过内在价值（贵）
+      - 标的基本面出大问题（投资逻辑坏了）
+      - 发现性价比更好的标的（换马）
+    engine_params:
+      enabled: false
+      note: 人工判断为主——讲解模式素材（Q19）
+
+aliases: [卖, 止损, 止盈, 清仓, 减仓, 降本]
