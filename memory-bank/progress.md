@@ -1,6 +1,8 @@
 # 当前进度（progress）
 
 > 最后更新：2026-08-15。Pi 每次工作后更新此文件 + SYNC.md。
+>
+> **维护纪律（2026-08-15 用户指出）：更新本文件前必须核对 docs/SYNC.md 尾部 + `git log --oneline`，禁止从旧版直接继承待办**——progress.md 是易过时缓存，SYNC.md/git log 才是事实源。
 
 ## Go购（v2.0 收尾）
 
