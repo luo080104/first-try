@@ -213,7 +213,7 @@ def run_daily_loop() -> dict[str, Any]:
         except Exception:
             pass  # 推送失败不阻塞（红线③：数据失误不静默但也不中断）
 
-    # 自检段（每日健康检查——数据源命中/打分分布/异常）
+    # 自检段（每日健康检查——数据源命中/打分分布/异常/数据质量）
     scores = [x["score"] for x in candidates]
     anomalies = []
     if not quotes:
@@ -222,11 +222,26 @@ def run_daily_loop() -> dict[str, Any]:
         anomalies.append("打分 0 只（估值源或过滤异常）")
     elif max(scores) == 0:
         anomalies.append("全部 0 分（打分异常）")
+    # 数据质量检查（第六批落地——MAD 异常值/延迟——WealthAgent 借鉴）
+    dq: dict[str, Any] = {"level": "GOOD", "issues": []}
+    try:
+        from tools.strategy_engine import data_quality as dq_mod
+
+        kline = data.tencent_kline("sh000300", days=120)
+        if kline and len(kline) >= 30:
+            closes = [x["close"] for x in kline]
+            d_dates = [x["date"] for x in kline]
+            dq = dq_mod.quality_summary(closes, d_dates, last_date=d_dates[-1])
+            for i in dq["issues"]:
+                anomalies.append(f"[数据质量] {i['issue']}")
+    except Exception:
+        pass  # 质量检查失败不阻塞（红线③）
     self_check = {
         "quotes_hit": len(quotes),
         "pool_size": len(pool),
         "scored": len(candidates),
         "score_range": [min(scores), max(scores)] if scores else [0, 0],
+        "data_quality": dq["level"],
         "anomalies": anomalies,
     }
 
