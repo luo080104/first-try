@@ -1,4 +1,5 @@
 """backtest 事件配对 + 涨跌停单测（2026-08-15 回测真实性修复）"""
+
 import os
 import sys
 
@@ -8,7 +9,10 @@ from tools.strategy_engine import backtest as bt
 
 def _weeks_with(opens: list[float], closes: list[float]) -> list[dict]:
     """构造周线数据（open/close）"""
-    return [{"date": f"2026-01-{i+1:02d}", "open": o, "close": c} for i, (o, c) in enumerate(zip(opens, closes))]
+    return [
+        {"date": f"2026-01-{i + 1:02d}", "open": o, "close": c}
+        for i, (o, c) in enumerate(zip(opens, closes))
+    ]
 
 
 def test_limit_blocked_buy():
