@@ -248,12 +248,23 @@ POOL_DEFAULT = [
 ]
 
 
+SELL_VARIANTS: dict[str, Any] = {
+    "A_书式S2上轨": lambda h: sg.s2_weekly_upper_exit(h)["signal"],
+    "B_MA交叉": lambda h: sg.ma_cross_exit(h)["signal"],
+    "C_MA拐点确认": lambda h: sg.ma_trend_confirm_exit(h)["signal"],
+}
+
+
 def run_pool(
     codes: list[str],
     years: int = DEFAULT_YEARS,
     variants: tuple[str, ...] = ("b+r+t", "b+r"),
+    sell_variants: tuple[str, ...] = ("A_书式S2上轨",),
 ) -> dict:
-    """多股聚合回测：每只 load_weekly+run_backtest——按段聚合交易（N 提升到可统计）"""
+    """多股聚合回测：每只 load_weekly+run_backtest——按段聚合交易（N 提升到可统计）
+
+    sell_variants：卖出变体对比（A 书式/B MA交叉/C MA拐点——候选进回测池——红线）
+    """
     import time
 
     agg = {seg: {} for seg in ("训练", "验证")}
@@ -264,14 +275,14 @@ def run_pool(
             print(f"  {code} 数据失败: {str(e)[:60]}")
             continue
         for v in variants:
-            res = run_backtest(
-                weeks, make_buy(v), lambda h: sg.s2_weekly_upper_exit(h)["signal"]
-            )
-            for seg, m in res.items():
-                a = agg[seg].setdefault(v, {"n": 0, "wins": 0, "sum": 0.0})
-                a["n"] += m["trades"]
-                a["wins"] += m["trades"] * m["win_rate"] / 100
-                a["sum"] += m["avg_ret"] * m["trades"]
+            for sv in sell_variants:
+                key = f"{v}+{sv}"
+                res = run_backtest(weeks, make_buy(v), SELL_VARIANTS[sv])
+                for seg, m in res.items():
+                    a = agg[seg].setdefault(key, {"n": 0, "wins": 0, "sum": 0.0})
+                    a["n"] += m["trades"]
+                    a["wins"] += m["trades"] * m["win_rate"] / 100
+                    a["sum"] += m["avg_ret"] * m["trades"]
         time.sleep(1.5)  # 节流（新浪限流——红线③）
     out = {}
     for seg, vstats in agg.items():
@@ -293,19 +304,27 @@ def main():
         default=None,
         help="聚合回测（龙头池代码列表——不传用默认 10 只）",
     )
+    ap.add_argument(
+        "--sells",
+        nargs="*",
+        default=None,
+        help="卖出变体对比（A_书式S2上轨 / B_MA交叉 / C_MA拐点确认——默认只 A）",
+    )
     args = ap.parse_args()
     if args.pool is not None:
         codes = args.pool or POOL_DEFAULT
-        print(
-            f"聚合回测 {len(codes)} 只 × {args.years} 年（变体: b+r+t 三重/b+r 两重）"
+        sells: tuple[str, ...] = (
+            tuple(args.sells) if args.sells else ("A_书式S2上轨",)
         )
-        agg = run_pool(codes, args.years)
+        print(
+            f"聚合回测 {len(codes)} 只 × {args.years} 年（买入: b+r 两重——卖出: {sells}）"
+        )
+        agg = run_pool(codes, args.years, variants=("b+r",), sell_variants=sells)
         for seg, vstats in agg.items():
             print(f"\n【{seg}段】")
             for v, m in vstats.items():
-                name = {"b+r+t": "三重(布林+RSI30+九转)", "b+r": "两重(布林+RSI30)"}[v]
                 print(
-                    f"  {name}: N={m['n']} 笔 | 胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}%"
+                    f"  {v}: N={m['n']} 笔 | 胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}%"
                 )
         return
     weeks = load_weekly(args.code, args.years)

@@ -59,6 +59,74 @@ def s2_weekly_upper_exit(closes: list[float]) -> dict[str, Any]:
     return {"signal": False, "reasons": []}
 
 
+def _ma(closes: list[float], n: int) -> float | None:
+    """简单均线（最近 n 周收盘——数据不足 None）"""
+    if len(closes) < n:
+        return None
+    return sum(closes[-n:]) / n
+
+
+def ma_cross_exit(closes: list[float], fast: int = 5, slow: int = 20) -> dict[str, Any]:
+    """卖出候选-变体B：MA 交叉触发（fast 下穿 slow → 卖出）
+
+    来源：aiagents-stock low_price_bull_strategy（MA5 下穿 MA20 卖）
+    状态：候选——未回测不启用（红线）——进三变体对比池
+    预期问题（投资视角）：震荡市反复交叉——假信号——回测裁决
+    """
+    if len(closes) < slow + 2:
+        return {"signal": False, "reasons": ["数据不足"]}
+    f_prev = _ma(closes[:-1], fast)
+    s_prev = _ma(closes[:-1], slow)
+    f_now = _ma(closes, fast)
+    s_now = _ma(closes, slow)
+    if None in (f_prev, s_prev, f_now, s_now):
+        return {"signal": False, "reasons": ["数据不足"]}
+    # 交叉事件：前周 fast>slow，本周 fast<=slow（None 已排除）
+    if (
+        f_prev is not None
+        and s_prev is not None
+        and f_now is not None
+        and s_now is not None
+        and f_prev > s_prev
+        and f_now <= s_now
+    ):
+        return {
+            "signal": True,
+            "reasons": [f"MA{fast} 下穿 MA{slow}（{f_now:.2f} vs {s_now:.2f}）"],
+        }
+    return {"signal": False, "reasons": []}
+
+
+def ma_trend_confirm_exit(closes: list[float], slow: int = 20) -> dict[str, Any]:
+    """卖出候选-变体C：融合版——MA 交叉确认趋势转熊 → 启用 S1 熊市规则
+
+    设计（2026-08-15 探讨——甲方认可进回测池）：
+    - 书的盲区：S1 依赖"周布林中轨下跌趋势"——但趋势拐点无机械触发器（Q7 滞后）
+    - 本变体：MA20 走平转下（前周上升→本周下降）= 拐点确认 → 触发卖出
+    - 与书不冲突：不替代布林/九转——只补"何时算熊市开始"的判定
+    """
+    if len(closes) < slow + 2:
+        return {"signal": False, "reasons": ["数据不足"]}
+    ma_prev2 = _ma(closes[:-2], slow)
+    ma_prev1 = _ma(closes[:-1], slow)
+    ma_now = _ma(closes, slow)
+    if None in (ma_prev2, ma_prev1, ma_now):
+        return {"signal": False, "reasons": ["数据不足"]}
+    # 拐点：前周上升（prev2<prev1）→ 本周转下（prev1>now）（None 已排除）
+    if (
+        ma_prev2 is not None
+        and ma_prev1 is not None
+        and ma_now is not None
+        and ma_prev2 < ma_prev1
+        and ma_prev1 > ma_now
+    ):
+        return {
+            "signal": True,
+            "reasons": [f"MA{slow} 走平转下（拐点——趋势转熊确认）"],
+        }
+    return {"signal": False, "reasons": []}
+
+
 def s3_valuation_exit(
     pe: float, fair_pe: float | None, premium: float = 1.5
 ) -> dict[str, Any]:
