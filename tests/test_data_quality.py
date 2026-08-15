@@ -94,8 +94,34 @@ def test_classify_missingness_mnar_block():
 
 def test_classify_missingness_mar_correlated():
     """与其他列共现（Jaccard>0.5）→ MAR"""
-    mask = [False, True, False, True, False, False, True, False, True, False, False, True]
-    other = [False, True, False, True, False, False, True, False, True, False, False, True]
+    mask = [
+        False,
+        True,
+        False,
+        True,
+        False,
+        False,
+        True,
+        False,
+        True,
+        False,
+        False,
+        True,
+    ]
+    other = [
+        False,
+        True,
+        False,
+        True,
+        False,
+        False,
+        True,
+        False,
+        True,
+        False,
+        False,
+        True,
+    ]
     assert "MAR" in dq.classify_missingness(mask, [other])
 
 
