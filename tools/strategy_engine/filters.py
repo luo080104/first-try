@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -87,11 +88,11 @@ def check_valuation(v: dict[str, Any]) -> list[str]:
 
 
 def check_no_buy(q: dict[str, Any]) -> list[str]:
-    """N 不买清单（可量化部分——N2/N3/N9/N13/N8/N11）
+    """N 不买清单（可量化部分——N2/N3/N9/N13/N8/N11/N10）
 
     输入: pe_ttm, pb, ps(市销率), price_from_low(距低点涨幅%), listing_years(上市年数),
           holder_reduce(大股东减持), recent_surge(连续巨量阳线——最近 3 根量能异常),
-          pe_gt30_recommended(大V强推且 PE>30——外部传入)
+          pe_gt30_recommended(大V强推且 PE>30——外部传入), sw_code(申万行业代码——N10 可选)
     """
     blocked = []
     pe = q.get("pe_ttm") or 0
@@ -109,6 +110,11 @@ def check_no_buy(q: dict[str, Any]) -> list[str]:
     # N9 新股前 3 年
     if (q.get("listing_years") or 99) < 3:
         blocked.append("N9 新股上市未满 3 年")
+    # N10 板块连续逆势 2 年以上走牛（申万行业指数近 2 年涨幅 >100%——书："基本后面都会走输大盘"）
+    if q.get("sw_code"):
+        chg = _sector_2y_surge(q["sw_code"])
+        if chg is not None and chg > 100:
+            blocked.append(f"N10 板块连逆 2 年走牛（行业指数 2 年 +{chg:.0f}%——走输大盘风险）")
     # N11 平台连拉 3 根巨量阳线
     if q.get("recent_surge", False):
         blocked.append("N11 连续小阳后 3 根巨量阳线（90% 套）")
@@ -116,6 +122,30 @@ def check_no_buy(q: dict[str, Any]) -> list[str]:
     if q.get("pe_gt30_recommended", False) and pe > 30:
         blocked.append("N13 大V强推成长股且 PE>30（80% 顶）")
     return blocked
+
+
+def _sector_2y_surge(sw_code: str) -> float | None:
+    """申万行业指数近 2 年涨幅%（N10 用——书"连逆 2 年走牛板块不能买"）
+
+    akshare index_hist_sw（实测 6434 日——1999 起可用）——失败返回 None（降级不阻塞）
+    """
+    try:
+        os.environ.pop("HTTP_PROXY", None)
+        os.environ.pop("HTTPS_PROXY", None)
+        import akshare as ak
+
+        df = ak.index_hist_sw(symbol=sw_code, period="day")
+        if df is None or len(df) < 250:
+            return None
+        closes = df["收盘"].astype(float)
+        last = closes.iloc[-1]
+        # 约 2 年前（250 交易日×2）
+        two_years_ago = closes.iloc[-500] if len(closes) >= 500 else closes.iloc[0]
+        if two_years_ago <= 0:
+            return None
+        return round((last / two_years_ago - 1) * 100, 1)
+    except Exception:
+        return None
 
 
 def check_redlines(r: dict[str, bool]) -> list[str]:

@@ -117,6 +117,51 @@ def test_explainable_reasons():
     assert "ROE" in texts and "销售利润率" in texts
 
 
+def test_no_buy_n10_surge(monkeypatch):
+    """板块 2 年走牛 >100% → N10 否决（书：连逆 2 年走牛板块走输大盘）"""
+    import pandas as pd
+
+    # 合成 600 日申万指数（500 日前 → 现在 +200%——超过 100% 阈值）
+    dates = pd.date_range("2024-06-01", periods=600, freq="D")
+    closes = [100 + i * 0.5 for i in range(600)]  # iloc[-500]=300 → 终点 400 = +33%
+    # 修正：终点 iloc[-1]=399.5，500 日前 iloc[-500]=300——+33% 不够——重新设计
+    closes = [100 * (1.005**i) for i in range(600)]  # 日涨 0.5%——2 年约 +370%
+
+    def _fake_hist(symbol, period):
+        return pd.DataFrame({"代码": [symbol] * 600, "日期": dates, "收盘": closes})
+
+    monkeypatch.setattr("akshare.index_hist_sw", _fake_hist)
+    q = _good_quote()
+    q["sw_code"] = "801010"
+    r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
+    assert any("N10" in b for b in r.blocked_by)
+
+
+def test_no_buy_n10_normal(monkeypatch):
+    """板块 2 年涨幅温和 → 不触发 N10"""
+    import pandas as pd
+
+    dates = pd.date_range("2024-06-01", periods=600, freq="D")
+    closes = [100 + i * 0.05 for i in range(600)]  # 终点 130 = +30%
+
+    def _fake_hist(symbol, period):
+        return pd.DataFrame({"代码": [symbol] * 600, "日期": dates, "收盘": closes})
+
+    monkeypatch.setattr("akshare.index_hist_sw", _fake_hist)
+    q = _good_quote()
+    q["sw_code"] = "801010"
+    r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
+    assert not any("N10" in b for b in r.blocked_by)
+
+
+def test_no_buy_n10_no_code():
+    """无 sw_code → N10 跳过（降级不阻塞——讲解模式无行业数据时正常通过）"""
+    q = _good_quote()
+    q["sw_code"] = None
+    r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
+    assert not any("N10" in b for b in r.blocked_by)
+
+
 if __name__ == "__main__":
     test_good_stock_passes()
     test_moutai_blocked_by_valuation()
