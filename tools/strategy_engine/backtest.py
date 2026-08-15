@@ -288,7 +288,13 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
 
 
 def make_buy(variant):
-    """B3 变体工厂（网格调参——三重/两重/放宽——回测工具）"""
+    """B3 变体工厂（网格调参——三重/两重/放宽——回测工具）
+
+    2026-08-15 注册制重构：变体集合从 signals.B3_VARIANTS 校验——
+    未知变体直接报错（原静默返回全 False——难排查）
+    """
+    if variant not in sg.B3_VARIANTS:
+        raise ValueError(f"未知买入变体 {variant!r}——可选: {list(sg.B3_VARIANTS)}")
 
     def buy(hist):
         b = ind.bollinger(hist, 20, 2)
@@ -328,6 +334,16 @@ SELL_VARIANTS: dict[str, Any] = {
     "B_MA交叉": lambda h: sg.ma_cross_exit(h)["signal"],
     "C_MA拐点确认": lambda h: sg.ma_trend_confirm_exit(h)["signal"],
 }
+# 注册制校验（2026-08-15）：卖出变体必须已注册（防新函数漏登记——回测池静默缺项）
+for _sv_key, _sv_fn in list(SELL_VARIANTS.items()):
+    _registered = {v["id"]: v for v in sg.list_signals(kind="sell")}
+    _canon = {
+        "A_书式S2上轨": "S2",
+        "B_MA交叉": "MA交叉",
+        "C_MA拐点确认": "MA拐点",
+    }[_sv_key]
+    if _canon not in _registered:
+        raise RuntimeError(f"卖出变体 {_sv_key} 未在 signals.SIGNALS 注册——请先登记")
 
 
 def run_pool(

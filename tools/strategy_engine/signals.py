@@ -160,3 +160,75 @@ def evaluate_tactical(
         "s3": s3,
         "note": "战术层——回测验证后启用（方案红线）——当前仅记录不决策",
     }
+
+
+# ============================================================================
+# 信号注册表（2026-08-15——czsc 借鉴——信号注册制重构）
+# 目标：新信号 = 写函数 + 注册一行——回测/核心循环/文档按注册表遍历——自动去重
+# 结构：id → {kind: buy/sell, fn, desc, status: enabled/候选/否决, source}
+# 用法：signals.SIGNALS[key] / signals.list_signals(kind=...)
+# ============================================================================
+
+SIGNALS: dict[str, dict[str, Any]] = {
+    # ---- 买入（战术层——B3 两重定案 2026-08-15） ----
+    "B3": {
+        "kind": "buy",
+        "fn": b3_triple_confirm,
+        "desc": "B3 低潮买入：布林下轨触 + RSI(6)<30（两重——定案启用）",
+        "status": "enabled",
+        "source": "主书低潮买入——回测定案",
+    },
+    # ---- 卖出（战术层） ----
+    "S2": {
+        "kind": "sell",
+        "fn": s2_weekly_upper_exit,
+        "desc": "S2 周布林降本：周线收盘 > 布林上轨 → 波段仓卖出（启用）",
+        "status": "enabled",
+        "source": "主书64/95/手册62",
+    },
+    "S3": {
+        "kind": "sell",
+        "fn": s3_valuation_exit,
+        "desc": "S3 估值溢价卖出：PE > fair_pe × 1.5（待回测）",
+        "status": "候选",
+        "source": "主书46/95/98",
+    },
+    "MA交叉": {
+        "kind": "sell",
+        "fn": ma_cross_exit,
+        "desc": "卖出变体B：MA5 下穿 MA20（回测 p=0.49 不显著——否决）",
+        "status": "否决",
+        "source": "aiagents-stock low_price_bull_strategy",
+    },
+    "MA拐点": {
+        "kind": "sell",
+        "fn": ma_trend_confirm_exit,
+        "desc": "卖出变体C：MA20 拐点确认（回测低于书式——否决）",
+        "status": "否决",
+        "source": "设计 2026-08-15 进池对比",
+    },
+}
+
+# 买入变体（B3 网格调参——make_buy 工厂用——回测工具）
+B3_VARIANTS: dict[str, dict[str, Any]] = {
+    "b+r+t": {"note": "三重（含九转）——回测否决——不进核心", "status": "否决"},
+    "b+r": {"note": "两重——定案启用", "status": "enabled"},
+    "r+t": {"note": "RSI+九转——网格调参候选", "status": "候选"},
+    "b+t": {"note": "布林+九转——网格调参候选", "status": "候选"},
+    "b+r40+t": {"note": "布林+RSI40+九转——放宽候选", "status": "候选"},
+}
+
+
+def list_signals(kind: str | None = None) -> list[dict[str, Any]]:
+    """列出注册表（按 kind 过滤 buy/sell）——自动去重（注册表本身 dict——天然去重）"""
+    out = []
+    for sig_id, meta in SIGNALS.items():
+        if kind and meta["kind"] != kind:
+            continue
+        out.append({"id": sig_id, **meta})
+    return out
+
+
+def get_signal(sig_id: str) -> dict[str, Any] | None:
+    """按 id 查信号（S1-S7/MA交叉——未找到 None）——core_loop/backtest 统一入口"""
+    return SIGNALS.get(sig_id)
