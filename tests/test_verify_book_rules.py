@@ -1,4 +1,5 @@
 """verify_book_rules 单测（K 规则——sell_bullaware 牛市判定——2026-08-15 审查 R7 修复）"""
+
 import os
 import sys
 

@@ -286,8 +286,13 @@ def verify_s2_bull_market() -> dict[str, Any]:
     # 扩池：B3 聚合池 10 只 × 10 年（2026-08-15——单股 N=2-3 → 聚合 N 可统计）
     import time
 
-    agg = {seg: {"机械": {"n": 0, "wins": 0, "sum": 0.0}, "牛熊限定": {"n": 0, "wins": 0, "sum": 0.0}}
-           for seg in ("训练", "验证")}
+    agg = {
+        seg: {
+            "机械": {"n": 0, "wins": 0, "sum": 0.0},
+            "牛熊限定": {"n": 0, "wins": 0, "sum": 0.0},
+        }
+        for seg in ("训练", "验证")
+    }
     for code in POOL:
         try:
             weeks = bt.load_weekly(code, YEARS)
