@@ -56,7 +56,7 @@ def test_good_stock_passes():
     r = fl.filter_stock(
         _good_fundamentals(), _good_valuation(), _good_quote(), _no_redlines()
     )
-    assert r.passed is True
+    assert r.passed == True
     assert len(r.reasons) == 4
 
 
@@ -67,7 +67,7 @@ def test_moutai_blocked_by_valuation():
     v["pe_ttm"], v["pb"] = 20.28, 7.2
     v["pe_percentile"] = 60.0
     r = fl.filter_stock(f, v, _good_quote(), _no_redlines())
-    assert r.passed is False
+    assert r.passed == False
     assert any("B5" in b for b in r.blocked_by)
 
 
@@ -76,7 +76,7 @@ def test_no_buy_n13():
     q = _good_quote()
     q["pe_ttm"], q["pe_gt30_recommended"] = 35.0, True
     r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
-    assert r.passed is False
+    assert r.passed == False
     assert any("N13" in b for b in r.blocked_by)
 
 
@@ -85,7 +85,7 @@ def test_redline_borrowing():
     r = fl.filter_stock(
         _good_fundamentals(), _good_valuation(), _good_quote(), {"borrowing": True}
     )
-    assert r.passed is False
+    assert r.passed == False
     assert any("R1" in b for b in r.blocked_by)
 
 
@@ -94,7 +94,7 @@ def test_new_stock_n9():
     q = _good_quote()
     q["listing_years"] = 1
     r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
-    assert r.passed is False
+    assert r.passed == False
     assert any("N9" in b for b in r.blocked_by)
 
 
@@ -103,7 +103,7 @@ def test_value_8_roe_fail():
     f = _good_fundamentals()
     f["roe"] = 8.0
     r = fl.filter_stock(f, _good_valuation(), _good_quote(), _no_redlines())
-    assert r.passed is False
+    assert r.passed == False
     assert any("B4-3" in b for b in r.blocked_by)
 
 

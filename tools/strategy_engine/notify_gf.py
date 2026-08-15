@@ -67,7 +67,18 @@ def _throttled(text: str) -> bool:
 
 
 def push_brief() -> bool:
-    """晨报推送（9:00——大盘状态+估值百分位+策略信号——书体系）"""
+    """晨报推送（9:00——大盘状态+估值百分位+策略信号——书体系）
+
+    2026-08-15 修复：晨报入口顺带 record_equity（昨日收盘净值）——
+    原缺陷：record_equity 无任何调度调用——净值序列永不积累——gate_check 无法判定
+    """
+    # 先记净值（幂等——同一日覆盖——gate_check 判定依赖此序列）
+    try:
+        from tools.strategy_engine.portfolio import Portfolio
+
+        Portfolio().record_equity()
+    except Exception:
+        pass  # 净值记录失败不阻塞晨报（红线③容错）
     if push_wechat is None:
         return False
     text = mb.build_brief()
