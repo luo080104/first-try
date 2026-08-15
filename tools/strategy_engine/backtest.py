@@ -202,7 +202,9 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
     SIGNAL_VALID_WEEKS = 4  # v0 先验——Q11 校准
     buy_retry = 0
     sell_retry = 0
-    last_blocked_i: int | None = None  # 最近一次触板顺延周（超期从它之后重算——审查 2026-08-15）
+    last_blocked_i: int | None = (
+        None  # 最近一次触板顺延周（超期从它之后重算——审查 2026-08-15）
+    )
     for i in range(30, len(weeks)):
         if pos is None and b_idx < len(buys):
             b_sig = buys[b_idx]
@@ -242,6 +244,7 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
                 and i - sells[s_idx]["i"] > SIGNAL_VALID_WEEKS
             ):
                 s_idx += 1
+                sell_retry = 0  # 审查 2026-08-15：跳过时重置——防顺延额度泄漏到下一卖点
             exit_sig = s_idx < len(sells) and sells[s_idx]["i"] <= i
             over_hold = i - pos["entry_i"] >= MAX_HOLD_WEEKS
             if exit_sig or over_hold:
