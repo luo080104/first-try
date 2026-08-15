@@ -47,7 +47,9 @@ def _score_value(f: dict[str, Any]) -> list[tuple[float, str]]:
     debt = f.get("debt_ratio") or 0
     # 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"——exempt 时不惩罚）
     s3 = 5.0 if (f.get("debt_exempt", False) or debt < 50) else 0
-    parts.append((s3, f"负债率{debt:.0f}%" + ("（金融豁免）" if f.get("debt_exempt") else "")))
+    parts.append(
+        (s3, f"负债率{debt:.0f}%" + ("（金融豁免）" if f.get("debt_exempt") else ""))
+    )
     s4 = 5.0 if f.get("ocf_gt_profit", False) else 0
     parts.append((s4, "现金流"))
     dy = f.get("dividend_yield") or 0
