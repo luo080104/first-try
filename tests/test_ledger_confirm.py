@@ -6,7 +6,9 @@ import tempfile
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from tools.strategy_engine import confirm as cf  # pyright: ignore 假阴性（pytest 实测通过）
+from tools.strategy_engine import (
+    confirm as cf,  # pyright: ignore 假阴性（pytest 实测通过）
+)
 from tools.strategy_engine import signal_ledger as sl
 
 TMP = tempfile.mkdtemp()
