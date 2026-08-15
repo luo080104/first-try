@@ -4,14 +4,15 @@
   A 打五折（L3486：PE < 合理 PE/2 买入）vs 普通低估 vs 无条件
   M 66% 分段（L486：百分位 <66% 不动——66-80/80+ 分级）
   C 底线思维（L2684：极端 PE 低 + 股息保障）
-方法：龙头池 10 只 × 20 年——按条件分组——后 12 月收益胜率/均值对比
-数据：腾讯 K 线（价格）+ 百度估值历史（PE 序列——data.pe_pb_history）
+方法：龙头池 10 只 × 10 年（数据边界定案：2016 起——制度可比性）——按条件分组——后 12 月相对收益胜率/均值对比
+数据：baostock 周线（价格）+ baostock 估值日线（PE——asof 对齐周线——2026-08-15 修复索引错位）
 局限标注：财务类规则（F/H）需历史财务——用当前特征×历史收益近似（第二轮）
 运行：python -m tools.strategy_engine.verify_book_rules
 """
 
 from __future__ import annotations
 
+import bisect
 import os
 import sys
 from statistics import mean
@@ -19,6 +20,8 @@ from typing import Any
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 from tools.strategy_engine import data as d
+
+YEARS = 10  # 数据边界定案（2026-08-15：10 年——2016 起——覆盖 1.5 轮牛熊）
 
 POOL = [
     "600036",
@@ -34,11 +37,52 @@ POOL = [
 ]
 
 
+_BENCH: list[float] = []  # 沪深300 周线（相对收益基准——防市场状态污染）
+
+
+def _load_bench() -> list[float]:
+    """基准（沪深300——10 年周线——baostock 主源，失败退 akshare）"""
+    global _BENCH
+    if not _BENCH:
+        wk = d.bs_kline_weekly("000300", YEARS)
+        if not wk:
+            from tools.strategy_engine import backtest as bt
+
+            wk = bt.load_weekly("sh000300", YEARS)
+        _BENCH = [w["close"] for w in wk]
+    return _BENCH
+
+
+def _align_weekly(
+    weeks: list[dict[str, Any]], hist: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """估值日线 → 周线对齐（每行附该周最新 PE——asof：date ≤ 周线日期的最近估值）
+
+    修复 2026-08-15：原实现 hist[i] 日线索引直接对应 closes[i] 周线索引——错位
+    """
+    dates = [h["date"] for h in hist]
+    pes = [h.get("pe") for h in hist]
+    out = []
+    for w in weeks:
+        idx = bisect.bisect_right(dates, w["date"]) - 1
+        out.append(
+            {
+                "date": w["date"],
+                "close": w["close"],
+                "pe": pes[idx] if idx >= 0 else None,
+            }
+        )
+    return out
+
+
 def _fwd_return(closes: list[float], i: int, weeks: int = 52) -> float | None:
-    """第 i 周买入——weeks 周后收益%（数据不足返回 None）"""
-    if i + weeks >= len(closes):
+    """第 i 周买入——weeks 周后【相对收益】%（个股 − 沪深300 同期——防市场状态污染）"""
+    bench = _load_bench()
+    if i + weeks >= len(closes) or i + weeks >= len(bench) or i >= len(bench):
         return None
-    return (closes[i + weeks] / closes[i] - 1) * 100
+    ret = closes[i + weeks] / closes[i] - 1
+    bref = bench[i + weeks] / bench[i] - 1
+    return (ret - bref) * 100
 
 
 def verify_valuation_rules() -> dict[str, Any]:
@@ -55,21 +99,23 @@ def verify_valuation_rules() -> dict[str, Any]:
     }
     for code in POOL:
         try:
-            k = d.tencent_kline(code, days=400)
-            hist = d.pe_pb_history(code)
+            # 价格：10 年周线（baostock 主源）——PE：baostock 估值日线（asof 对齐）
+            weeks = d.bs_kline_weekly(code, YEARS)
+            hist = d.bs_pe_pb_history(code, YEARS)
         except Exception:
             continue
-        if not k or not hist or len(k) < 120:
+        if not weeks or not hist or len(weeks) < 120:
             continue
-        closes = [x["close"] for x in k]
-        pes = [h["pe"] for h in hist if h.get("pe", 0) > 0]
+        # 对齐：估值日线 asof → 周线（修复：原 hist[i] 日线索引与 closes[i] 周线索引错位）
+        aligned = _align_weekly(weeks, hist)
+        closes = [w["close"] for w in aligned]
+        pes = [w["pe"] for w in aligned if w.get("pe")]
         if not pes:
             continue
         median = sorted(pes)[len(pes) // 2]  # 合理 PE ≈ 历史中位数（书 B：长期平均 PE）
-        # 对齐：K 线 400 周 ~ 8 年——估值历史同样窗口——逐周判定
-        n = min(len(closes), len(hist))
+        n = len(aligned)
         for i in range(30, n - 52):
-            pe = hist[i].get("pe") or 0
+            pe = aligned[i].get("pe") or 0
             if pe <= 0:
                 continue
             pct = sum(1 for p in pes if p < pe) / len(pes) * 100
@@ -122,7 +168,7 @@ def verify_valuation_rules() -> dict[str, Any]:
 
 
 def main():
-    print("书规则验证（10 只 × 20 年——后 12 月收益分组对比）")
+    print(f"书规则验证（10 只 × {YEARS} 年——后 12 月相对收益分组对比）")
     print("=" * 56)
     r = verify_valuation_rules()
     for name, s in r.items():
@@ -143,7 +189,6 @@ def main():
         )
 
 
-
 def verify_financial_rules() -> dict[str, Any]:
     """F/H 验证（书 L3399/L2761）：当前财务特征 × 近 5 年收益——42 只全池
     局限标注：当前特征近似历史（财务特征相对稳定——但非精确——方向参考）
@@ -151,12 +196,14 @@ def verify_financial_rules() -> dict[str, Any]:
     from tools.strategy_engine import fundamentals as fd
     from tools.strategy_engine.core_loop import load_leader_pool
 
-    groups = {"F_高ROE低负债": {"n": 0, "wins": 0, "rets": []},
-              "F_高ROE高负债(杠杆)": {"n": 0, "wins": 0, "rets": []},
-              "F_低ROE": {"n": 0, "wins": 0, "rets": []},
-              "H_分红率40-75": {"n": 0, "wins": 0, "rets": []},
-              "H_分红率<40": {"n": 0, "wins": 0, "rets": []},
-              "H_分红率>75": {"n": 0, "wins": 0, "rets": []}}
+    groups = {
+        "F_高ROE低负债": {"n": 0, "wins": 0, "rets": []},
+        "F_高ROE高负债(杠杆)": {"n": 0, "wins": 0, "rets": []},
+        "F_低ROE": {"n": 0, "wins": 0, "rets": []},
+        "H_分红率40-75": {"n": 0, "wins": 0, "rets": []},
+        "H_分红率<40": {"n": 0, "wins": 0, "rets": []},
+        "H_分红率>75": {"n": 0, "wins": 0, "rets": []},
+    }
     for code in load_leader_pool():
         try:
             f = fd.get_fundamentals(code, 10.0)
@@ -188,8 +235,11 @@ def verify_financial_rules() -> dict[str, Any]:
                 groups[g]["wins"] += 1
         # H 分组（有分红率数据才判）
         if payout > 0:
-            g2 = "H_分红率40-75" if 40 <= payout <= 75 else (
-                "H_分红率<40" if payout < 40 else "H_分红率>75")
+            g2 = (
+                "H_分红率40-75"
+                if 40 <= payout <= 75
+                else ("H_分红率<40" if payout < 40 else "H_分红率>75")
+            )
             groups[g2]["n"] += 1
             groups[g2]["rets"].append(r)
             if r > 0:
@@ -197,9 +247,11 @@ def verify_financial_rules() -> dict[str, Any]:
     out = {}
     for name, s in groups.items():
         if s["n"]:
-            out[name] = {"n": s["n"],
-                         "win_rate": round(s["wins"] / s["n"] * 100, 1),
-                         "avg_ret": round(mean(s["rets"]), 2)}
+            out[name] = {
+                "n": s["n"],
+                "win_rate": round(s["wins"] / s["n"] * 100, 1),
+                "avg_ret": round(mean(s["rets"]), 2),
+            }
         else:
             out[name] = {"n": 0, "win_rate": 0.0, "avg_ret": 0.0}
     return out
@@ -207,12 +259,12 @@ def verify_financial_rules() -> dict[str, Any]:
 
 def verify_s2_bull_market() -> dict[str, Any]:
     """K 验证（书 L290-300：牛市布林上轨卖出无效——S2 限定）——回测对比
-    沪深300 20 年——机械上轨卖出 vs 牛市（周 MA20 上升）不卖
+    沪深300 {YEARS} 年——机械上轨卖出 vs 牛市（周 MA20 上升）不卖
     """
     from tools.strategy_engine import backtest as bt
     from tools.strategy_engine import indicators as ind
 
-    weeks = bt.load_weekly("600036", 20)
+    weeks = bt.load_weekly("600036", YEARS)
 
     def sell_mechanical(hist):
         b = ind.bollinger(hist, 20, 2)
@@ -235,11 +287,20 @@ def verify_s2_bull_market() -> dict[str, Any]:
     out = {}
     for seg in ("训练", "验证"):
         m1, m2 = r1[seg], r2[seg]
-        out[f"K_机械卖出_{seg}"] = {"n": m1["trades"], "win_rate": m1["win_rate"],
-                                    "avg_ret": m1["avg_ret"], "max_dd": m1["max_dd"]}
-        out[f"K_牛熊限定_{seg}"] = {"n": m2["trades"], "win_rate": m2["win_rate"],
-                                    "avg_ret": m2["avg_ret"], "max_dd": m2["max_dd"]}
+        out[f"K_机械卖出_{seg}"] = {
+            "n": m1["trades"],
+            "win_rate": m1["win_rate"],
+            "avg_ret": m1["avg_ret"],
+            "max_dd": m1["max_dd"],
+        }
+        out[f"K_牛熊限定_{seg}"] = {
+            "n": m2["trades"],
+            "win_rate": m2["win_rate"],
+            "avg_ret": m2["avg_ret"],
+            "max_dd": m2["max_dd"],
+        }
     return out
+
 
 if __name__ == "__main__":
     main()
