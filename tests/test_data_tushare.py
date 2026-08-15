@@ -1,4 +1,5 @@
 """tushare 通道单测（data_tushare——2026-08-15 已购——mock 不依赖网络）"""
+
 import os
 import sys
 
@@ -30,8 +31,20 @@ def test_kline_daily_parses(monkeypatch):
         def daily(self, ts_code, start_date, end_date):
             return pd.DataFrame(
                 [
-                    {"trade_date": "20260814", "open": 1355.0, "close": 1341.99, "high": 1359.0, "low": 1338.14},
-                    {"trade_date": "20260813", "open": 1338.0, "close": 1350.0, "high": 1360.0, "low": 1330.0},
+                    {
+                        "trade_date": "20260814",
+                        "open": 1355.0,
+                        "close": 1341.99,
+                        "high": 1359.0,
+                        "low": 1338.14,
+                    },
+                    {
+                        "trade_date": "20260813",
+                        "open": 1338.0,
+                        "close": 1350.0,
+                        "high": 1360.0,
+                        "low": 1330.0,
+                    },
                 ]
             )
 
@@ -48,6 +61,7 @@ def test_kline_daily_parses(monkeypatch):
 
 def test_ts_failure_returns_empty(monkeypatch):
     """接口异常 → 空（不抛）"""
+
     class _Boom:
         def daily(self, **kw):
             raise ConnectionError("tushare down")
