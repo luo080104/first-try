@@ -50,7 +50,7 @@ def cash_guidance(status: str) -> dict[str, Any]:
     center = (lo + hi) // 2
     hint = {"低潮": "钱可以多入场——左侧网格/建仓窗口",
             "正常": "维持标准仓位——现金留底",
-            "高潮": "现金为王——防守优先——等极端信号"}[status]
+            "高潮": "现金为王——防守优先——等极端信号"}.get(status, "维持标准仓位——现金留底")
     return {"status": status, "cash_range": (lo, hi),
             "cash_pct": center, "hint": hint}
 
