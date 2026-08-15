@@ -58,7 +58,7 @@ class Portfolio:
             "init_cash": INIT_CASH,
             "cash": INIT_CASH,
             "holdings": {},
-            "track": {"base": 0.0, "swing": 0.0},
+            "track": {"base": 0.0, "swing": 0.0},  # Q16 轨道累计投入（buy 时累加）
         }
 
     def save(self):
@@ -107,6 +107,7 @@ class Portfolio:
                 "buy_date": datetime.now().strftime("%Y-%m-%d"),
             }
         self.data["cash"] = round(self.data["cash"] - cost, 2)
+        # track 累计投入（Q16 底仓/波段分轨统计——test_track_accounting 保护）
         self.data["track"][track] = round(self.data["track"].get(track, 0) + cost, 2)
         self.save()
         self._event(

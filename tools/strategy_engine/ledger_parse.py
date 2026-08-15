@@ -87,7 +87,9 @@ def parse_trade(text: str) -> dict[str, Any]:
     result = _call_llm(text)
     if not result or not result.get("action"):
         result = _rule_fallback(text)
-    _cache[text] = (time.time(), result)
+        # 审查 R4 修复：只缓存规则兜底结果（确定性——同文本同结果）——
+        # LLM 结果不缓存（temperature=0 但仍可能偶发漂移——错解析若被缓存 24h 复用则污染记账）
+        _cache[text] = (time.time(), result)
     if len(_cache) > 500:  # 防内存膨胀
         keys = list(_cache)
         for k in keys[:250]:

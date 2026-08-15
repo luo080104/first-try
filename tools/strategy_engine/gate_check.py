@@ -108,7 +108,7 @@ def check() -> dict[str, Any]:
     if not weekly:
         return {
             "passed": False,
-            "reason": f"净值序列不足 2 周（record_equity 每日记录中——当前 {days} 天）",
+            "reason": f"净值序列不足 14 个点（record_equity 每日记录中——当前 {days} 天——约需 2 周）",
             "days": days,
             "weeks_beat": 0,
         }
