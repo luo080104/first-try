@@ -1,4 +1,5 @@
 """归因拆解单测（attribution.py——2026-08-15 整改①——合成数据验证）"""
+
 import os
 import sys
 
@@ -6,7 +7,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tools.strategy_engine import attribution as att
 
 
-def _synthetic(beta: float, alpha_daily: float, n: int = 60, seed: int = 42) -> tuple[list, list]:
+def _synthetic(
+    beta: float, alpha_daily: float, n: int = 60, seed: int = 42
+) -> tuple[list, list]:
     """构造合成数据：市场收益 + 组合收益 = beta×市场 + alpha + 噪声
 
     返回 (equity_curve, bench_daily)——净值从 100 开始累计
@@ -40,7 +43,9 @@ def test_beta_1_2_positive_alpha():
     eq, bench = _synthetic(beta=1.2, alpha_daily=0.001)  # 0.1%/日 ≈ +25%/年
     r = att.attribution(eq, bench)
     assert r["beta_market"] is not None
-    assert abs(r["beta_market"] - 1.2) / 1.2 < 0.05, f"Beta 还原误差过大: {r['beta_market']}"
+    assert abs(r["beta_market"] - 1.2) / 1.2 < 0.05, (
+        f"Beta 还原误差过大: {r['beta_market']}"
+    )
     assert r["alpha_positive"] is True
     assert r["alpha_annual"] > 10  # 年化 >10%
 
@@ -65,7 +70,10 @@ def test_insufficient_points():
 def test_no_overlap_dates():
     """零重叠日期 → 显式缺口标注（不静默）"""
     eq = [{"date": "2026-07-01", "total": 100}, {"date": "2026-07-02", "total": 101}]
-    bench = [{"date": "2026-06-01", "close": 4000}, {"date": "2026-06-02", "close": 4001}]
+    bench = [
+        {"date": "2026-06-01", "close": 4000},
+        {"date": "2026-06-02", "close": 4001},
+    ]
     r = att.attribution(eq, bench)
     assert r["beta_market"] is None
     assert "对齐" in r["note"] or "不足" in r["note"]
