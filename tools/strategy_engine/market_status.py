@@ -37,6 +37,42 @@ def _rate_fair_pe() -> float | None:
         return None
 
 
+def fair_pe_grid(
+    rates: tuple[float, ...] = (0.017, 0.022, 0.028),
+    erps: tuple[float, ...] = (0.02, 0.03, 0.04),
+) -> list[dict[str, Any]]:
+    """Q1 敏感性网格升级（Vibe-Trading DCF 3x3 网格借鉴——2026-08-15）
+
+    合理 PE = 1/(利率 + ERP)——利率×股权风险溢价二维网格
+    - 原 Q1：3 利率情景（1.7/2.2/2.8%——ERP 固定 3%）
+    - 升级：利率 3 档 × ERP 3 档 = 9 格——讲解模式展示'估值对什么最敏感'
+    返回 [{rate, erp, fair_pe}]——利率升/ERP 升 → 合理 PE 降（估值中枢下移）
+    """
+    out = []
+    for r in rates:
+        for erp in erps:
+            fp = 1 / (r + erp)
+            out.append({"rate": round(r * 100, 1), "erp": round(erp * 100, 0), "fair_pe": round(fp, 1)})
+    return out
+
+
+def _fair_pe_sensitivity_text() -> str:
+    """讲解模式文本：9 格网格 → 一句话结论（哪个维度敏感）"""
+    g = fair_pe_grid()
+    if not g:
+        return ""
+    by_rate = {r: [x["fair_pe"] for x in g if x["rate"] == r] for r in (1.7, 2.2, 2.8)}
+    by_erp = {e: [x["fair_pe"] for x in g if x["erp"] == e] for e in (2, 3, 4)}
+    # 利率 1.7→2.8 的影响（ERP 固定 3）vs ERP 2→4 的影响（利率固定 1.7）
+    rate_span = by_rate[1.7][1] - by_rate[2.8][1]
+    erp_span = by_erp[2][0] - by_erp[4][0]
+    dom = "利率" if rate_span > erp_span else "风险溢价(ERP)"
+    return (
+        f"敏感性网格：利率 1.7→2.8% 使合理PE变化约 {rate_span:.0f} 点；"
+        f"ERP 2→4% 约 {erp_span:.0f} 点——当前主要敏感于{dom}"
+    )
+
+
 def cash_guidance(status: str) -> dict[str, Any]:
     """Q5 现金纪律：现金比例 = f(大盘状态)——研讨定案（书的最大空白）
 

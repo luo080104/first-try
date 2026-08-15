@@ -61,11 +61,26 @@ def _score_value(f: dict[str, Any]) -> list[tuple[float, str]]:
 
 
 def _score_valuation(v: dict[str, Any]) -> list[tuple[float, str]]:
-    """估值面 0-30（B5 + Q1 利率校准）"""
+    """估值面 0-30（B5 + Q1 利率校准）——2026-08-15 分段线性化（保分档骨架）
+
+    定案（Q12 + 甲方拍板）：分档骨架保留（书绝对低估纪律线）——档内线性平滑
+    （aiagents-stock 分段映射借鉴——消除 PE 14.9 vs 15.1 悬崖）
+    档位：PE<15 或 PB<2 满分 10 → 15-25 线性递减 10→5 → 25-40 五分段 5→0 → >40 零分
+    """
     parts = []
     pe, pb = v.get("pe_ttm") or 0, v.get("pb") or 0
-    # 绝对估值（PE<15 或 PB<2 满分；PE 25-40 半分——修复死代码：pe<25 分支不可达）
-    s1 = 10.0 if (0 < pe < 15) or (0 < pb < 2) else (5.0 if pe < 40 else 0)
+    # 绝对估值（分段线性——书纪律线 PE=15/PB=2 保留）
+    if (0 < pe < 15) or (0 < pb < 2):
+        s1 = 10.0  # 绝对低估满分（书：安全边际纪律线内）
+    elif pe <= 0:
+        s1 = 0.0
+    elif pe < 25:
+        s1 = 10.0 - (pe - 15) / 10 * 5  # 15→25 线性 10→5
+    elif pe < 40:
+        s1 = 5.0 - (pe - 25) / 15 * 5  # 25→40 线性 5→0
+    else:
+        s1 = 0.0
+    s1 = max(0.0, min(10.0, s1))
     parts.append((s1, f"PE={pe} PB={pb}"))
     pct = v.get("pe_percentile") or 50
     s2 = max(0.0, 10.0 - pct / 10)

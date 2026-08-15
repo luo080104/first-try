@@ -66,6 +66,9 @@ def build_brief() -> str:
     if fp:
         verdict = "便宜" if (m.get("pe") or 0) < fp else "偏贵"
         lines.append(f"Q1 利率校准: 隐含合理PE≈{fp}——当前{verdict}")
+    sens = ms._fair_pe_sensitivity_text()
+    if sens:
+        lines.append(f"  {sens}")
     for e in m.get("evidence", []):
         lines.append(f"  • {e}")
     if not m.get("evidence"):

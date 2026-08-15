@@ -90,7 +90,7 @@ def _flat_parts(r):
 
 
 def test_valuation_band_fix():
-    """估值边界（审查修复 2026-08-15）：PE 25-40 给 5 分（修复死代码——原 pe<25 不可达）"""
+    """估值边界（2026-08-15 分段线性化）：PE 30 → 3.3 分（25-40 线性段——原 5 分档）"""
     v = _good_v()
     v["pe_ttm"] = 30.0  # 25-40 区间
     v["pb"] = 6.0
@@ -98,5 +98,6 @@ def test_valuation_band_fix():
         _good_f(), v, {}, {}, quote={"pe_ttm": 30.0, "pb": 6.0}, market_status="正常"
     )
     parts = _flat_parts(r)
-    # 估值面绝对分包含 5 分档（PE30 → 5 分——修复后可达）
-    assert any(p == 5.0 for name, p, _ in parts if "PE=" in name)
+    # 分段线性：PE30 → 5-(30-25)/15*5 = 3.33（原 5 分档——线性后更连续）
+    pe_part = next(p for name, p, _ in parts if "PE=" in name)
+    assert abs(pe_part - 3.33) < 0.1
