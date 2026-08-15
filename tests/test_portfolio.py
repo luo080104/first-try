@@ -29,10 +29,10 @@ def test_buy_and_sell():
     assert ok
     assert p.data["holdings"]["600036"]["shares"] == 800
     assert p.data["cash"] == round(100000 - 38.46 * 1300 + 39.5 * 500, 2)
-    # 事件日志
+    # 事件日志（全局文件——断言最后两个事件）
     events = [json.loads(l) for l in open(pf.EVENTS_FILE, encoding="utf-8")]
-    assert [e["action"] for e in events] == ["buy", "sell"]
-    assert events[0]["track"] == "base"
+    assert [e["action"] for e in events[-2:]] == ["buy", "sell"]
+    assert events[-2]["track"] == "base"
 
 
 def test_track_accounting():
