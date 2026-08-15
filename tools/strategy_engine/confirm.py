@@ -50,16 +50,22 @@ def append_pending(signal, total_assets=None):
     shares = int(assets * MAX_POSITION_PCT / signal["price"] // 100 * 100) or 100
     item = {
         "ts": datetime.now().isoformat(timespec="seconds"),
-        "code": signal["code"], "name": signal.get("name", ""),
-        "price": round(signal["price"], 2), "shares": shares,
-        "score": signal.get("score"), "threshold": signal.get("threshold"),
+        "code": signal["code"],
+        "name": signal.get("name", ""),
+        "price": round(signal["price"], 2),
+        "shares": shares,
+        "score": signal.get("score"),
+        "threshold": signal.get("threshold"),
         "track": signal.get("track", "base"),
         "reason": signal.get("reason", "Q12 打分达标"),
         "status": "pending",
     }
     items.append(item)
     _save_pending(items)
-    return True, f"{signal['name'] or signal['code']} 已入待确认队列（{shares} 股 @ {item['price']}）"
+    return (
+        True,
+        f"{signal['name'] or signal['code']} 已入待确认队列（{shares} 股 @ {item['price']}）",
+    )
 
 
 def list_pending():
@@ -73,10 +79,14 @@ def confirm_loop():
         print("无待确认信号——今天没有达标候选？")
         return
     for i, item in enumerate(pending, 1):
-        print(f"\n[{i}] 🔔 {item['name']}({item['code']}) "
-              f"{item['score']}分（门槛 {item['threshold']}）")
-        print(f"    建议: {item['shares']} 股 @ {item['price']} "
-              f"[{item['track']}] 原因: {item['reason']}")
+        print(
+            f"\n[{i}] 🔔 {item['name']}({item['code']}) "
+            f"{item['score']}分（门槛 {item['threshold']}）"
+        )
+        print(
+            f"    建议: {item['shares']} 股 @ {item['price']} "
+            f"[{item['track']}] 原因: {item['reason']}"
+        )
         choice = input("    1=确认买  2=改价格/股数  3=忽略  q=退出: ").strip()
         if choice == "q":
             break
@@ -100,13 +110,26 @@ def _execute(item):
     """确认执行：虚拟盘买入 + 账本记录 + 队列状态更新"""
     from tools.strategy_engine import portfolio as pf
     from tools.strategy_engine import signal_ledger as sl
+
     p = pf.Portfolio()
-    ok, msg = p.buy(item["code"], item["price"], item["shares"],
-                    track=item["track"], reason=item["reason"], name=item["name"])
+    ok, msg = p.buy(
+        item["code"],
+        item["price"],
+        item["shares"],
+        track=item["track"],
+        reason=item["reason"],
+        name=item["name"],
+    )
     if ok:
-        sl.record(item["code"], name=item["name"], sig_type="score_pass",
-                  price=item["price"], reason=item["reason"],
-                  track=item["track"], threshold=item.get("threshold"))
+        sl.record(
+            item["code"],
+            name=item["name"],
+            sig_type="score_pass",
+            price=item["price"],
+            reason=item["reason"],
+            track=item["track"],
+            threshold=item.get("threshold"),
+        )
         item["status"] = "confirmed"
         print(f"    ✅ {msg}")
     else:
@@ -116,9 +139,15 @@ def _execute(item):
 
 def _ignore(item):
     from tools.strategy_engine import signal_ledger as sl
-    sl.record(item["code"], name=item["name"], sig_type="score_pass",
-              price=item["price"], reason=item["reason"] + "（人工忽略）",
-              track=item["track"])
+
+    sl.record(
+        item["code"],
+        name=item["name"],
+        sig_type="score_pass",
+        price=item["price"],
+        reason=item["reason"] + "（人工忽略）",
+        track=item["track"],
+    )
     item["status"] = "ignored"
     _save_pending(_load_pending())
     print(f"    已忽略 {item['name']}（事件已记——供行为诊断）")
@@ -127,7 +156,9 @@ def _ignore(item):
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "list":
         for i in list_pending():
-            print(f"  {i['name']}({i['code']}) {i['shares']}股 @ {i['price']} [{i['status']}]")
+            print(
+                f"  {i['name']}({i['code']}) {i['shares']}股 @ {i['price']} [{i['status']}]"
+            )
     else:
         confirm_loop()
 

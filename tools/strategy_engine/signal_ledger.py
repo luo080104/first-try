@@ -21,22 +21,41 @@ LEDGER_FILE = os.path.join(DATA_DIR, "signal_ledger.jsonl")
 VERIFY_WINDOWS = (90, 180, 365)  # 3/6/12 月验证窗（天）
 
 # 信号类型（与观复信号体系对应）
-TYPES = ("score_pass",     # Q12 动态打分达标（建仓信号）
-         "grid_add",       # Q13 抄底网格（跌 3/6/10% 加仓）
-         "swing_exit",     # Q16 波段技术止损
-         "base_exit")      # Q16 底仓逻辑止损（季度体检）
+TYPES = (
+    "score_pass",  # Q12 动态打分达标（建仓信号）
+    "grid_add",  # Q13 抄底网格（跌 3/6/10% 加仓）
+    "swing_exit",  # Q16 波段技术止损
+    "base_exit",
+)  # Q16 底仓逻辑止损（季度体检）
 
 
-def record(code, name="", sig_type="score_pass", direction="buy", price=0.0,
-           reason="", track="base", threshold=None, grid=None, verify_at=None):
+def record(
+    code,
+    name="",
+    sig_type="score_pass",
+    direction="buy",
+    price=0.0,
+    reason="",
+    track="base",
+    threshold=None,
+    grid=None,
+    verify_at=None,
+):
     """记录一个信号（事件流——Q11 账本）。verify_at 可覆盖（测试/手动回填用）"""
     assert sig_type in TYPES, f"未知信号类型: {sig_type}"
     ev = {
         "ts": datetime.now().isoformat(timespec="seconds"),
-        "code": code, "name": name, "type": sig_type, "direction": direction,
-        "price": price, "reason": reason, "track": track,
-        "threshold": threshold, "grid": grid,
-        "verify_at": verify_at or (datetime.now() + timedelta(days=VERIFY_WINDOWS[0])).strftime("%Y-%m-%d"),
+        "code": code,
+        "name": name,
+        "type": sig_type,
+        "direction": direction,
+        "price": price,
+        "reason": reason,
+        "track": track,
+        "threshold": threshold,
+        "grid": grid,
+        "verify_at": verify_at
+        or (datetime.now() + timedelta(days=VERIFY_WINDOWS[0])).strftime("%Y-%m-%d"),
     }
     try:
         os.makedirs(DATA_DIR, exist_ok=True)
@@ -72,13 +91,15 @@ def backfill(quotes_provider=None):
         else:
             try:
                 from tools.strategy_engine import data
+
                 q = data.tencent_quote([ev["code"]])
                 px = (q.get(ev["code"]) or {}).get("price")
             except Exception:
                 pass
         if px:
-            ev["result_pct"] = round((px - ev["price"]) / ev["price"] * 100, 2) \
-                if ev["price"] else 0.0
+            ev["result_pct"] = (
+                round((px - ev["price"]) / ev["price"] * 100, 2) if ev["price"] else 0.0
+            )
             ev["result_price"] = px
             ev["verified_at"] = datetime.now().strftime("%Y-%m-%d")
             lines[i] = json.dumps(ev, ensure_ascii=False) + "\n"
@@ -95,12 +116,24 @@ def backfill(quotes_provider=None):
 def report():
     """分组统计（按类型——N/胜率/平均幅度）——校准依据"""
     if not os.path.exists(LEDGER_FILE):
-        return {"groups": {}, "total": 0, "verified": 0, "pending": 0, "note": "账本为空"}
+        return {
+            "groups": {},
+            "total": 0,
+            "verified": 0,
+            "pending": 0,
+            "note": "账本为空",
+        }
     try:
         raw = open(LEDGER_FILE, encoding="utf-8").readlines()
     except OSError as e:
         print(f"[signal_ledger] 读取失败: {e}")
-        return {"groups": {}, "total": 0, "verified": 0, "pending": 0, "note": f"读取失败: {e}"}
+        return {
+            "groups": {},
+            "total": 0,
+            "verified": 0,
+            "pending": 0,
+            "note": f"读取失败: {e}",
+        }
     rows = []
     for l in raw:
         try:
@@ -119,14 +152,22 @@ def report():
         else:  # sell 信号——下跌为胜
             g["wins"] += 1 if r < 0 else 0
         g["sum"] += r
-        g["rows"].append({"code": ev["code"], "pct": r, "verify": ev.get("verified_at")})
+        g["rows"].append(
+            {"code": ev["code"], "pct": r, "verify": ev.get("verified_at")}
+        )
     out = {}
     for t, g in groups.items():
-        out[t] = {"n": g["n"], "win_rate": round(g["wins"] / g["n"] * 100, 1),
-                  "avg_pct": round(g["sum"] / g["n"], 2)}
-    return {"groups": out, "total": len(rows),
-            "verified": sum(1 for r in rows if r.get("result_pct") is not None),
-            "pending": sum(1 for r in rows if r.get("result_pct") is None)}
+        out[t] = {
+            "n": g["n"],
+            "win_rate": round(g["wins"] / g["n"] * 100, 1),
+            "avg_pct": round(g["sum"] / g["n"], 2),
+        }
+    return {
+        "groups": out,
+        "total": len(rows),
+        "verified": sum(1 for r in rows if r.get("result_pct") is not None),
+        "pending": sum(1 for r in rows if r.get("result_pct") is None),
+    }
 
 
 def main():

@@ -35,7 +35,7 @@ LEADER_POOL = [
 _FINANCIAL_EXEMPT = {"600036", "601318", "600030", "601398", "601988"}
 
 
-def _technical_signals(code: str) -> dict[str, Any]:
+def technical_signals(code: str) -> dict[str, Any]:
     """个股技术信号（布林/RSI/九转——从日 K 计算——MVP 近似）"""
     k = data.tencent_kline(code, days=120)
     if not k or len(k) < 25:
@@ -58,7 +58,7 @@ def _technical_signals(code: str) -> dict[str, Any]:
     return out
 
 
-def _valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
+def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
     """估值面输入（PE/PB + 历史百分位）"""
     v = {"pe_ttm": quote.get("pe_ttm") or 0, "pb": quote.get("pb") or 0}
     try:
@@ -83,14 +83,16 @@ def run_daily_loop() -> dict[str, Any]:
     for code, q in quotes.items():
         if (q.get("pe_ttm") or 0) <= 0:
             continue
-        v = _valuation_input(code, q)
+        v = valuation_input(code, q)
         if fair_pe:
             v["fair_pe"] = fair_pe
-        t = _technical_signals(code)
+        t = technical_signals(code)
         # 基本面真实数据（fundamentals 管线——价值面 40 分）
         from tools.strategy_engine import fundamentals as fd
-        f = fd.get_fundamentals(code, q.get("price") or 0,
-                                debt_exempt=code in _FINANCIAL_EXEMPT)
+
+        f = fd.get_fundamentals(
+            code, q.get("price") or 0, debt_exempt=code in _FINANCIAL_EXEMPT
+        )
         s = {"is_leader": True, "bigv_holding": False}
         score = ss.score_stock(f, v, t, s, quote=q, market_status=status)
         candidates.append(
@@ -113,11 +115,26 @@ def run_daily_loop() -> dict[str, Any]:
 
     # ⑤ 达标信号自动入待确认队列（半自动——confirm 交互消费——1确认/2改/3忽略）
     from tools.strategy_engine import confirm as cf
+
     for sig in signals:
         try:
             cf.append_pending(sig)
         except Exception:
             pass  # 入队失败不阻塞循环（红线：不因边缘错误中断每日闭环）
+
+    # 自检段（每日健康检查——数据源命中/打分分布/异常）
+    scores = [x["score"] for x in candidates]
+    anomalies = []
+    if not quotes:
+        anomalies.append("行情源 0 命中（数据源可能挂了）")
+    if not candidates:
+        anomalies.append("打分 0 只（估值源或过滤异常）")
+    elif max(scores) == 0:
+        anomalies.append("全部 0 分（打分异常）")
+    self_check = {"quotes_hit": len(quotes), "pool_size": len(LEADER_POOL),
+                  "scored": len(candidates),
+                  "score_range": [min(scores), max(scores)] if scores else [0, 0],
+                  "anomalies": anomalies}
 
     return {
         "date": now,
@@ -127,6 +144,7 @@ def run_daily_loop() -> dict[str, Any]:
         "threshold": threshold,
         "candidates": candidates,
         "signals": signals,
+        "self_check": self_check,
         "note": "MVP：基本面真实（新浪三表）——技术面日线近似（书用周线）——"
         "确认交互已接（confirm）——Q11 账本采集已开（signal_ledger）——"
         "企业微信推送 = M3 vpush 阶段",

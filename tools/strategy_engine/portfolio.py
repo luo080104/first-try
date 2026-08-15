@@ -58,8 +58,10 @@ class Portfolio:
     def save(self):
         try:
             os.makedirs(os.path.dirname(self.path), exist_ok=True)
-            with open(self.path, "w", encoding="utf-8") as f:
+            tmp = self.path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, self.path)  # 原子替换——写一半崩溃不损坏原账本
         except OSError as e:
             print(f"[portfolio] 保存失败: {e}")
 
@@ -76,6 +78,8 @@ class Portfolio:
     # ---- 操作 ----
     def buy(self, code, price, shares, track="base", reason="", name="", grid=None):
         """建仓/加仓——扣现金+记持仓+事件日志。track: base(底仓)/swing(波段)"""
+        if price <= 0 or shares <= 0 or not isinstance(shares, int):
+            return False, f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）"
         cost = round(price * shares, 2)
         if cost > self.data["cash"]:
             return False, f"现金不足（需要 {cost}——现有 {self.data['cash']}）"
@@ -111,6 +115,8 @@ class Portfolio:
 
     def sell(self, code, shares, price, reason=""):
         """卖出——回现金+减持仓+事件日志"""
+        if price <= 0 or shares <= 0 or not isinstance(shares, int):
+            return False, f"参数无效（price={price} shares={shares}——需价格>0 且股数为正整数）"
         h = self.data["holdings"].get(code)
         if not h:
             return False, f"无持仓 {code}"

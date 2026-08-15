@@ -77,7 +77,7 @@ def test_high_market():
     prices = [100 + i * 2 for i in range(60)]  # 持续大涨
     s = _run(pe=18.0, prices=prices)
     # PE 粗判 (18-8)/10*100=100% > 80 → 高潮（若周九转触发更稳）
-    assert s["status"] in ("高潮", "正常")  # 至少估值证据在
+    assert s["status"] in ["高潮", "正常"]  # 至少估值证据在
     assert any("估值" in e for e in s["evidence"])
 
 
@@ -99,11 +99,12 @@ if __name__ == "__main__":
 def test_cash_guidance_map():
     """Q5 现金纪律映射（研讨定案：低潮 0-20/正常 20-40/高潮 40+）"""
     from tools.strategy_engine import market_status as ms
+
     g = ms.cash_guidance("低潮")
-    assert g["cash_range"] == (0, 20)
+    assert g["cash_range"][0] == 0 and g["cash_range"][1] == 20
     g = ms.cash_guidance("正常")
-    assert g["cash_range"] == (20, 40)
+    assert g["cash_range"][0] == 20 and g["cash_range"][1] == 40
     g = ms.cash_guidance("高潮")
-    assert g["cash_range"] == (40, 100)
+    assert g["cash_range"][0] == 40 and g["cash_range"][1] == 100
     g = ms.cash_guidance("未知状态")
-    assert g["cash_range"] == (20, 40)  # 默认正常
+    assert g["cash_range"][0] == 20 and g["cash_range"][1] == 40  # 默认正常

@@ -10,12 +10,18 @@ from tools.strategy_engine import risk_score as rs  # pyright: ignore
 
 def _score(pe_pct, rsi=None, td_sell=False, months=5.0):
     """构造环境：估值分位 + 技术过热 + 距重估月数——测计分公式"""
-    with patch.object(rs.ms, "market_status",
-                      lambda: {"pe_percentile_approx": pe_pct}), \
-            patch.object(rs, "_months_to_review", lambda: months), \
-            patch.object(rs, "_tech_overheat",
-                         lambda: (30 if (rsi and rsi > 80) else 15 if td_sell else 0,
-                                  ["过热" if (rsi and rsi > 80) or td_sell else ""])):
+    with (
+        patch.object(rs.ms, "market_status", lambda: {"pe_percentile_approx": pe_pct}),
+        patch.object(rs, "_months_to_review", lambda: months),
+        patch.object(
+            rs,
+            "_tech_overheat",
+            lambda: (
+                30 if (rsi and rsi > 80) else 15 if td_sell else 0,
+                ["过热" if (rsi and rsi > 80) or td_sell else ""],
+            ),
+        ),
+    ):
         return rs.risk_score()
 
 

@@ -79,9 +79,14 @@ def style_status() -> dict[str, Any]:
     else:
         style = "均衡"
         advice = "维持当前配置（无风格极端信号——低频验证）"
-    return {"style": style, "rate_trend": rate, "rs_12m": rs,
-            "advice": advice, "evidence": evidence,
-            "note": "季度频率——简单偏离轮动会卖飞（Q8 教训）——v0 参数待校准"}
+    return {
+        "style": style,
+        "rate_trend": rate,
+        "rs_12m": rs,
+        "advice": advice,
+        "evidence": evidence,
+        "note": "季度频率——简单偏离轮动会卖飞（Q8 教训）——v0 参数待校准",
+    }
 
 
 def main():

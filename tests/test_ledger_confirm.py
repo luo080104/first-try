@@ -16,8 +16,14 @@ sl.LEDGER_FILE = os.path.join(TMP, "ledger.jsonl")
 
 
 def test_record_event():
-    ev = sl.record("600036", name="招商银行", sig_type="score_pass",
-                   price=38.46, reason="Q12 达标", track="base")
+    ev = sl.record(
+        "600036",
+        name="招商银行",
+        sig_type="score_pass",
+        price=38.46,
+        reason="Q12 达标",
+        track="base",
+    )
     assert ev["type"] == "score_pass" and ev["code"] == "600036"
     assert ev["direction"] == "buy" and ev["track"] == "base"
     assert ev["verify_at"] > "2026-01-01"  # 3 个月验证窗
@@ -33,8 +39,9 @@ def test_record_unknown_type():
 
 def test_backfill_and_report():
     for code, px in [("600036", 40.0), ("600519", 1300.0)]:
-        sl.record(code, sig_type="score_pass", price=px, reason="t",
-                  verify_at="2020-01-01")  # 强制到期（verify_at 覆盖）
+        sl.record(
+            code, sig_type="score_pass", price=px, reason="t", verify_at="2020-01-01"
+        )  # 强制到期（verify_at 覆盖）
     # 用 provider mock 回填已到期行
     # 手动构造：直接改文件太麻烦——用 provider mock 回填已到期行
     sl.backfill(quotes_provider=lambda code: 42.0 if code == "600036" else 1200.0)
@@ -48,8 +55,14 @@ def test_backfill_and_report():
 
 def test_append_pending_and_dedup():
     cf.PENDING_FILE = os.path.join(TMP, "pending.json")
-    sig = {"code": "600036", "name": "招商银行", "price": 38.46,
-           "score": 94.5, "threshold": 80, "track": "base"}
+    sig = {
+        "code": "600036",
+        "name": "招商银行",
+        "price": 38.46,
+        "score": 94.5,
+        "threshold": 80,
+        "track": "base",
+    }
     ok, _ = cf.append_pending(sig, total_assets=100000)
     assert ok
     items = cf.list_pending()
@@ -61,8 +74,14 @@ def test_append_pending_and_dedup():
 
 def test_execute_calls_portfolio():
     cf.PENDING_FILE = os.path.join(TMP, "pending2.json")
-    sig = {"code": "600036", "name": "招商银行", "price": 38.46,
-           "score": 94.5, "threshold": 80, "track": "base"}
+    sig = {
+        "code": "600036",
+        "name": "招商银行",
+        "price": 38.46,
+        "score": 94.5,
+        "threshold": 80,
+        "track": "base",
+    }
     cf.append_pending(sig, total_assets=100000)
     item = cf.list_pending()[0]
     with patch("tools.strategy_engine.portfolio.Portfolio") as mock_pf:

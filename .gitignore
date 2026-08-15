@@ -18,3 +18,4 @@ data/tb_profile_h/
 data/tb_test_mobile/
 data/tb_profile/
 data/*.log
+.env.bak*

@@ -9,8 +9,10 @@ from tools.strategy_engine import style_thermometer as st  # pyright: ignore
 
 
 def _status(rate, rs):
-    with patch.object(st, "_rate_trend", lambda: rate), \
-            patch.object(st, "_rs_momentum", lambda: rs):
+    with (
+        patch.object(st, "_rate_trend", lambda: rate),
+        patch.object(st, "_rs_momentum", lambda: rs),
+    ):
         return st.style_status()
 
 

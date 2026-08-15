@@ -47,13 +47,15 @@ def _save_history(h):
 def _score_position(code, quote):
     """单只持仓重打分（复用 core_loop 组装——价值/估值/技术/票源）"""
     from tools.strategy_engine import fundamentals as fd
-    v = cl._valuation_input(code, quote)
+
+    v = cl.valuation_input(code, quote)
     m = ms.market_status()
     if m.get("fair_pe_rate_calibrated"):
         v["fair_pe"] = m["fair_pe_rate_calibrated"]
-    t = cl._technical_signals(code)
-    f = fd.get_fundamentals(code, quote.get("price") or 0,
-                            debt_exempt=code in cl._FINANCIAL_EXEMPT)
+    t = cl.technical_signals(code)
+    f = fd.get_fundamentals(
+        code, quote.get("price") or 0, debt_exempt=code in cl._FINANCIAL_EXEMPT
+    )
     s = {"is_leader": True, "bigv_holding": False}
     return ss.score_stock(f, v, t, s, quote=quote, market_status=m["status"])
 
@@ -81,16 +83,22 @@ def review_positions() -> list[dict]:
         else:
             observe = 0
         rec = {
-            "code": code, "name": q.get("name", ""),
-            "score": score.total, "prev_score": prev_score,
-            "threshold": threshold, "market": status,
-            "dropped": dropped, "below": below,
+            "code": code,
+            "name": q.get("name", ""),
+            "score": score.total,
+            "prev_score": prev_score,
+            "threshold": threshold,
+            "market": status,
+            "dropped": dropped,
+            "below": below,
             "observe_streak": observe,
             "suggest_exit": observe >= 2,  # 连续两季观察 → 换仓建议（甲方确认）
         }
-        hist[code] = {"score": score.total,
-                      "observe_streak": observe,
-                      "reviewed_at": datetime.now().strftime("%Y-%m-%d")}
+        hist[code] = {
+            "score": score.total,
+            "observe_streak": observe,
+            "reviewed_at": datetime.now().strftime("%Y-%m-%d"),
+        }
         results.append(rec)
     _save_history(hist)
     return results
@@ -98,8 +106,10 @@ def review_positions() -> list[dict]:
 
 def main():
     results = review_positions()
-    print(f"📋 持仓季度体检 {datetime.now().strftime('%Y-%m-%d')}（门槛 "
-          f"{results[0]['threshold'] if results else '—'}——{results[0]['market'] if results else ''}）")
+    print(
+        f"📋 持仓季度体检 {datetime.now().strftime('%Y-%m-%d')}（门槛 "
+        f"{results[0]['threshold'] if results else '—'}——{results[0]['market'] if results else ''}）"
+    )
     print("=" * 30)
     for r in results:
         delta = ""

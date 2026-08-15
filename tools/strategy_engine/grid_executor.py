@@ -17,10 +17,10 @@ from datetime import datetime
 from tools.strategy_engine import data
 from tools.strategy_engine import portfolio as pf
 
-GRID_STEPS = (0.03, 0.06, 0.10)   # Q13：跌 3/6/10%
-GRID_MIN_INTERVAL_DAYS = 28       # Q13：两批间隔 ≥4 周
+GRID_STEPS = (0.03, 0.06, 0.10)  # Q13：跌 3/6/10%
+GRID_MIN_INTERVAL_DAYS = 28  # Q13：两批间隔 ≥4 周
 GRID_STATE_FILE = os.path.join(pf.DATA_DIR, "grid_state.json")
-GRID_ADD_PCT = 0.05               # v0：每批加仓 = 组合 5% 仓位（Q11 待校准）
+GRID_ADD_PCT = 0.05  # v0：每批加仓 = 组合 5% 仓位（Q11 待校准）
 
 
 def _load_state():
@@ -71,16 +71,22 @@ def check_grid(code, price, total_assets=pf.INIT_CASH):
             continue
         if price <= base * (1 - step):
             shares = int(total_assets * GRID_ADD_PCT / price // 100 * 100) or 100
-            return {"code": code, "grid": i, "step_pct": step * 100,
-                    "target_price": round(base * (1 - step), 2),
-                    "price": price, "shares": shares,
-                    "reason": f"网格第{i}批（跌{step*100:.0f}%——左侧加仓）"}
+            return {
+                "code": code,
+                "grid": i,
+                "step_pct": step * 100,
+                "target_price": round(base * (1 - step), 2),
+                "price": price,
+                "shares": shares,
+                "reason": f"网格第{i}批（跌{step * 100:.0f}%——左侧加仓）",
+            }
     return None
 
 
 def run_check(quotes=None):
     """对所有持仓跑网格检查——触发→入待确认队列（半自动）"""
     from tools.strategy_engine import confirm as cf
+
     p = pf.Portfolio()
     items = []
     for code in p.data["holdings"]:
@@ -98,8 +104,13 @@ def run_check(quotes=None):
         hit = check_grid(code, px)
         if hit:
             items.append(hit)
-            cf.append_pending({**hit, "name": p.data["holdings"][code].get("name", ""),
-                               "track": "swing"})  # 网格加仓归波段仓（Q16）
+            cf.append_pending(
+                {
+                    **hit,
+                    "name": p.data["holdings"][code].get("name", ""),
+                    "track": "swing",
+                }
+            )  # 网格加仓归波段仓（Q16）
     return items
 
 
@@ -118,7 +129,9 @@ def main():
     if hits:
         print(f"网格触发 {len(hits)} 个（已入待确认队列——跑 confirm 确认）:")
         for h in hits:
-            print(f"  {h['code']} 第{h['grid']}批 {h['shares']}股 @ {h['price']}（跌{h['step_pct']:.0f}%）")
+            print(
+                f"  {h['code']} 第{h['grid']}批 {h['shares']}股 @ {h['price']}（跌{h['step_pct']:.0f}%）"
+            )
     else:
         print("无网格触发（价格未到位或间隔不足 4 周）")
 

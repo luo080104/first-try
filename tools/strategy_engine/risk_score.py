@@ -23,9 +23,9 @@ from tools.strategy_engine import data
 from tools.strategy_engine import indicators as ind
 from tools.strategy_engine import market_status as ms
 
-REVIEW_POINT = "2027-01-01"   # Q9：重估点（不是判决日）
-TRIGGER = 70                  # Q9：阈值——触发 Q5 现金纪律
-TIME_FACTOR_MONTHS = 24       # v0：24 个月内线性逼近重估点
+REVIEW_POINT = "2027-01-01"  # Q9：重估点（不是判决日）
+TRIGGER = 70  # Q9：阈值——触发 Q5 现金纪律
+TIME_FACTOR_MONTHS = 24  # v0：24 个月内线性逼近重估点
 
 
 def _months_to_review() -> float:
@@ -64,29 +64,36 @@ def risk_score() -> dict[str, Any]:
     """风险计分（周度——Q9）"""
     m = ms.market_status()
     pe_pct = m.get("pe_percentile_approx", 50.0)
-    val = round(pe_pct / 100 * 40, 1)          # 估值 0-40
-    tech, tnotes = _tech_overheat()            # 技术 0-30
+    val = round(pe_pct / 100 * 40, 1)  # 估值 0-40
+    tech, tnotes = _tech_overheat()  # 技术 0-30
     months = _months_to_review()
     time_f = round(max(0.0, 30 * (1 - months / TIME_FACTOR_MONTHS)), 1)  # 时间 0-30
     total = round(val + tech + time_f)
     level = "低" if total < 40 else ("中" if total < TRIGGER else "高")
     return {
-        "score": total, "level": level,
-        "val_part": val, "tech_part": tech, "time_part": time_f,
+        "score": total,
+        "level": level,
+        "val_part": val,
+        "tech_part": tech,
+        "time_part": time_f,
         "months_to_review": round(months, 1),
         "tech_notes": tnotes,
         "triggered": total >= TRIGGER,
-        "advice": ("⚠️ 高风险——触发 Q5 现金纪律：现金 40%+（高潮防守——等极端信号）"
-                   if total >= TRIGGER else
-                   "现金纪律维持正常（低-中风险——季度复核）"),
+        "advice": (
+            "⚠️ 高风险——触发 Q5 现金纪律：现金 40%+（高潮防守——等极端信号）"
+            if total >= TRIGGER
+            else "现金纪律维持正常（低-中风险——季度复核）"
+        ),
         "note": f"重估点 {REVIEW_POINT}（不是判决日）——届时用估值/涨幅数据判定——v0 参数待校准",
     }
 
 
 def main():
     r = risk_score()
-    print(f"风险计分: {r['score']}/100（{r['level']}风险——估值 {r['val_part']}"
-          f" + 技术 {r['tech_part']} + 时间 {r['time_part']}）")
+    print(
+        f"风险计分: {r['score']}/100（{r['level']}风险——估值 {r['val_part']}"
+        f" + 技术 {r['tech_part']} + 时间 {r['time_part']}）"
+    )
     for n in r["tech_notes"]:
         print("  -", n)
     print(f"距重估点: {r['months_to_review']} 个月（{REVIEW_POINT}）")
