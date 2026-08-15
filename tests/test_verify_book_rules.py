@@ -31,14 +31,14 @@ def test_bullaware_holds_in_uptrend():
     sell = _bullaware()
     b = ind.bollinger(closes, 20, 2)
     assert closes[-1] > b["upper"], f"前提：触上轨（{closes[-1]} vs {b['upper']:.1f}）"
-    assert sell(closes) is False  # MA 上升——不卖
+    assert sell(closes) == False  # MA 上升——不卖
 
 
 def test_bullaware_not_touch_no_sell():
     """未触上轨 → 不卖（无信号）"""
     closes = [10.0 + i * 0.01 for i in range(40)]  # 温和上升——不触轨
     sell = _bullaware()
-    assert sell(closes) is False
+    assert sell(closes) == False
 
 
 def test_bullaware_callable_bear():
