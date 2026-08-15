@@ -124,5 +124,88 @@ def build_report() -> str:
     return "\n".join(lines)
 
 
+def _equity_curve_png() -> str | None:
+    """净值曲线图 → base64 data URL（2026-08-15——周报图——Server酱 pics 内嵌）
+
+    matplotlib Agg 无头渲染——失败返回 None（文本周报降级——红线③容错）
+    """
+    try:
+        import base64
+        import io
+
+        import matplotlib
+
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        # 中文字体（Windows 微软雅黑——matplotlib 默认 DejaVu 无 CJK 字形）
+        plt.rcParams["font.sans-serif"] = [
+            "Microsoft YaHei",
+            "SimHei",
+            "DejaVu Sans",
+        ]
+        plt.rcParams["axes.unicode_minus"] = False
+
+        curve = pf.Portfolio().equity_series()
+        if len(curve) < 2:
+            return None
+        dates = [c["date"] for c in curve]
+        totals = [c["total"] for c in curve]
+        # 沪深300 对比（同窗口——baostock 周线）
+        bench: list[float] = []
+        try:
+            from tools.strategy_engine import data as d
+
+            bw = d.bs_kline_weekly("000300", 10)
+            bd = {w["date"][:10]: w["close"] for w in bw}
+            init_b = None
+            for dt in dates:
+                if dt in bd:
+                    if init_b is None:
+                        init_b = bd[dt]
+                    if init_b:
+                        bench.append(round((bd[dt] / init_b - 1) * 100, 2))
+        except Exception:
+            pass  # 基准失败——只有净值线
+        fig, ax = plt.subplots(figsize=(7, 3.5))
+        init = totals[0] or 1
+        norm = [(t / init - 1) * 100 for t in totals]
+        ax.plot(dates, norm, label="观复组合", color="#2563eb", linewidth=2)
+        if len(bench) == len(norm):
+            ax.plot(dates, bench, label="沪深300", color="#d97706", linewidth=1.5, alpha=0.8)
+        ax.axhline(0, color="#999", linewidth=0.8, linestyle="--")
+        ax.set_title("观复虚拟盘净值（相对初始 %）")
+        ax.legend(fontsize=9)
+        ax.tick_params(axis="x", rotation=30, labelsize=8)
+        ax.grid(True, alpha=0.3)
+        fig.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=100)
+        plt.close(fig)
+        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        return None
+
+
+def push_weekly_with_chart() -> bool:
+    """周报推送（含净值图——Server酱 pics 内嵌——2026-08-15）
+
+    无图（净值点不足/渲染失败）→ 纯文本周报降级
+    """
+    from tools.strategy_engine import notify_gf as ng
+
+    if ng.push_wechat is None:
+        return False
+    text = build_report()
+    pic = _equity_curve_png()
+    return ng.push_with_pic(f"📊 观复周报（含净值图）\n\n{text}", pic)
+
+
 if __name__ == "__main__":
-    print(build_report())
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "--push":
+        ok = push_weekly_with_chart()
+        print(f"周报推送（含图）: {'✅' if ok else '❌'}")
+    else:
+        print(build_report())

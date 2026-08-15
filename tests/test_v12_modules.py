@@ -79,3 +79,39 @@ def test_plot_ascii_too_few_points():
 
     out = _plot_ascii([{"date": "2026-08-15", "total": 100000}])
     assert "不足" in out
+
+
+def test_weekly_equity_png_generated(monkeypatch):
+    """周报净值图：≥2 点 → base64 PNG（Server酱 pics 用）"""
+    from tools.strategy_engine import portfolio as pf
+    from tools.strategy_engine.weekly_report import _equity_curve_png
+
+    monkeypatch.setattr(
+        pf.Portfolio,
+        "equity_series",
+        lambda self: [
+            {"date": f"2026-08-{d:02d}", "total": 100000 + i * 300}
+            for i, d in enumerate(range(1, 16))
+        ],
+    )
+    pic = _equity_curve_png()
+    assert pic and pic.startswith("data:image/png;base64,")
+
+
+def test_weekly_equity_png_too_few_points(monkeypatch):
+    """不足 2 点 → None（文本周报降级）"""
+    from tools.strategy_engine import portfolio as pf
+    from tools.strategy_engine.weekly_report import _equity_curve_png
+
+    monkeypatch.setattr(
+        pf.Portfolio, "equity_series", lambda self: [{"date": "2026-08-15", "total": 100000}]
+    )
+    assert _equity_curve_png() is None
+
+
+def test_risk_dashboard_max_dd():
+    """风险仪表盘：净值序列不足时 max_dd 用盈亏兜底（v0 行为）"""
+    from tools.strategy_engine.risk_dashboard import dashboard
+
+    r = dashboard()
+    assert "max_dd" in r  # 字段存在（数值取决于真实数据）

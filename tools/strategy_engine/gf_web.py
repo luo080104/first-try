@@ -156,6 +156,7 @@ def watch_del(code: str = Query(...), d: str = Query("below")):
 @app.get("/history", response_class=HTMLResponse)
 def history():
     rows = ""
+    buys = sells = 0
     try:
         with open(pf.EVENTS_FILE, encoding="utf-8") as f:
             for line in f:
@@ -166,14 +167,44 @@ def history():
                     e = json.loads(line)
                 except ValueError:
                     continue
+                act = e.get("action", "")
+                if act == "buy":
+                    buys += 1
+                elif act == "sell":
+                    sells += 1
                 rows += (
-                    f"<tr><td>{e.get('ts', '')[:16]}</td><td>{e.get('action', '')}</td>"
+                    f"<tr><td>{e.get('ts', '')[:16]}</td><td>{act}</td>"
                     f"<td>{e.get('name', '')}</td><td>{e.get('shares', '')}</td>"
-                    f"<td>{e.get('price', '')}</td></tr>"
+                    f"<td>{e.get('price', '')}</td>"
+                    f"<td>{e.get('reason', '')[:30]}</td></tr>"
                 )
     except OSError:
         pass
-    content = f"<h2>事件历史</h2><div class='card'><table><tr><th>时间</th><th>操作</th><th>名称</th><th>数量</th><th>价格</th></tr>{rows}</table></div>"
+    # 净值曲线（复用总览逻辑）
+    curve = pf.Portfolio().equity_series()
+    chart = ""
+    if len(curve) >= 2:
+        dates = [c["date"] for c in curve]
+        totals = [c["total"] for c in curve]
+        chart = f"""
+<div class='card'><b>📈 净值曲线（{len(curve)} 点）</b>
+<div id='eqh' style='height:200px'></div></div>
+<script src='https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js'></script>
+<script>
+const c2 = echarts.init(document.getElementById('eqh'));
+c2.setOption({{
+  grid: {{left: 60, right: 16, top: 16, bottom: 24}},
+  xAxis: {{type: 'category', data: {dates}}},
+  yAxis: {{type: 'value', scale: true}},
+  series: [{{type: 'line', data: {totals}, smooth: true, areaStyle: {{}}}}]
+}});
+</script>"""
+    content = f"""
+<h2>事件历史</h2>
+<div class='card'>累计 {buys} 买 / {sells} 卖（{len(curve)} 个净值点）</div>
+{chart}
+<div class='card'><table><tr><th>时间</th><th>操作</th><th>名称</th><th>数量</th><th>价格</th><th>原因</th></tr>{rows}</table></div>
+"""
     return _PAGE.format(content=content)
 
 

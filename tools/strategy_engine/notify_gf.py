@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 import os
 import sys
 
@@ -88,6 +89,69 @@ def push_brief() -> bool:
     if ok:
         _bump_count()
     return ok
+
+
+def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
+    """推送（带图片——Server酱 pics 参数——2026-08-15 周报图用）
+
+    pic_data_url: data:image/png;base64,...——None 时降级纯文本
+    Server酱³ 实测支持 pics=base64（2026-08-15 验证 code=0）——无需图床
+    """
+    if push_wechat is None:
+        return False
+    if not pic_data_url:
+        # 无图 → 普通文本推送
+        if not _throttled("图文"):
+            return False
+        ok = push_wechat(text)
+        if ok:
+            _bump_count()
+        return ok
+    if not _throttled("图文"):
+        return False
+    try:
+        import urllib.parse
+        import urllib.request
+
+        env = {}
+        _env_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "..", ".env"
+        )
+        try:
+            for _line in open(_env_path, encoding="utf-8"):
+                _line = _line.strip()
+                if "=" in _line and not _line.startswith("#"):
+                    k, v = _line.split("=", 1)
+                    env[k.strip()] = v.strip()
+        except OSError:
+            pass
+        sendkey = os.environ.get("SERVERCHAN_SENDKEY", "") or env.get(
+            "SERVERCHAN_SENDKEY", ""
+        )
+        if not sendkey:
+            # 无 Server酱 → 纯文本降级
+            ok = push_wechat(text)
+            if ok:
+                _bump_count()
+            return ok
+        body = urllib.parse.urlencode(
+            {"title": "📊 观复周报", "desp": text, "pics": pic_data_url}
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            f"https://sctapi.ftqq.com/{sendkey}.send", data=body
+        )
+        resp = json.loads(
+            urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
+        )
+        ok = resp.get("code") == 0
+        if ok:
+            _bump_count()
+        else:
+            print(f"[notify_gf] Server酱图文失败: {resp.get('message', resp)}")
+        return ok
+    except Exception as e:
+        print(f"[notify_gf] 图文推送异常: {str(e)[:60]}")
+        return False
 
 
 def push_signal(signal_text: str) -> bool:

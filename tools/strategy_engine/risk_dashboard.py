@@ -56,9 +56,21 @@ def dashboard() -> dict[str, Any]:
             f"🟡 现金偏高：{cash_pct:.0f}% > {MAX_CASH_PCT * 100}%（闲置——找机会）"
         )
 
-    # ③ 回撤（v0：用盈亏代替——真实回撤需净值序列）
-    if pnl_pct < -MAX_DRAWDOWN_PCT:
-        alerts.append(f"🔴 回撤超线：{pnl_pct:.1f}% < -{MAX_DRAWDOWN_PCT}%（触发防守）")
+    # ③ 真实净值回撤（2026-08-15 升级：净值序列 → 最大回撤——替代盈亏近似）
+    max_dd = 0.0
+    curve = p.equity_series()
+    if len(curve) >= 2:
+        peak = 0.0
+        for c in curve:
+            t = c.get("total", 0) or 0
+            peak = max(peak, t)
+            if peak > 0:
+                max_dd = max(max_dd, (peak - t) / peak * 100)
+    if max_dd < 0.01 and pnl_pct < -MAX_DRAWDOWN_PCT:
+        # 净值序列不足时用盈亏兜底（v0 行为）
+        max_dd = abs(pnl_pct)
+    if max_dd > MAX_DRAWDOWN_PCT:
+        alerts.append(f"🔴 回撤超线：最大回撤 {max_dd:.1f}% > {MAX_DRAWDOWN_PCT}%（触发防守）")
 
     # ④ 持仓数（Q4：3-5 只）
     n = s.get("n_holdings", 0)
@@ -71,6 +83,7 @@ def dashboard() -> dict[str, Any]:
         "total": round(total, 0),
         "pnl": round(pnl, 0),
         "pnl_pct": round(pnl_pct, 1),
+        "max_dd": round(max_dd, 1),  # 真实净值最大回撤%（2026-08-15 升级）
         "cash_pct": round(cash_pct, 0),
         "holdings": n,
         "positions": [
