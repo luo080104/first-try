@@ -94,3 +94,16 @@ if __name__ == "__main__":
     test_high_market()
     test_evidence_explainable()
     print("✅ 大盘状态单测全过")
+
+
+def test_cash_guidance_map():
+    """Q5 现金纪律映射（研讨定案：低潮 0-20/正常 20-40/高潮 40+）"""
+    from tools.strategy_engine import market_status as ms
+    g = ms.cash_guidance("低潮")
+    assert g["cash_range"] == (0, 20)
+    g = ms.cash_guidance("正常")
+    assert g["cash_range"] == (20, 40)
+    g = ms.cash_guidance("高潮")
+    assert g["cash_range"] == (40, 100)
+    g = ms.cash_guidance("未知状态")
+    assert g["cash_range"] == (20, 40)  # 默认正常

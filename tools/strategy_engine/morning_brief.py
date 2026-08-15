@@ -28,8 +28,6 @@ LEADER_POOL = [
     "600030",
 ]
 
-# Q5 现金纪律：大盘状态 → 建议现金比例（书 M 系列 + Q5 定案表）
-CASH_MAP = {"低潮": 0.10, "正常": 0.45, "高潮": 0.75}
 
 
 def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
@@ -72,9 +70,11 @@ def build_brief() -> str:
         lines.append(f"  • {e}")
     if not m.get("evidence"):
         lines.append("  • 无极端信号（估值/技术均中性）")
-    cash = CASH_MAP.get(m["status"], 0.45)
+    g = m.get("cash_guidance", {})
+    lo, hi = g.get("cash_range", (0, 0))
+    hint = g.get("hint", "")
     lines.append(
-        f"Q5 现金纪律: 建议现金 {cash * 100:.0f}%（股票仓 {(1 - cash) * 100:.0f}%——低潮满仓/高潮防守）"
+        f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{hint}）"
     )
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")

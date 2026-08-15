@@ -37,6 +37,24 @@ def _rate_fair_pe() -> float | None:
         return None
 
 
+def cash_guidance(status: str) -> dict[str, Any]:
+    """Q5 现金纪律：现金比例 = f(大盘状态)——研讨定案（书的最大空白）
+
+    低潮 0-20% / 正常 20-40% / 高潮 40%+（v0 先验——Q11 待校准）
+    晨报直接给"建议现金比例"（Q5 定案原文）
+    注：与 5-10 万方案的组合现金 10-15%（portfolio Q5 检查）是两个维度——
+    此处是"状态→现金比例"映射——组合配置按方案 v1.1
+    """
+    m = {"低潮": (0, 20), "正常": (20, 40), "高潮": (40, 100)}
+    lo, hi = m.get(status, (20, 40))
+    center = (lo + hi) // 2
+    hint = {"低潮": "钱可以多入场——左侧网格/建仓窗口",
+            "正常": "维持标准仓位——现金留底",
+            "高潮": "现金为王——防守优先——等极端信号"}[status]
+    return {"status": status, "cash_range": (lo, hi),
+            "cash_pct": center, "hint": hint}
+
+
 def market_status() -> dict[str, Any]:
     """大盘状态（沪深300——书 M 系列判定指标）
 
@@ -98,6 +116,7 @@ def market_status() -> dict[str, Any]:
         "pe": pe,
         "fair_pe_rate_calibrated": fair_pe,  # Q1：利率隐含合理PE（ERP=3%——待校准）
         "pe_percentile_approx": pe_pct,
+        "cash_guidance": cash_guidance(status),  # Q5：现金比例=f(大盘状态)
         "evidence": evidence,
         "note": "M 系列判定：估值+周布林+周RSI(6)+周九转——MVP 为日K重采样近似——周/月级别精确化后续",
     }
@@ -110,5 +129,9 @@ if __name__ == "__main__":
         fp = s["fair_pe_rate_calibrated"]
         verdict = "便宜" if s["pe"] < fp else "偏贵"
         print(f"Q1 利率校准: 合理PE≈{fp}——当前{'便宜' if s['pe'] < fp else '偏贵'}")
+    g = s.get("cash_guidance", {})
+    if g:
+        lo, hi = g.get("cash_range", (0, 0))
+        print(f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{g.get('hint', '')}）")
     for e in s["evidence"]:
         print("  -", e)
