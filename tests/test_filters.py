@@ -171,3 +171,20 @@ if __name__ == "__main__":
     test_value_8_roe_fail()
     test_explainable_reasons()
     print("✅ 过滤器单测全过")
+
+
+def test_no_buy_n14_pump():
+    """荐股引流信号 ≥2 → N14 否决（UZI trap-detector 借鉴——杀猪盘）"""
+    q = _good_quote()
+    q["pump_keywords"] = True  # 必涨话术
+    q["paid_group"] = True  # 付费群引流
+    r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
+    assert any("N14" in b for b in r.blocked_by)
+
+
+def test_no_buy_n14_single_signal_ok():
+    """单个引流信号 → 不触发（避免误伤——需 ≥2 共振）"""
+    q = _good_quote()
+    q["pump_keywords"] = True
+    r = fl.filter_stock(_good_fundamentals(), _good_valuation(), q, _no_redlines())
+    assert not any("N14" in b for b in r.blocked_by)

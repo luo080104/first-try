@@ -79,3 +79,29 @@ def test_quality_summary_shape():
     s = dq.quality_summary(_normal_series(), last_date="2026-08-14")
     assert s["level"] in ("GOOD", "SUSPICIOUS", "ERROR")
     assert isinstance(s["issues"], list)
+
+
+def test_classify_missingness_none():
+    """无缺失 → 无缺失"""
+    assert dq.classify_missingness([False] * 20) == "无缺失"
+
+
+def test_classify_missingness_mnar_block():
+    """连续成块缺失（≥3）→ MNAR（系统性——重试无效）——东财封锁类"""
+    mask = [False] * 10 + [True] * 5 + [False] * 5
+    assert "MNAR" in dq.classify_missingness(mask)
+
+
+def test_classify_missingness_mar_correlated():
+    """与其他列共现（Jaccard>0.5）→ MAR"""
+    mask = [False, True, False, True, False, False, True, False, True, False, False, True]
+    other = [False, True, False, True, False, False, True, False, True, False, False, True]
+    assert "MAR" in dq.classify_missingness(mask, [other])
+
+
+def test_classify_missingness_mcar_random():
+    """孤立随机缺失 → MCAR（重试可能有效）"""
+    mask = [False] * 20
+    mask[3] = True
+    mask[9] = True
+    assert "MCAR" in dq.classify_missingness(mask)

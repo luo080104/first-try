@@ -123,6 +123,18 @@ def check_no_buy(q: dict[str, Any]) -> list[str]:
     # N13 大V 强推 + PE>30
     if q.get("pe_gt30_recommended", False) and pe > 30:
         blocked.append("N13 大V强推成长股且 PE>30（80% 顶）")
+    # N14 荐股引流/杀猪盘信号（2026-08-15 UZI trap-detector 借鉴——8 信号精简为 4 个可输入标记）
+    # 外部传入（讲解模式/大V 数据流）：pump_keywords(必涨/翻倍/稳赚话术),
+    #          paid_group(付费群/直播间引流), cross_platform(多平台联动), fake_report(虚假研报)
+    pump_hits = sum(
+        1
+        for k in ("pump_keywords", "paid_group", "cross_platform", "fake_report")
+        if q.get(k, False)
+    )
+    if pump_hits >= 2:
+        blocked.append(
+            f"N14 荐股引流信号 {pump_hits}/4（必涨话术/付费群/多平台/虚假研报——杀猪盘风险）"
+        )
     return blocked
 
 

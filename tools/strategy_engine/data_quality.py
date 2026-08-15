@@ -162,6 +162,49 @@ def quality_level(issues: list[dict[str, Any]]) -> str:
     return "GOOD"
 
 
+def classify_missingness(
+    mask: list[bool], other_masks: list[list[bool]] | None = None
+) -> str:
+    """缺失机制分类（2026-08-15 claude-skills data-quality-auditor 借鉴）
+
+    - MCAR（随机缺失）：null 与其他列/位置无相关性——重试有效
+    - MAR（条件缺失）：null 与其他列的缺失共现（Jaccard>0.5）——需观察关联列
+    - MNAR（系统性缺失）：null 连续成块（时间聚类）——重试无效（接口封锁类）
+
+    用途：诊断"重试无效"类问题（东财 push2 封锁=MNAR——重试 3 次无效是必然）
+    mask: 布尔列表（True=缺失）——other_masks: 其他序列的缺失掩码（可选）
+    """
+    null_idx = {i for i, v in enumerate(mask) if v}
+    if not null_idx:
+        return "无缺失"
+    if len(mask) < 10:
+        return "样本不足"
+    # ① 与其他列缺失共现（Jaccard>0.5 → MAR）
+    if other_masks:
+        for om in other_masks:
+            other_null = {i for i, v in enumerate(om) if v}
+            if not other_null:
+                continue
+            inter = len(null_idx & other_null)
+            union = len(null_idx | other_null)
+            if union and inter / union > 0.5:
+                return "MAR（缺失与其他列共现）"
+    # ② 缺失聚类（时间连续成块 → MNAR——系统性）
+    sorted_idx = sorted(null_idx)
+    if len(sorted_idx) > 2:
+        max_run = 1
+        cur = 1
+        for i in range(1, len(sorted_idx)):
+            if sorted_idx[i] - sorted_idx[i - 1] == 1:
+                cur += 1
+                max_run = max(max_run, cur)
+            else:
+                cur = 1
+        if max_run >= 3:
+            return "MNAR（系统性缺失——连续成块——重试无效）"
+    return "MCAR（随机缺失——重试可能有效）"
+
+
 def quality_summary(
     prices: list[float], dates: list[str] | None = None, last_date: str | None = None
 ) -> dict[str, Any]:
