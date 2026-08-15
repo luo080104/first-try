@@ -166,22 +166,81 @@ def run_backtest(
     return out
 
 
+def _limit_blocked(weeks, i: int, is_buy: bool) -> bool:
+    """涨跌停不可成交检查（第五批精读落地——QUANTAXIS market_preset 借鉴）
+
+    A 股主板 ±10%（创业板/科创板 20%——二期细化）：
+    - 买单：开盘价 ≥ 前收盘×1.1 → 涨停封板买不进
+    - 卖单：开盘价 ≤ 前收盘×0.9 → 跌停封板卖不出
+    用前一周收盘价近似前收盘（周线粒度——v0 简化——Q11 校准）
+    """
+    if i < 1 or i >= len(weeks):
+        return False
+    prev_close = weeks[i - 1].get("close") or 0
+    opx = weeks[i].get("open") or 0
+    if prev_close <= 0 or opx <= 0:
+        return False
+    if is_buy:
+        return opx >= prev_close * 1.10  # 涨停买不进
+    return opx <= prev_close * 0.90  # 跌停卖不出
+
+
 def _simulate(weeks, opens, events) -> dict[str, Any]:
-    """按买卖事件模拟（T+1 开盘成交——含成本）——返回交易统计"""
+    """按买卖事件模拟（T+1 开盘成交——含成本）——返回交易统计
+
+    涨跌停：触板订单不成交（真实市场——_limit_blocked）——事件顺延到下一交易日重试
+    """
     trades: list[dict] = []
     pos = None  # {"entry_i": i, "entry_px": p}
     buys = [e for e in events if e["type"] == "buy"]
     sells = [e for e in events if e["type"] == "sell"]
     b_idx, s_idx = 0, 0
+    # 涨跌停顺延上限（防周期保护到期+跌停=永远等——Q11 校准）
+    MAX_LIMIT_RETRY = 8  # 连续触板最多顺延 8 周
+    # 信号有效期（Q6 信号失效条件——触发后 N 周内未成交则失效——2026-08-15 修复：
+    # 原 `==` 严格匹配在持仓期间丢失全部信号——`<=` 顺延又捡回过期信号——折中：限时有效）
+    SIGNAL_VALID_WEEKS = 4  # v0 先验——Q11 校准
+    buy_retry = 0
+    sell_retry = 0
     for i in range(30, len(weeks)):
-        if pos is None and b_idx < len(buys) and buys[b_idx]["i"] == i:
+        if pos is None and b_idx < len(buys):
+            b_sig = buys[b_idx]
+            if b_sig["i"] > i:
+                continue  # 信号在未来（未触发）——等（修复 2026-08-15：原逻辑提前成交）
+            # 信号超期失效（触发 4 周后仍无法成交——放弃该信号——Q6）
+            if i - b_sig["i"] > SIGNAL_VALID_WEEKS:
+                b_idx += 1
+                buy_retry = 0
+                continue
+            # 买单：涨停封板买不进——顺延（限期内重试）
+            if _limit_blocked(weeks, i, is_buy=True) and buy_retry < MAX_LIMIT_RETRY:
+                buy_retry += 1
+                continue
+            buy_retry = 0
             px = opens[i] * (1 + COMMISSION)
             pos = {"entry_i": i, "entry_px": px}
             b_idx += 1
+            # 事件配对：跳过所有早于建仓周的 SELL 信号（卖出只对之后建立的持仓有效——
+            # 修复 2026-08-15：s_idx 从 0 开始导致老卖点挡住新卖点→周期保护主导）
+            while s_idx < len(sells) and sells[s_idx]["i"] <= i:
+                s_idx += 1
+            sell_retry = 0
         elif pos is not None:
-            exit_sig = s_idx < len(sells) and sells[s_idx]["i"] == i
+            # 卖点超期（持仓中信号触发超 4 周未成交）→ 跳过（Q6——限时有效）
+            while (
+                s_idx < len(sells)
+                and sells[s_idx]["i"] <= i
+                and i - sells[s_idx]["i"] > SIGNAL_VALID_WEEKS
+            ):
+                s_idx += 1
+            exit_sig = s_idx < len(sells) and sells[s_idx]["i"] <= i
             over_hold = i - pos["entry_i"] >= MAX_HOLD_WEEKS
             if exit_sig or over_hold:
+                # 卖单：跌停封板卖不出——顺延（周期保护到期也等能卖再卖——Q11 校准）
+                if _limit_blocked(weeks, i, is_buy=False) and sell_retry < MAX_LIMIT_RETRY:
+                    sell_retry += 1
+                    continue
+                sell_retry = 0
                 px = opens[i] * (1 - COMMISSION - STAMP_TAX)
                 ret = (px - pos["entry_px"]) / pos["entry_px"] * 100
                 trades.append(
