@@ -117,3 +117,34 @@ def test_risk_dashboard_max_dd():
 
     r = dashboard()
     assert "max_dd" in r  # 字段存在（数值取决于真实数据）
+
+
+def test_data_source_status_flow_blocked(monkeypatch):
+    """资金流双源失败 → 数据缺口显式标注（UZI data_gap——不静默）"""
+    from tools.strategy_engine import morning_brief as mb
+
+    monkeypatch.setattr(
+        "tools.strategy_engine.fund_flow.main_force_flow", lambda code: {}
+    )
+    monkeypatch.setattr(
+        "tools.strategy_engine.data.valuation_percentile",
+        lambda code: {"pe_percentile": 30.0, "pb_percentile": 30.0},
+    )
+    notes = mb._data_source_status()
+    assert any("双源均不可用" in n for n in notes)
+
+
+def test_data_source_status_ths_fallback(monkeypatch):
+    """东财封锁 → 同花顺降级标注（不静默）"""
+    from tools.strategy_engine import morning_brief as mb
+
+    monkeypatch.setattr(
+        "tools.strategy_engine.fund_flow.main_force_flow",
+        lambda code: {"verdict": "主力今日净流入 1.2 亿（同花顺源）"},
+    )
+    monkeypatch.setattr(
+        "tools.strategy_engine.data.valuation_percentile",
+        lambda code: {"pe_percentile": 30.0, "pb_percentile": 30.0},
+    )
+    notes = mb._data_source_status()
+    assert any("降级同花顺" in n for n in notes)

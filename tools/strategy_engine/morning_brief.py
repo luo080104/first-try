@@ -53,6 +53,35 @@ def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
     return candidates[:top_n]
 
 
+def _data_source_status() -> list[str]:
+    """数据源健康探测（2026-08-15 UZI data_gap_acknowledged 落地——
+    数据缺口显式承认——不静默降级）
+
+    探测：fund_flow 双源（东财/同花顺）+ 估值源（baostock）——
+    失败标注为数据缺口（讲解模式/晨报告知用户——而非悄悄缺失）
+    """
+    notes: list[str] = []
+    # ① 主力资金流（东财主源 → 同花顺 fallback——2026-08-15 加）
+    try:
+        from tools.strategy_engine import fund_flow as ff
+
+        f = ff.main_force_flow(LEADER_POOL[0])  # 用茅台探测
+        if not f:
+            notes.append("⚠️ 主力资金流：双源均不可用（东财封锁+同花顺失败）")
+        elif "同花顺源" in f.get("verdict", ""):
+            notes.append("ℹ️ 主力资金流：东财封锁——已降级同花顺（当日快照）")
+    except Exception:
+        notes.append("⚠️ 主力资金流：探测失败")
+    # ② 估值历史源（baostock——估值百分位依赖）
+    try:
+        p = data.valuation_percentile(LEADER_POOL[0])
+        if p.get("pe_percentile", 50.0) == 50.0:
+            notes.append("⚠️ 估值百分位：数据不足或源异常（返回中性 50%）")
+    except Exception:
+        notes.append("⚠️ 估值百分位：探测失败")
+    return notes or ["✅ 数据源正常"]
+
+
 def build_brief() -> str:
     """组装晨报文本（大盘+利率校准+现金纪律+估值候选+讲解）"""
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
@@ -84,6 +113,8 @@ def build_brief() -> str:
         lines.append(f"\n【虚拟盘进度】{gate.get('reason', '')}")
     except Exception:
         pass  # 判定失败不阻塞晨报（红线③容错）
+    # 数据源健康（2026-08-15 UZI data_gap 落地——缺口显式承认——不静默）
+    lines.append("\n【数据源】" + "；".join(_data_source_status()))
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
