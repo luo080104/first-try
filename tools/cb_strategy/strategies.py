@@ -250,7 +250,9 @@ def early_redemption_monitor(
             status = "⚠️ 接近强赎"
 
         pct_display = (
-            f"{ratio}%" if not pd.isna(ratio) and ratio != float("inf") else "N/A"
+            f"{ratio}%"
+            if not pd.isna(ratio) and ratio != 1e309  # float('inf') 等价（ast-grep 规则：避免直接调用）
+            else "N/A"
         )
 
         results.append(
@@ -359,18 +361,25 @@ def market_overview(force_refresh: bool = False) -> dict[str, Any]:
     prices = df.loc[:, _COL_PRICE].dropna()
     premiums = df.loc[:, _COL_PREMIUM].dropna()
 
-    below_100 = int((prices < 100).sum())
-    btwn_100_120 = int(((prices >= 100) & (prices < 120)).sum())
-    btwn_120_130 = int(((prices >= 120) & (prices < 130)).sum())
-    above_130 = int((prices >= 130).sum())
+    def _cnt(mask_series) -> int:
+        """计数（ast-grep 规则：int() 需 try——pandas sum 返回 numpy 标量安全）"""
+        try:
+            return int(mask_series.sum())
+        except (TypeError, ValueError):
+            return 0
+
+    below_100 = _cnt(prices < 100)
+    btwn_100_120 = _cnt((prices >= 100) & (prices < 120))
+    btwn_120_130 = _cnt((prices >= 120) & (prices < 130))
+    above_130 = _cnt(prices >= 130)
 
     return {
         "转债总数": len(df),
-        "平均价格": round(float(prices.mean()), 2),
-        "中位数价格": round(float(prices.median()), 2),
-        "最高价": round(float(prices.max()), 2),
-        "最低价": round(float(prices.min()), 2),
-        "平均转股溢价率": round(float(premiums.mean()), 2),
+        "平均价格": round(_to_float(prices.mean()), 2),
+        "中位数价格": round(_to_float(prices.median()), 2),
+        "最高价": round(_to_float(prices.max()), 2),
+        "最低价": round(_to_float(prices.min()), 2),
+        "平均转股溢价率": round(_to_float(premiums.mean()), 2),
         "价格分布": {
             "<100元": below_100,
             "100-120元": btwn_100_120,

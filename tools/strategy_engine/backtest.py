@@ -136,20 +136,33 @@ def run_backtest(
     sell_fn: Callable[[list[float]], bool],
     split_date: str = SPLIT_DATE,
 ) -> dict[str, Any]:
-    """事件循环回测：信号（T 收盘）→ T+1 开盘成交——分段统计"""
+    """事件循环回测：信号（T 收盘）→ T+1 开盘成交——分段统计
+
+    附带 coverage：市场状态覆盖度（regime_coverage——第二批精读落地）——
+    交易在单一状态的集中度警告（书"过去有效不代表未来"的量化版）
+    """
     closes = [w["close"] for w in weeks]
     opens = [w["open"] for w in weeks]
     segments = {"训练": [], "验证": []}
+    buy_indices: list[int] = []
     for i in range(30, len(weeks)):
         seg = "训练" if weeks[i]["date"][:10] < split_date else "验证"
         hist = closes[max(0, i - 250) : i]  # 防未来：只用 T 日及之前
         if buy_fn(hist):
             segments[seg].append({"i": i, "type": "buy"})
+            buy_indices.append(i)
         if sell_fn(hist):
             segments[seg].append({"i": i, "type": "sell"})
     out = {}
     for seg, events in segments.items():
         out[seg] = _simulate(weeks, opens, events)
+    # 覆盖度（交易位置 = 买入索引——检查是否集中单一波动状态）
+    try:
+        from tools.strategy_engine import regime_coverage as rc
+
+        out["coverage"] = rc.coverage_report(closes, trade_indices=buy_indices)
+    except Exception:
+        out["coverage"] = {"n_regimes": 0, "warning": "覆盖度检测失败（不阻塞）"}
     return out
 
 
@@ -333,11 +346,23 @@ def main():
     sell = lambda hist: sg.s2_weekly_upper_exit(hist)["signal"]
     res = run_backtest(weeks, buy, sell)
     for seg, m in res.items():
+        if seg == "coverage":
+            continue  # 覆盖度单独打印（非交易段）
         print(
             f"\n【{seg}段】{SPLIT_DATE} 分界——交易 {m['trades']} 笔 | "
             f"胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}% | "
             f"累计 {m['total_ret']}% | 最大回撤 {m['max_dd']}% | 卡玛 {m['calmar']}"
         )
+    cov = res.get("coverage")
+    if cov:
+        print(
+            f"\n【市场覆盖度】{cov['n_regimes']} 个波动状态"
+            + (f"——交易分布 {cov.get('trade_dist')}" if cov.get("trade_dist") else "")
+        )
+        if cov.get("warning"):
+            print(f"  {cov['warning']}")
+        else:
+            print("  ✅ 覆盖多状态——结论稳健")
 
 
 if __name__ == "__main__":
