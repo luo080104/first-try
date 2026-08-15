@@ -168,7 +168,9 @@ def filter_double_low_enhanced(
             | ((df[JSL_PRICE] < max_price2) & (df[JSL_PREMIUM] < max_premium2))
         )
         & (df[JSL_YEAR_LEFT] < 5.5)  # 已到转股期
-        & (df[JSL_YEAR_LEFT] > 0.25)  # 到期过滤（源头 filter.py——剩余>90天——防临期债 2026-08-15 补）
+        & (
+            df[JSL_YEAR_LEFT] > 0.25
+        )  # 到期过滤（源头 filter.py——剩余>90天——防临期债 2026-08-15 补）
         & (df["cb_to_pb"] > 1.0)
     )
     df = df.loc[mask]
@@ -192,7 +194,9 @@ def filter_three_low_enhanced(cookie: str | None = None, top_n: int = 20) -> lis
     )
     mask = (
         ((df[JSL_PREMIUM] < 30) | (df[JSL_PRICE] < 130))
-        & (df[JSL_YEAR_LEFT] > 0.25)  # 到期过滤（源头 filter.py——剩余>90天——防临期债 2026-08-15 补）
+        & (
+            df[JSL_YEAR_LEFT] > 0.25
+        )  # 到期过滤（源头 filter.py——剩余>90天——防临期债 2026-08-15 补）
     )
     df = df.loc[mask]
     df = df.loc[~df[JSL_NAME].str.contains("EB", na=False)]

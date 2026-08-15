@@ -30,7 +30,9 @@ def main_force_flow(code: str, days: int = 5) -> dict[str, Any]:
 
         market = "sh" if code.startswith("6") else "sz"
         df = None
-        for attempt in range(3):  # 东财高频接口间歇封锁（2026-08-15 实测）——重试提高命中
+        for attempt in range(
+            3
+        ):  # 东财高频接口间歇封锁（2026-08-15 实测）——重试提高命中
             try:
                 df = ak.stock_individual_fund_flow(stock=code, market=market)
                 if df is not None and not df.empty:

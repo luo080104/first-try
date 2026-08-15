@@ -1,4 +1,5 @@
 """fund_flow 单测（第四批落地——主力资金流辅助——mock 不依赖网络）"""
+
 import os
 import sys
 
@@ -12,7 +13,7 @@ def _fake_df():
 
     return pd.DataFrame(
         {
-            "日期": [f"2026-08-{10+i}" for i in range(5)],
+            "日期": [f"2026-08-{10 + i}" for i in range(5)],
             "主力净流入-净额": [2.0e8, 1.5e8, -0.5e8, 1.0e8, -0.2e8],
             "主力净流入-净占比": [5.0, 3.5, -1.0, 2.5, -0.5],
         }
@@ -21,7 +22,9 @@ def _fake_df():
 
 def test_main_force_flow(monkeypatch):
     """正常数据 → 汇总/趋势/讲解"""
-    monkeypatch.setattr("akshare.stock_individual_fund_flow", lambda stock, market: _fake_df())
+    monkeypatch.setattr(
+        "akshare.stock_individual_fund_flow", lambda stock, market: _fake_df()
+    )
     r = ff.main_force_flow("600519")
     assert r["net_inflow"] > 0  # 净流入 3.8 亿
     assert r["positive_days"] == 3

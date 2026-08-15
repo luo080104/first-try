@@ -251,7 +251,8 @@ def early_redemption_monitor(
 
         pct_display = (
             f"{ratio}%"
-            if not pd.isna(ratio) and ratio != 1e309  # float('inf') 等价（ast-grep 规则：避免直接调用）
+            if not pd.isna(ratio)
+            and ratio != 1e309  # float('inf') 等价（ast-grep 规则：避免直接调用）
             else "N/A"
         )
 

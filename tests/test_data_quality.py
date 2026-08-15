@@ -1,4 +1,5 @@
 """data_quality 单测（第六批收官——MAD 异常值/数据延迟/质量等级）"""
+
 import os
 import sys
 

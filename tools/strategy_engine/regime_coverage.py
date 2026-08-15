@@ -94,7 +94,9 @@ def _merge_short(labels: list[str], min_days: int = MIN_DAYS) -> list[str]:
             else:
                 left_dur = groups[idx - 1][1] - groups[idx - 1][0]
                 right_dur = groups[idx + 1][1] - groups[idx + 1][0]
-                new_label = groups[idx - 1][2] if left_dur >= right_dur else groups[idx + 1][2]
+                new_label = (
+                    groups[idx - 1][2] if left_dur >= right_dur else groups[idx + 1][2]
+                )
             for k in range(s, e):
                 out[k] = new_label
             merged = True
@@ -108,7 +110,9 @@ def detect_regimes(closes: list[float]) -> list[dict[str, Any]]:
     """市场状态分段（周线收盘 → 状态段列表）"""
     if len(closes) < VOL_WINDOW + 2:
         return []
-    returns = [(closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))]
+    returns = [
+        (closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))
+    ]
     vol = _rolling_vol(returns)
     labels = _merge_short(_classify(vol))
     # 分段
@@ -155,11 +159,7 @@ def coverage_report(
     if not regimes:
         return {"n_regimes": 0, "regimes": [], "warning": "数据不足——无法检测市场状态"}
     n = len(regimes)
-    warning = (
-        ""
-        if n >= 2
-        else "⚠️ 回测区间仅覆盖 1 个市场状态——结论脆弱（样本单态）"
-    )
+    warning = "" if n >= 2 else "⚠️ 回测区间仅覆盖 1 个市场状态——结论脆弱（样本单态）"
     trade_dist: dict[str, int] = {}
     if trade_indices:
         for ti in trade_indices:
@@ -172,7 +172,9 @@ def coverage_report(
             top = max(trade_dist.values())
             total = sum(trade_dist.values())
             if total >= 5 and top / total > 0.8:
-                warning += f"｜🔴 交易 {top}/{total} 集中在单一状态——结论可能仅适用于该状态"
+                warning += (
+                    f"｜🔴 交易 {top}/{total} 集中在单一状态——结论可能仅适用于该状态"
+                )
     return {
         "n_regimes": n,
         "regimes": regimes,
