@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import datetime
+import os
 from typing import Any
 
 from tools.strategy_engine import data
@@ -32,7 +33,21 @@ LEADER_POOL = [
 ]
 
 # 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"）
-_FINANCIAL_EXEMPT = {"600036", "601318", "600030", "601398", "601988"}
+_FINANCIAL_EXEMPT = {"600036", "601318", "600030", "601398", "601988", "601601",
+                     "601288", "601939", "300059", "601766", "600941"}
+
+
+def load_leader_pool() -> list[str]:
+    """读龙头池 YAML（书 B2 全量——A股启用/港股二期）——缺失时 fallback MVP 池"""
+    try:
+        import yaml
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leader_pool.yaml")
+        with open(path, encoding="utf-8") as f:
+            d = yaml.safe_load(f)
+        codes = [code for grp in d.get("a_share", {}).values() for code, _ in grp]
+        return codes if codes else LEADER_POOL
+    except Exception:
+        return LEADER_POOL
 
 
 def technical_signals(code: str) -> dict[str, Any]:
@@ -77,8 +92,9 @@ def run_daily_loop() -> dict[str, Any]:
     status = m["status"]
     threshold = ss.THRESHOLD_MAP.get(status, 80)
 
-    # ① 龙头池行情 + 打分
-    quotes = data.tencent_quote(LEADER_POOL)
+    # ① 龙头池行情 + 打分（YAML 全量——fallback MVP 池）
+    pool = load_leader_pool()
+    quotes = data.tencent_quote(pool)
     candidates = []
     for code, q in quotes.items():
         if (q.get("pe_ttm") or 0) <= 0:
@@ -131,7 +147,7 @@ def run_daily_loop() -> dict[str, Any]:
         anomalies.append("打分 0 只（估值源或过滤异常）")
     elif max(scores) == 0:
         anomalies.append("全部 0 分（打分异常）")
-    self_check = {"quotes_hit": len(quotes), "pool_size": len(LEADER_POOL),
+    self_check = {"quotes_hit": len(quotes), "pool_size": len(pool),
                   "scored": len(candidates),
                   "score_range": [min(scores), max(scores)] if scores else [0, 0],
                   "anomalies": anomalies}
