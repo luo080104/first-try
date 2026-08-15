@@ -16,6 +16,7 @@ from typing import Any
 from tools.strategy_engine import data
 from tools.strategy_engine import indicators as ind
 from tools.strategy_engine import market_status as ms
+from tools.strategy_engine import signals as sg  # pyright: ignore
 from tools.strategy_engine import strategy_score as ss
 
 # 龙头股池（书 B2——A股龙头池——MVP 前 12 只——待建静态 YAML 全量清单）
@@ -89,6 +90,33 @@ def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
     return v
 
 
+def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
+    """B3 战术信号（两重版——回测达标 2026-08-15——周线布林下轨+RSI30）
+
+    触发 → 波段仓买入建议（swing——Q16 技术轨——机械止损）——score=None（无打分维度）
+    """
+    try:
+        k = data.tencent_kline(code, days=260)
+        if not k or len(k) < 130:
+            return None
+        closes = [x["close"] for x in k]
+        wk: list[float] = []
+        for i in range(0, len(closes), 5):
+            seg = closes[i : i + 5]
+            if seg:
+                wk.append(seg[-1])
+        if len(wk) < 30:
+            return None
+        r = sg.b3_triple_confirm(wk)
+        if not r["signal"]:
+            return None
+        return {"code": code, "name": name, "price": price, "score": None,
+                "threshold": None, "track": "swing",
+                "reason": "B3 低潮买入（布林下轨+RSI30——回测达标）"}
+    except Exception:
+        return None  # B3 计算失败不阻塞循环（红线③容错）
+
+
 def run_daily_loop() -> dict[str, Any]:
     """每日核心循环（MVP）——返回报告"""
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
@@ -133,6 +161,15 @@ def run_daily_loop() -> dict[str, Any]:
         )
     candidates.sort(key=lambda x: -x["score"])
     signals = [c for c in candidates if c["passed"] and not c["vetoed"]]
+
+    # ② B3 战术信号（两重版——回测达标）——打分未达标但 B3 触发 → 独立入队（波段仓）
+    scored = {c["code"] for c in signals}
+    for c in candidates:
+        if c["code"] in scored:
+            continue  # 打分已入队——B3 不重复（去重）
+        b3 = _b3_signal_for(c["code"], c["price"], c["name"])
+        if b3:
+            signals.append(b3)
 
     # ⑤ 达标信号自动入待确认队列（半自动——confirm 交互消费——1确认/2改/3忽略）
     from tools.strategy_engine import confirm as cf
@@ -188,7 +225,8 @@ def format_report(r: dict[str, Any]) -> str:
     if sig:
         lines.append(f"\n【信号】{len(sig)} 个待确认：")
         for c in sig:
-            lines.append(f"  🔔 {c['name']} {c['score']}分——确认？")
+            tag = f"{c['score']}分" if c.get("score") is not None else "B3战术"
+            lines.append(f"  🔔 {c['name']} {tag}——确认？")
     else:
         lines.append("\n【信号】今日无达标候选（低于门槛——持币等待是纪律）")
     lines.append(f"\n（{r['note']}）")

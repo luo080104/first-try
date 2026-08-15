@@ -47,7 +47,10 @@ def append_pending(signal, total_assets=None):
     if any(i["code"] == signal["code"] and i.get("status") == "pending" for i in items):
         return False, f"{signal['code']} 已在待确认队列"
     assets = total_assets or 100000  # 虚拟盘初始 10 万（v0）
-    shares = int(assets * MAX_POSITION_PCT / signal["price"] // 100 * 100) or 100
+    try:
+        shares = int(assets * MAX_POSITION_PCT / signal["price"] // 100 * 100) or 100
+    except (KeyError, TypeError, ZeroDivisionError, ValueError):
+        shares = 100  # 价格异常 → 安全降级（红线③容错）
     item = {
         "ts": datetime.now().isoformat(timespec="seconds"),
         "code": signal["code"],
@@ -79,9 +82,14 @@ def confirm_loop():
         print("无待确认信号——今天没有达标候选？")
         return
     for i, item in enumerate(pending, 1):
+        tag = (
+            f"{item['score']}分（门槛 {item['threshold']}）"
+            if item.get("score") is not None
+            else "B3战术信号（回测达标）"
+        )
         print(
             f"\n[{i}] 🔔 {item['name']}({item['code']}) "
-            f"{item['score']}分（门槛 {item['threshold']}）"
+            f"{tag}"
         )
         print(
             f"    建议: {item['shares']} 股 @ {item['price']} "
