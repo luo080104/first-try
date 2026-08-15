@@ -57,7 +57,12 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
     start = min((e.get("ts") or e.get("date") or "")[:10] for e in buys)
     if not start:
         return []
-    return [{"start": start, "days": (datetime.date.today() - datetime.date.fromisoformat(start)).days}]
+    return [
+        {
+            "start": start,
+            "days": (datetime.date.today() - datetime.date.fromisoformat(start)).days,
+        }
+    ]
 
 
 def check() -> dict[str, Any]:
@@ -65,10 +70,20 @@ def check() -> dict[str, Any]:
     p = pf.Portfolio()
     s = p.summary()
     if not s.get("n_holdings"):
-        return {"passed": False, "reason": "虚拟盘空仓（未开跑或已清仓）", "days": 0, "weeks_beat": 0}
+        return {
+            "passed": False,
+            "reason": "虚拟盘空仓（未开跑或已清仓）",
+            "days": 0,
+            "weeks_beat": 0,
+        }
     info = _portfolio_weeks()
     if not info:
-        return {"passed": False, "reason": "无建仓事件（数据不足）", "days": 0, "weeks_beat": 0}
+        return {
+            "passed": False,
+            "reason": "无建仓事件（数据不足）",
+            "days": 0,
+            "weeks_beat": 0,
+        }
     days = info[0]["days"]
     # 满 3 个月（先到为准）
     if days >= MAX_DAYS:

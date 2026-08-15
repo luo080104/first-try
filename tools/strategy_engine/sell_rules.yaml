@@ -13,7 +13,7 @@ rules:
       - 熊市（周布林中轨下跌趋势）中期波段卖出：周Boll上轨(主)/周上九转(辅)/周RSI(6)到80+顶背离(辅)/周量能顶背离(辅)
       - 牛市（周布林中轨上升趋势）——周/月Boll上轨不是好卖出指标：估值70百分位之上/月上九转/周RSI80+顶背离/周量能顶背离
     engine_params:
-      enabled: false          # 未回测——不启用（红线）
+      enabled: false # 未回测——不启用（红线）
       note: 待虚拟盘验证——与 S2 互补（S2 只管波段仓）
 
   - id: S2
@@ -30,7 +30,7 @@ rules:
       - 成功票基本面显著改善：可考虑周布林中轨就买回
       - 底部起来个股涨幅一倍则退出投资
     engine_params:
-      enabled: true           # 回测达标（2026-08-15）——signals.s2_weekly_upper_exit
+      enabled: true # 回测达标（2026-08-15）——signals.s2_weekly_upper_exit
       trigger: 周线收盘 > 布林上轨（20,2）
       scope: swing 波段仓（Q16）
       note: 上轨卖出已启用——补仓/买回规则待 Q11 验证
@@ -48,7 +48,7 @@ rules:
       - PE百分位<66 → 不动
       - 股价大涨因业绩且估值仍便宜 → 估值到溢价才卖
     engine_params:
-      enabled: false          # 未回测——不启用
+      enabled: false # 未回测——不启用
       trigger: PE/PB 历史百分位（baostock 10 年窗口）
       note: 与 signals.s3_valuation_exit 对应——阈值待回测
 

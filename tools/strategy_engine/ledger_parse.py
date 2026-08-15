@@ -23,9 +23,7 @@ import urllib.request
 from typing import Any
 
 _API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-_API_URL = os.environ.get(
-    "LLM_API_URL", "https://api.deepseek.com/chat/completions"
-)
+_API_URL = os.environ.get("LLM_API_URL", "https://api.deepseek.com/chat/completions")
 
 # 记账解析缓存（同文本 24h——不重复调 LLM）
 _cache: dict[str, tuple[float, dict[str, Any]]] = {}

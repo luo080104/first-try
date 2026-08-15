@@ -39,6 +39,12 @@ GRID_MIN_INTERVAL_DAYS = 28  # Q13：两批间隔 ≥4 周（防阴跌接飞刀�
 class Portfolio:
     def __init__(self, path=PORTFOLIO_FILE):
         self.path = path
+        # 事件日志跟随实例账本路径（测试用临时文件时不污染真实事件流——2026-08-15 修复）
+        self.events_file = (
+            os.path.join(os.path.dirname(path), "portfolio_events.jsonl")
+            if path != PORTFOLIO_FILE
+            else EVENTS_FILE
+        )
         self.data = self._load()
 
     def _load(self):
@@ -69,8 +75,8 @@ class Portfolio:
         ev = {"ts": datetime.now().isoformat(timespec="seconds"), "action": action}
         ev.update(fields)
         try:
-            os.makedirs(os.path.dirname(EVENTS_FILE), exist_ok=True)
-            with open(EVENTS_FILE, "a", encoding="utf-8") as f:
+            os.makedirs(os.path.dirname(self.events_file), exist_ok=True)
+            with open(self.events_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(ev, ensure_ascii=False) + "\n")
         except OSError as e:
             print(f"[portfolio] 事件日志写入失败: {e}")

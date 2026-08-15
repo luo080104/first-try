@@ -88,7 +88,12 @@ def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
     失败返回 []（不抛异常——源链自动降级）
     """
     rows = _bs_fetch(
-        code, "date,open,close,high,low", f"{2026 - years}-01-01", "2026-12-31", "w", "2"
+        code,
+        "date,open,close,high,low",
+        f"{2026 - years}-01-01",
+        "2026-12-31",
+        "w",
+        "2",
     )
     out = []
     for r in rows:
