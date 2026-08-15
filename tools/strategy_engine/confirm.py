@@ -87,10 +87,7 @@ def confirm_loop():
             if item.get("score") is not None
             else "B3战术信号（回测达标）"
         )
-        print(
-            f"\n[{i}] 🔔 {item['name']}({item['code']}) "
-            f"{tag}"
-        )
+        print(f"\n[{i}] 🔔 {item['name']}({item['code']}) {tag}")
         print(
             f"    建议: {item['shares']} 股 @ {item['price']} "
             f"[{item['track']}] 原因: {item['reason']}"

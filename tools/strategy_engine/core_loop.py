@@ -34,15 +34,29 @@ LEADER_POOL = [
 ]
 
 # 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"）
-_FINANCIAL_EXEMPT = {"600036", "601318", "600030", "601398", "601988", "601601",
-                     "601288", "601939", "300059", "601766", "600941"}
+_FINANCIAL_EXEMPT = {
+    "600036",
+    "601318",
+    "600030",
+    "601398",
+    "601988",
+    "601601",
+    "601288",
+    "601939",
+    "300059",
+    "601766",
+    "600941",
+}
 
 
 def load_leader_pool() -> list[str]:
     """读龙头池 YAML（书 B2 全量——A股启用/港股二期）——缺失时 fallback MVP 池"""
     try:
         import yaml
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "leader_pool.yaml")
+
+        path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "leader_pool.yaml"
+        )
         with open(path, encoding="utf-8") as f:
             d = yaml.safe_load(f)
         codes = [code for grp in d.get("a_share", {}).values() for code, _ in grp]
@@ -110,9 +124,15 @@ def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
         r = sg.b3_triple_confirm(wk)
         if not r["signal"]:
             return None
-        return {"code": code, "name": name, "price": price, "score": None,
-                "threshold": None, "track": "swing",
-                "reason": "B3 低潮买入（布林下轨+RSI30——回测达标）"}
+        return {
+            "code": code,
+            "name": name,
+            "price": price,
+            "score": None,
+            "threshold": None,
+            "track": "swing",
+            "reason": "B3 低潮买入（布林下轨+RSI30——回测达标）",
+        }
     except Exception:
         return None  # B3 计算失败不阻塞循环（红线③容错）
 
@@ -189,10 +209,13 @@ def run_daily_loop() -> dict[str, Any]:
         anomalies.append("打分 0 只（估值源或过滤异常）")
     elif max(scores) == 0:
         anomalies.append("全部 0 分（打分异常）")
-    self_check = {"quotes_hit": len(quotes), "pool_size": len(pool),
-                  "scored": len(candidates),
-                  "score_range": [min(scores), max(scores)] if scores else [0, 0],
-                  "anomalies": anomalies}
+    self_check = {
+        "quotes_hit": len(quotes),
+        "pool_size": len(pool),
+        "scored": len(candidates),
+        "score_range": [min(scores), max(scores)] if scores else [0, 0],
+        "anomalies": anomalies,
+    }
 
     return {
         "date": now,

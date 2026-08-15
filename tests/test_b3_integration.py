@@ -18,8 +18,14 @@ def _fake_kline(days=260):
 
 def test_b3_signal_struct():
     """B3 触发 → 波段仓建议（swing/score=None/reason 标注）"""
-    with patch.object(cl.data, "tencent_kline", lambda c, days=260: _fake_kline()), \
-            patch.object(cl.sg, "b3_triple_confirm", lambda wk: {"signal": True, "reasons": ["x", "y"]}):
+    with (
+        patch.object(cl.data, "tencent_kline", lambda c, days=260: _fake_kline()),
+        patch.object(
+            cl.sg,
+            "b3_triple_confirm",
+            lambda wk: {"signal": True, "reasons": ["x", "y"]},
+        ),
+    ):
         sig = cl._b3_signal_for("600036", 38.0, "招商银行")
         assert sig is not None
         assert sig["track"] == "swing"  # Q16 波段轨
@@ -30,8 +36,12 @@ def test_b3_signal_struct():
 
 def test_b3_no_signal_returns_none():
     """B3 未触发 → None（不入队）"""
-    with patch.object(cl.data, "tencent_kline", lambda c, days=260: _fake_kline()), \
-            patch.object(cl.sg, "b3_triple_confirm", lambda wk: {"signal": False, "reasons": []}):
+    with (
+        patch.object(cl.data, "tencent_kline", lambda c, days=260: _fake_kline()),
+        patch.object(
+            cl.sg, "b3_triple_confirm", lambda wk: {"signal": False, "reasons": []}
+        ),
+    ):
         assert cl._b3_signal_for("600036", 38.0, "招商银行") is None
 
 
@@ -46,8 +56,15 @@ def test_confirm_accepts_b3_signal():
     import tools.strategy_engine.confirm as cf
 
     cf.PENDING_FILE = os.path.join(TMP, "pending_b3.json")
-    b3 = {"code": "600036", "name": "招商银行", "price": 38.0, "score": None,
-          "threshold": None, "track": "swing", "reason": "B3 低潮买入"}
+    b3 = {
+        "code": "600036",
+        "name": "招商银行",
+        "price": 38.0,
+        "score": None,
+        "threshold": None,
+        "track": "swing",
+        "reason": "B3 低潮买入",
+    }
     ok, _ = cf.append_pending(b3, total_assets=100000)
     assert ok
     item = cf.list_pending()[0]

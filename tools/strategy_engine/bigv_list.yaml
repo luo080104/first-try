@@ -1,0 +1,43 @@
+# 观复大V 清单（书 B2——雪球 60+ 顶级大V——MVP 先录书里明确名单）
+# 来源：docs/爸妈投资理念.md（书原文）+ docs/观复策略库_父母样例.md
+# 字段说明：平台/备注——可信度字段【不提前分级】（Q3 修正——数据驱动——X 证据链积累后评分）
+# 全量 60+ 待 vpush 部署后数据补充（或用户提供清单）
+version: v1
+
+bigvs:
+  - name: 超级鹿鼎公
+    platform: [微博, 雪球]
+    note: 书最高频——高息股/价值+趋势结合/搬砖降本——组合给家人用（跟随仓≤20% 红线对象）
+  - name: 管我财
+    platform: [雪球]
+    note: 抄作业第二章对象——A股港股价值投资
+  - name: 山湖水
+    platform: [雪球]
+    note: 梦幻组合——顶级企业分析（书多次引用）
+  - name: 宁静的冬日M
+    platform: [雪球]
+    note: 优秀企业长期低迷+分红再投理论（书引用）
+  - name: 发财油菜君
+    platform: [雪球]
+    note: A股港股价值投资组合
+  - name: 丹书铁券
+    platform: [雪球]
+    note: 书大V 清单在列
+  - name: 六亿
+    platform: [雪球]
+    note: 估值+技术大V（估值参考）
+  - name: 小林聊股道
+    platform: [雪球]
+    note: 仓位水平参考（书）
+  - name: 公公
+    platform: [微博]
+    note: 仓位水平参考（书）
+  - name: 徐小明
+    platform: [微信]
+    note: 仓位水平参考（书）
+  - name: czy710
+    platform: [雪球]
+    note: 海油深度分析专栏（书引用）
+  - name: 南京天空
+    platform: [雪球]
+    note: 书引用——长期持有+分红再投
