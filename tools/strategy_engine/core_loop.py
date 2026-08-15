@@ -74,11 +74,16 @@ def technical_signals(code: str) -> dict[str, Any]:
 
 
 def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
-    """估值面输入（PE/PB + 历史百分位）"""
+    """估值面输入（PE/PB + 历史百分位 + 个股 fair_pe——Q1 分层）
+
+    Q1 定案：利率管总量时机（指数 fair_pe——market_status）/ 百分位管个股筛选
+    个股 fair_pe = 个股 PE 历史中位数（质量已内含——数据驱动——Q11 校准）
+    """
     v = {"pe_ttm": quote.get("pe_ttm") or 0, "pb": quote.get("pb") or 0}
     try:
         pct = data.valuation_percentile(code)
         v["pe_percentile"] = pct["pe_percentile"]
+        v["fair_pe"] = pct["pe_median"]  # 个股级（覆盖外部传入的指数级）
     except Exception:
         v["pe_percentile"] = 50.0
     return v

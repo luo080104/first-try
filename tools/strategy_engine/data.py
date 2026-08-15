@@ -160,4 +160,5 @@ def valuation_percentile(code: str) -> dict[str, float]:
     return {
         "pe_percentile": round(i / len(pes) * 100, 1),
         "pb_percentile": round(j / len(pbs) * 100, 1),
+        "pe_median": round(pes[len(pes) // 2], 1),  # 个股 PE 历史中位数（Q1 个股 fair_pe）
     }
