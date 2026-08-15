@@ -114,9 +114,7 @@ def kline_weekly(
         return []
 
 
-def daily_basic(
-    code: str, trade_date: str = ""
-) -> dict[str, Any]:
+def daily_basic(code: str, trade_date: str = "") -> dict[str, Any]:
     """每日指标（PE/PB/总市值——tushare daily_basic）——单日快照
 
     返回 {pe_ttm, pb, total_mv, turnover_rate}——失败返回 {}（不抛）
@@ -157,8 +155,11 @@ def moneyflow(
         out = []
         for _, r in df.iterrows():
             # 主力净流入 = 大单+特大单净额（手——×100 股）
-            net = (float(r.get("buy_lg_amount") or 0) + float(r.get("buy_elg_amount") or 0)) - (
-                float(r.get("sell_lg_amount") or 0) + float(r.get("sell_elg_amount") or 0)
+            net = (
+                float(r.get("buy_lg_amount") or 0) + float(r.get("buy_elg_amount") or 0)
+            ) - (
+                float(r.get("sell_lg_amount") or 0)
+                + float(r.get("sell_elg_amount") or 0)
             )
             out.append(
                 {
