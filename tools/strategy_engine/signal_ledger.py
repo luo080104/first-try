@@ -95,12 +95,12 @@ def backfill(quotes_provider=None):
 def report():
     """分组统计（按类型——N/胜率/平均幅度）——校准依据"""
     if not os.path.exists(LEDGER_FILE):
-        return {"groups": {}, "total": 0, "note": "账本为空"}
+        return {"groups": {}, "total": 0, "verified": 0, "pending": 0, "note": "账本为空"}
     try:
         raw = open(LEDGER_FILE, encoding="utf-8").readlines()
     except OSError as e:
         print(f"[signal_ledger] 读取失败: {e}")
-        return {"groups": {}, "total": 0, "note": f"读取失败: {e}"}
+        return {"groups": {}, "total": 0, "verified": 0, "pending": 0, "note": f"读取失败: {e}"}
     rows = []
     for l in raw:
         try:
