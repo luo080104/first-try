@@ -54,9 +54,8 @@ def test_financial_exempt_value():
     f["debt_exempt"] = True
     r = ss.score_stock(f, _good_v(), {}, {}, quote={"pe_ttm": 20, "pb": 5},
                        market_status="正常")
-    assert any("金融豁免" in note for name, p, note in
-               [(n, 0, x) for n, (_, x) in []]) or any(
-        "金融豁免" in note for _, _, note in _flat_parts(r))
+    labels = [p[0] for p in r.parts if len(p) == 2]
+    assert any("金融豁免" in l for l in labels)  # 豁免标注在分项 label
     # 负债分贡献 5 分（对比非豁免同数据为 0）
     f2 = _good_f()
     f2["debt_ratio"] = 90.0
