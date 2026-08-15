@@ -81,6 +81,29 @@ def _bs_fetch(
         return []
 
 
+def bs_kline_daily(code: str, years: int = 1) -> list[dict[str, Any]]:
+    """baostock 日线（后复权——归因拆解用——2026-08-15 整改①）
+
+    code 六位数字（指数 000300 自动加 sh. 前缀）——返回 [{date, close}] 升序
+    失败返回 []（不抛异常——源链自动降级）
+    """
+    rows = _bs_fetch(
+        code,
+        "date,close",
+        f"{2026 - years}-01-01",
+        "2026-12-31",
+        "d",
+        "2",
+    )
+    out = []
+    for r in rows:
+        try:
+            out.append({"date": r[0], "close": float(r[1])})
+        except (ValueError, IndexError):
+            continue
+    return out
+
+
 def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
     """baostock 周线（后复权——历史主源——回测/验证统一用）
 

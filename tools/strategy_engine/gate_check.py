@@ -58,8 +58,11 @@ def check() -> dict[str, Any]:
     """通过判定——返回 {passed, reason, days, weeks_beat}
 
     定案（需求 v1.1）：连续 4 周跑赢沪深300 或满 3 个月（先到为准）
+    整改①（2026-08-15）：跑赢判定加 Beta/Alpha 归因——Alpha 必须为正
+    （防"押对板块"的运气误判——3 持仓全金融板块——跑赢可能只是 Beta）
     - 净值序列（equity_curve）vs 沪深300 周线（baostock）——逐周对比
     - 净值不足 2 周 → 数据不足（Q11：样本不足不判定）
+    - 归因数据不足 → 不阻断跑赢判定（标注缺口——等积累）
     """
     p = pf.Portfolio()
     s = p.summary()
@@ -69,6 +72,8 @@ def check() -> dict[str, Any]:
             "reason": "虚拟盘空仓（未开跑或已清仓）",
             "days": 0,
             "weeks_beat": 0,
+            "alpha_positive": None,
+            "attribution_note": "空仓——无归因",
         }
     # 建仓日起算天数（事件日志最早 buy）
     events = []
@@ -95,13 +100,30 @@ def check() -> dict[str, Any]:
         if start
         else 0
     )
-    # 满 3 个月（先到为准）
+    # 归因拆解（整改①——组合日净值 vs 沪深300 日线）
+    from tools.strategy_engine import attribution as attr
+    from tools.strategy_engine import data as d
+
+    curve = p.equity_series()
+    att = {"alpha_positive": None, "attribution_note": "净值不足——归因跳过"}
+    if len(curve) >= 11:
+        try:
+            bench_daily = d.bs_kline_daily("000300", 1)
+            att = attr.attribution(curve, bench_daily)
+        except Exception:
+            att = {
+                "alpha_positive": None,
+                "attribution_note": "归因数据获取失败（红线⑤——显式标注）",
+            }
+    # 满 3 个月（先到为准）——满 90 天通过（长期实盘观察——归因仅参考）
     if days >= MAX_DAYS:
         return {
             "passed": True,
-            "reason": f"满 {MAX_DAYS} 天（{days} 天）——先到为准通过",
+            "reason": f"满 {MAX_DAYS} 天（{days} 天）——先到为准通过（归因参考：{att.get('attribution_note', '')}）",
             "days": days,
             "weeks_beat": 0,
+            "alpha_positive": att.get("alpha_positive"),
+            "attribution_note": att.get("attribution_note", ""),
         }
     # 连续 4 周跑赢：净值序列 vs 沪深300 周线
     weekly = _portfolio_weeks()
@@ -111,10 +133,10 @@ def check() -> dict[str, Any]:
             "reason": f"净值序列不足 14 个点（record_equity 每日记录中——当前 {days} 天——约需 2 周）",
             "days": days,
             "weeks_beat": 0,
+            "alpha_positive": att.get("alpha_positive"),
+            "attribution_note": att.get("attribution_note", ""),
         }
     # 沪深300 周线（同窗口——baostock）
-    from tools.strategy_engine import data as d
-
     bench_weeks = d.bs_kline_weekly("000300", 10)
     bench = {w["date"][:10]: w["close"] for w in bench_weeks}
     # 逐周对比：组合周收益 vs 基准周收益
@@ -135,17 +157,39 @@ def check() -> dict[str, Any]:
         wins = wins + 1 if port_ret > bench_ret else 0
         max_wins = max(max_wins, wins)
     if max_wins >= CONSECUTIVE_WEEKS:
+        # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）
+        if att.get("alpha_positive") is False:
+            return {
+                "passed": False,
+                "reason": (
+                    f"连续 {max_wins} 周跑赢沪深300——但 Alpha 为负"
+                    f"（{att.get('attribution_note', '')}）——疑似 Beta 驱动——判定不通过"
+                ),
+                "days": days,
+                "weeks_beat": max_wins,
+                "alpha_positive": False,
+                "attribution_note": att.get("attribution_note", ""),
+            }
+        alpha_txt = (
+            "——Alpha 为正（策略贡献确认）"
+            if att.get("alpha_positive") is True
+            else "——归因数据不足（Alpha 待确认——红线⑤）"
+        )
         return {
             "passed": True,
-            "reason": f"连续 {max_wins} 周跑赢沪深300（净值序列实证）",
+            "reason": f"连续 {max_wins} 周跑赢沪深300（净值序列实证）{alpha_txt}",
             "days": days,
             "weeks_beat": max_wins,
+            "alpha_positive": att.get("alpha_positive"),
+            "attribution_note": att.get("attribution_note", ""),
         }
     return {
         "passed": False,
         "reason": f"运行 {days} 天——最高连续跑赢 {max_wins} 周（需 {CONSECUTIVE_WEEKS} 周——满 {MAX_DAYS} 天也通过）",
         "days": days,
         "weeks_beat": max_wins,
+        "alpha_positive": att.get("alpha_positive"),
+        "attribution_note": att.get("attribution_note", ""),
     }
 
 
