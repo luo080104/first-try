@@ -57,16 +57,17 @@
 
 ## 工具/技能
 
-- [x] easy-vibe/vibe-coding-cn（~/ref/）——⚠️ 修正：Paseo/tldr 实际未装（progress 记录错误，2026-08-13 核对）
+- [x] easy-vibe/vibe-coding-cn（~/ref/）
 - [x] 39 skill 分类检查完成（9 工具待迁观复，29 角色正确，humanizer 保留）
 - [x] 技能路由表 + 安装前分拣原则已入 MEMORY.md
 - [x] humanizer_scorer.py 已入 tools/（雕龙质检第 14 项）
-- [ ] Paseo 未装（progress 曾误记已装）——如需要：装 + 配置
-- [ ] codebase-memory-mcp 补精读（克隆失败，待网络好）
+- [x] tech-stack 补记：SQLite FTS5 优先于向量库（2026-08-15）
+- [x] ~~Paseo~~ 已划掉（2026-08-15：小布退役单 AI 流程，手机遥控需求消失）
+- [x] ~~codebase-memory-mcp 补精读~~ 已划掉（2026-08-15：与 memory-bank+pi-lens 重叠，不读）
 - [ ] BGE-M3 2GB 下载（回家）
-- [ ] tech-stack 待记：SQLite FTS5 优先于向量库（轻量场景）
 
 ## 个人事务（重要，勿忘）
 
-- [ ] **实验室申请简历**（MetaEvo，8/17 截止）——用户之前说 15 号左右交，还差简历撰写！
-- [ ] 暑假作业：4/5 完成，第四项 AI 绘画不做，01 需要补照片
+- [x] **实验室申请简历**（MetaEvo）——8/15 完成交付
+- [x] 班干部面试——8/15 已完成
+- [x] 暑假作业——4/5，01 照片已补（8/15 完成）
