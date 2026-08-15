@@ -237,7 +237,10 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
             over_hold = i - pos["entry_i"] >= MAX_HOLD_WEEKS
             if exit_sig or over_hold:
                 # 卖单：跌停封板卖不出——顺延（周期保护到期也等能卖再卖——Q11 校准）
-                if _limit_blocked(weeks, i, is_buy=False) and sell_retry < MAX_LIMIT_RETRY:
+                if (
+                    _limit_blocked(weeks, i, is_buy=False)
+                    and sell_retry < MAX_LIMIT_RETRY
+                ):
                     sell_retry += 1
                     continue
                 sell_retry = 0
@@ -351,6 +354,8 @@ def run_pool(
                 key = f"{v}+{sv}"
                 res = run_backtest(weeks, make_buy(v), SELL_VARIANTS[sv])
                 for seg, m in res.items():
+                    if seg == "coverage":
+                        continue  # 覆盖度非交易段（2026-08-15 适配）
                     a = agg[seg].setdefault(key, {"n": 0, "wins": 0, "sum": 0.0})
                     a["n"] += m["trades"]
                     a["wins"] += m["trades"] * m["win_rate"] / 100
