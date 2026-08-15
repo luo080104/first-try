@@ -33,12 +33,16 @@ def test_main_force_flow(monkeypatch):
 
 
 def test_flow_failure_returns_empty(monkeypatch):
-    """接口失败 → 空 dict（红线③容错——讲解降级跳过）"""
+    """东财失败 + 同花顺也失败 → 空 dict（红线③容错——讲解降级跳过）"""
 
     def _boom(stock, market):
         raise ConnectionError("proxy")
 
+    def _boom2(symbol):
+        raise ConnectionError("ths blocked")
+
     monkeypatch.setattr("akshare.stock_individual_fund_flow", _boom)
+    monkeypatch.setattr("akshare.stock_fund_flow_individual", _boom2)
     assert ff.main_force_flow("600519") == {}
 
 
@@ -58,3 +62,61 @@ def test_sz_market_prefix(monkeypatch):
     monkeypatch.setattr("akshare.stock_individual_fund_flow", _fake)
     ff.main_force_flow("000651")
     assert captured["market"] == "sz"
+
+
+def _fake_ths_df():
+    """同花顺即时快照（1 行——含 600519——净额字符串带单位）"""
+    import pandas as pd
+
+    return pd.DataFrame(
+        [
+            {
+                "序号": 3747,
+                "股票代码": 600519,
+                "股票简称": "贵州茅台",
+                "最新价": 1341.99,
+                "涨跌幅": "-0.98%",
+                "换手率": "0.24%",
+                "流入资金": "17.20亿",
+                "流出资金": "23.04亿",
+                "净额": "-5.83亿",
+                "成交额": "40.24亿",
+            }
+        ]
+    )
+
+
+def test_ths_fallback_parses(monkeypatch):
+    """同花顺 fallback：净额单位解析 + 占比 + 流出标注"""
+    monkeypatch.setattr(
+        "akshare.stock_fund_flow_individual", lambda symbol: _fake_ths_df()
+    )
+    r = ff._ths_fallback("600519")
+    assert r is not None
+    assert r["net_inflow"] == -5.83  # 亿
+    assert r["trend"] == "流出为主"
+    assert "同花顺源" in r["verdict"]
+    assert r["positive_days"] == 0
+
+
+def test_ths_fallback_missing_code(monkeypatch):
+    """同花顺快照无此股 → None（不抛）"""
+    monkeypatch.setattr(
+        "akshare.stock_fund_flow_individual", lambda symbol: _fake_ths_df()
+    )
+    assert ff._ths_fallback("000001") is None
+
+
+def test_main_flow_falls_back(monkeypatch):
+    """东财失败 → 自动切同花顺（2026-08-15——封锁免费解）"""
+
+    def _boom(stock, market):
+        raise ConnectionError("eastmoney blocked")
+
+    monkeypatch.setattr("akshare.stock_individual_fund_flow", _boom)
+    monkeypatch.setattr(
+        "akshare.stock_fund_flow_individual", lambda symbol: _fake_ths_df()
+    )
+    r = ff.main_force_flow("600519")
+    assert r["net_inflow"] == -5.83
+    assert "同花顺源" in r["verdict"]  # 降级标注

@@ -13,12 +13,58 @@ import os
 from typing import Any
 
 
+def _ths_fallback(code: str) -> dict[str, Any] | None:
+    """同花顺资金流 fallback（2026-08-15——东财 push2 间歇封锁的免费替代）
+
+    实测：stock_fund_flow_individual 可用（5205 只全市场——同花顺后端不受东财封锁影响）
+    限制：仅当日即时快照（无 5 日历史）——降级为当日净流入；全市场拉取较慢（~10s）
+    code 六位数字——股票代码列是整数——需 int 匹配
+    """
+    try:
+        import akshare as ak
+
+        df = ak.stock_fund_flow_individual(symbol="即时")
+        if df is None or df.empty:
+            return None
+        row = df[df["股票代码"] == int(code)]
+        if row.empty:
+            return None
+        r = row.iloc[0]
+        # 列：流入资金/流出资金/净额/成交额——值为字符串带单位（"17.20亿"）
+        def _to_yi(v: str) -> float:
+            s = str(v).strip().replace("+", "")
+            try:
+                if s.endswith("亿"):
+                    return float(s[:-1])
+                if s.endswith("万"):
+                    return float(s[:-1]) / 10000
+                return float(s) / 1e8
+            except ValueError:
+                return 0.0
+
+        net_yi = _to_yi(r["净额"])
+        inflow_yi = _to_yi(r["流入资金"])
+        total_yi = inflow_yi + _to_yi(r["流出资金"])
+        pct = round(net_yi / total_yi * 100, 1) if total_yi > 0 else 0.0
+        trend = "持续流入" if net_yi > 0 else ("流出为主" if net_yi < 0 else "持平")
+        return {
+            "net_inflow": round(net_yi, 2),
+            "net_pct": pct,
+            "positive_days": 1 if net_yi > 0 else 0,
+            "trend": trend,
+            "verdict": f"主力今日净流入 {net_yi:+.2f} 亿（占比 {pct:.1f}%——{trend}——同花顺源）",
+        }
+    except Exception:
+        return None
+
+
 def main_force_flow(code: str, days: int = 5) -> dict[str, Any]:
     """个股主力资金流（近 N 日——净流入/占比）
 
     code 六位数字（600519）——返回 {net_inflow, net_pct, trend, verdict}
     trend: 近 N 日主力净流入趋势（正=持续流入）
     verdict: 讲解用一句话（"主力近5日净流入 X 亿"）
+    数据源：东财主源（5 日历史）→ 失败自动切同花顺（当日快照——降级标注）
     失败返回空 dict（不抛——红线③容错——讲解模式降级跳过）
     """
     try:
@@ -41,6 +87,10 @@ def main_force_flow(code: str, days: int = 5) -> dict[str, Any]:
                 df = None
             time.sleep(1 + attempt)
         if df is None or df.empty:
+            # 东财不可用 → 同花顺 fallback（2026-08-15——免费解封锁）
+            fb = _ths_fallback(code)
+            if fb:
+                return fb
             return {}
         recent = df.tail(days)
         net = recent["主力净流入-净额"].sum()
