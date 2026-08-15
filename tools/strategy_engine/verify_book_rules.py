@@ -271,14 +271,17 @@ def verify_s2_bull_market() -> dict[str, Any]:
         return bool(b["upper"] and hist[-1] > b["upper"])
 
     def sell_bullaware(hist):
-        # 书：牛市（周 MA20 上升）上轨不是好卖出指标——不卖；熊市/震荡才卖
+        # 书：牛市（周布林中轨上升趋势）上轨不是好卖出指标——不卖；熊市/震荡才卖
         b = ind.bollinger(hist, 20, 2)
         if not (b["upper"] and hist[-1] > b["upper"]):
             return False
-        if len(hist) >= 21:
-            ma = sum(hist[-21:-1]) / 20
-            if hist[-1] > ma and hist[-21] < ma:
-                return False  # 周 MA 上升中（牛市）——不卖
+        if len(hist) >= 22:
+            # 审查 R7 修复：中轨上升 = MA20 本周 > 上周（趋势方向）——
+            # 原 hist[-21] < ma 是"价格穿越 MA"（熊市反弹也成立）——与书"中轨上升趋势"不符
+            ma_now = sum(hist[-20:]) / 20
+            ma_prev = sum(hist[-21:-1]) / 20
+            if ma_now > ma_prev:
+                return False  # 中轨上升（牛市）——不卖
         return True
 
     buy = lambda h: bt.make_buy("b+r")(h)
