@@ -63,7 +63,7 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
     if cached:
         return cached
     body = json.dumps({
-        'model': 'deepseek-v4-pro' if use_reasoner else 'deepseek-v4-flash',
+        'model': 'deepseek-v4-flash',  # 2026-08-15 改：v4-pro→flash（9元事件——省钱4倍）
         'messages': [
             {'role': 'system', 'content': SYSTEM_PROMPT},
             {'role': 'user', 'content': text},   # 只放可变内容
@@ -159,7 +159,7 @@ def generate_options(keyword: str, groups: list, history_txt: str = '') -> list:
     ctx = ('前面对话：' + chr(10) + history_txt + chr(10)) if history_txt else ''
     user_msg = ctx + "用户当前想买的关键词：" + keyword + chr(10) + "结果标题：" + chr(10) + chr(10).join(lines)
     body = json.dumps({
-        'model': 'deepseek-v4-pro',  # 小骆：性能第一，成本其次
+        'model': 'deepseek-v4-flash',  # 2026-08-15 改：v4-pro→flash（成本控制——恢复改回 v4-pro）
         'messages': [
             {'role': 'system', 'content': OPTIONS_SYSTEM},
             {'role': 'user', 'content': user_msg},

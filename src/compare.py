@@ -178,7 +178,7 @@ def gen_advice(keyword: str, group: dict, subsidies: list, history_rows: list, v
     user_text = build_advice_input(keyword, group, subsidies, history_rows)
     system = ADVICE_SYSTEM if variant == 'a' else OLD_ADVICE_SYSTEM
     try:
-        return _call_llm_retry(user_text, 'deepseek-v4-pro', system, 800)
+        return _call_llm_retry(user_text, 'deepseek-v4-flash', system, 800)  # 2026-08-15 改：v4-pro→flash
     except Exception as e:
         print(f'[advice] 生成失败: {str(e)[:80]}')
         return f'【当前位】AI 建议暂时不可用（{str(e)[:40]}），请稍后再试\n【历史】-\n【判断】-\n【行动】-'
