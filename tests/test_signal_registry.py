@@ -1,4 +1,5 @@
 """信号注册制单测（2026-08-15 重构——czsc 借鉴）"""
+
 import os
 import sys
 
