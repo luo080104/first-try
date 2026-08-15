@@ -68,6 +68,11 @@ def load_leader_pool() -> list[str]:
 def technical_signals(code: str) -> dict[str, Any]:
     """个股技术信号（布林/RSI/九转——从日 K 计算——MVP 近似）"""
     k = data.tencent_kline(code, days=120)
+    return _technical_from_kline(k)
+
+
+def _technical_from_kline(k: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """从 K 线算技术信号（审查 R6：与 B3 共用一次拉取——不重复网络请求）"""
     if not k or len(k) < 25:
         return {}
     closes = [x["close"] for x in k]
@@ -88,29 +93,11 @@ def technical_signals(code: str) -> dict[str, Any]:
     return out
 
 
-def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
-    """估值面输入（PE/PB + 历史百分位 + 个股 fair_pe——Q1 分层）
-
-    Q1 定案：利率管总量时机（指数 fair_pe——market_status）/ 百分位管个股筛选
-    个股 fair_pe = 个股 PE 历史中位数（质量已内含——数据驱动——Q11 校准）
-    """
-    v = {"pe_ttm": quote.get("pe_ttm") or 0, "pb": quote.get("pb") or 0}
+def _b3_from_kline(
+    code: str, price: float, name: str, k: list[dict[str, Any]] | None
+) -> dict[str, Any] | None:
+    """从 K 线算 B3 信号（审查 R6：与 technical 共用一次拉取——不重复网络请求）"""
     try:
-        pct = data.valuation_percentile(code)
-        v["pe_percentile"] = pct["pe_percentile"]
-        v["fair_pe"] = pct["pe_median"]  # 个股级（覆盖外部传入的指数级）
-    except Exception:
-        v["pe_percentile"] = 50.0
-    return v
-
-
-def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
-    """B3 战术信号（两重版——回测达标 2026-08-15——周线布林下轨+RSI30）
-
-    触发 → 波段仓买入建议（swing——Q16 技术轨——机械止损）——score=None（无打分维度）
-    """
-    try:
-        k = data.tencent_kline(code, days=260)
         if not k or len(k) < 130:
             return None
         closes = [x["close"] for x in k]
@@ -137,6 +124,35 @@ def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
         return None  # B3 计算失败不阻塞循环（红线③容错）
 
 
+def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
+    """估值面输入（PE/PB + 历史百分位 + 个股 fair_pe——Q1 分层）
+
+    Q1 定案：利率管总量时机（指数 fair_pe——market_status）/ 百分位管个股筛选
+    个股 fair_pe = 个股 PE 历史中位数（质量已内含——数据驱动——Q11 校准）
+    """
+    v = {"pe_ttm": quote.get("pe_ttm") or 0, "pb": quote.get("pb") or 0}
+    try:
+        pct = data.valuation_percentile(code)
+        v["pe_percentile"] = pct["pe_percentile"]
+        v["fair_pe"] = pct["pe_median"]  # 个股级（覆盖外部传入的指数级）
+    except Exception:
+        v["pe_percentile"] = 50.0
+    return v
+
+
+def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
+    """B3 战术信号（两重版——回测达标 2026-08-15——周线布林下轨+RSI30）
+
+    触发 → 波段仓买入建议（swing——Q16 技术轨——机械止损）——score=None（无打分维度）
+    独立入口（单只拉取 260 天）——核心循环走 _b3_from_kline（共用 K 线——审查 R6）
+    """
+    try:
+        k = data.tencent_kline(code, days=260)
+        return _b3_from_kline(code, price, name, k)
+    except Exception:
+        return None  # B3 计算失败不阻塞循环（红线③容错）
+
+
 def run_daily_loop() -> dict[str, Any]:
     """每日核心循环（MVP）——返回报告"""
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
@@ -155,7 +171,14 @@ def run_daily_loop() -> dict[str, Any]:
         v = valuation_input(code, q)
         if fair_pe:
             v["fair_pe"] = fair_pe
-        t = technical_signals(code)
+        # 一次 K 线拉取，两处使用（审查 R6：原 technical_signals 拉 120 天 +
+        # B3 单独再拉 260 天——每只 2 次网络请求——合并为 1 次 260 天）
+        try:
+            k = data.tencent_kline(code, days=260)
+        except Exception:
+            k = None  # K 线失败不阻塞单只打分（红线③容错——跳过技术/B3 信号）
+        t = _technical_from_kline(k)
+        b3 = _b3_from_kline(code, q.get("price") or 0, q["name"], k)
         # 基本面真实数据（fundamentals 管线——价值面 40 分）
         from tools.strategy_engine import fundamentals as fd
 
@@ -177,6 +200,7 @@ def run_daily_loop() -> dict[str, Any]:
                 "vetoed": score.vetoed,
                 "parts": score.parts,  # 完整分项（修复截断：原 parts[-4:] 只留技术/票源段）
                 "tech": t,
+                "b3": b3,
             }
         )
     candidates.sort(key=lambda x: -x["score"])
@@ -187,9 +211,8 @@ def run_daily_loop() -> dict[str, Any]:
     for c in candidates:
         if c["code"] in scored:
             continue  # 打分已入队——B3 不重复（去重）
-        b3 = _b3_signal_for(c["code"], c["price"], c["name"])
-        if b3:
-            signals.append(b3)
+        if c.get("b3"):
+            signals.append(c["b3"])
 
     # ⑤ 达标信号自动入待确认队列（半自动——confirm 交互消费——1确认/2改/3忽略）
     from tools.strategy_engine import confirm as cf
