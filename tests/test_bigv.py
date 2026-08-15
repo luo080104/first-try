@@ -30,7 +30,7 @@ def test_record_and_disclosure():
 def test_score_evidence_chain():
     _fresh()
     bv.record_trade("管我财", "600900", "买", 25.0, "长江电力——稳定现金流低估")
-    bv.record_trade("管我财", "601088", "买", 30.0, "神华——高息低估值")
+    bv.record_trade("管我财", "601088", "买", 30.0, "神华——高息低估值加仓")
     s = bv.score_bigv("管我财")
     assert s["n_trades"] == 2 and s["score"] == 2.0  # 2 次披露 +1+1
     s0 = bv.score_bigv("山湖水")
