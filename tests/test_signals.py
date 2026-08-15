@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from tools.strategy_engine import signals as sg  # pyright: ignore
 
 
-def test_b3_requires_all_three():
-    """B3 三重确认：缺一不可（两重满足不触发——纪律）"""
+def test_b3_requires_both():
+    """B3 两重定案（回测 2026-08-15）：布林+RSI 缺一不可（九转已否决）"""
     with (
         patch.object(
             sg.ind,
@@ -17,13 +17,10 @@ def test_b3_requires_all_three():
             lambda c, n, k: {"lower": 10.0, "upper": 20.0, "mid": 15.0},
         ),
         patch.object(sg.ind, "rsi", lambda c, n: 25.0),
-        patch.object(
-            sg.ind, "td_sequential", lambda c: {"setup": "buy", "completed": False}
-        ),
     ):
-        r = sg.b3_triple_confirm([9.5] * 40, None)  # 收盘 9.5 < 下轨 10
-        assert not r["signal"]  # 九转未完成——不触发
-        assert len(r["reasons"]) == 2  # 布林+RSI 两重
+        r = sg.b3_triple_confirm([9.5] * 40, None)  # 布林触发（9.5<10）但 RSI 25 未超卖
+        assert not r["signal"]  # 只有布林——不触发
+        assert len(r["reasons"]) == 1
 
 
 def test_b3_trigger():
@@ -34,12 +31,9 @@ def test_b3_trigger():
             lambda c, n, k: {"lower": 10.0, "upper": 20.0, "mid": 15.0},
         ),
         patch.object(sg.ind, "rsi", lambda c, n: 20.0),
-        patch.object(
-            sg.ind, "td_sequential", lambda c: {"setup": "buy", "completed": True}
-        ),
     ):
-        r = sg.b3_triple_confirm([9.5] * 40, None)  # 收盘 9.5 < 下轨 10
-        assert r["signal"] and len(r["reasons"]) == 3
+        r = sg.b3_triple_confirm([9.5] * 40, None)  # 布林（9.5<10）+ RSI（20<30）双触发
+        assert r["signal"] and len(r["reasons"]) == 2
 
 
 def test_s2_upper_exit():
