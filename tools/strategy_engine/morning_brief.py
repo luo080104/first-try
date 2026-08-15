@@ -76,6 +76,14 @@ def build_brief() -> str:
     lo, hi = g.get("cash_range", (0, 0))
     hint = g.get("hint", "")
     lines.append(f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{hint}）")
+    # 虚拟盘通过判定进度（2026-08-15 加——微信端可视化进度）
+    try:
+        from tools.strategy_engine.gate_check import check as _gate_check
+
+        gate = _gate_check()
+        lines.append(f"\n【虚拟盘进度】{gate.get('reason', '')}")
+    except Exception:
+        pass  # 判定失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)

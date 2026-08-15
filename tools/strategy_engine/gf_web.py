@@ -22,8 +22,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
-from tools.strategy_engine import price_watch as pw
+from tools.strategy_engine import gate_check as gc
 from tools.strategy_engine import portfolio as pf
+from tools.strategy_engine import price_watch as pw
 from tools.strategy_engine import risk_dashboard as rd
 
 app = FastAPI(title="观复配置页")
@@ -69,11 +70,40 @@ def overview():
         "".join(f"<div class='{cls}'>{a}</div>" for a in r["alerts"])
         or "<div class='ok'>✅ 风险合规</div>"
     )
+    # 进度卡（gate_check 判定——2026-08-15 加）
+    gate = gc.check()
+    gcls = "ok" if gate.get("passed") else "warn"
+    gate_card = (
+        f"<div class='card'><b>⏳ 通过判定</b><br>"
+        f"<span class='{gcls}'>{gate.get('reason', '')}</span></div>"
+    )
+    # 净值曲线（ECharts CDN——无本地依赖）
+    curve = pf.Portfolio().equity_series()
+    if len(curve) >= 2:
+        dates = [c["date"] for c in curve]
+        totals = [c["total"] for c in curve]
+        chart = f"""
+<div class='card'><b>📈 净值曲线（{len(curve)} 点）</b>
+<div id='eq' style='height:220px'></div></div>
+<script src='https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js'></script>
+<script>
+const chart = echarts.init(document.getElementById('eq'));
+chart.setOption({{
+  grid: {{left: 60, right: 16, top: 16, bottom: 24}},
+  xAxis: {{type: 'category', data: {dates}}},
+  yAxis: {{type: 'value', scale: true}},
+  series: [{{type: 'line', data: {totals}, smooth: true, areaStyle: {{}}, itemStyle: {{color: '#2563eb'}}}}]
+}});
+</script>"""
+    else:
+        chart = f"<div class='card'>📈 净值曲线——<span class='warn'>积累中（{len(curve)} 点——每天 9:00 自动记录）</span></div>"
     content = f"""
 <h2>总览</h2>
 <div class='card'>总资产 {r["total"]:.0f} ｜ 盈亏 {r["pnl"]:+.0f}（{r["pnl_pct"]:+.1f}%）
 ｜ 现金 {r["cash_pct"]:.0f}% ｜ 持仓 {r["holdings"]} 只</div>
 {alerts}
+{gate_card}
+{chart}
 <h2>持仓</h2><div class='card'><table><tr><th>名称</th><th>代码</th><th>盈亏</th></tr>{pos_rows}</table></div>
 """
     return _PAGE.format(content=content)
