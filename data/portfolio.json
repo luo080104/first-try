@@ -1,0 +1,34 @@
+{
+  "init_cash": 100000,
+  "cash": 77656.0,
+  "holdings": {
+    "601601": {
+      "code": "601601",
+      "name": "中国太保",
+      "shares": 300,
+      "avg_cost": 29.92,
+      "track": "base",
+      "buy_date": "2026-08-15"
+    },
+    "601318": {
+      "code": "601318",
+      "name": "中国平安",
+      "shares": 100,
+      "avg_cost": 51.75,
+      "track": "base",
+      "buy_date": "2026-08-15"
+    },
+    "600030": {
+      "code": "600030",
+      "name": "中信证券",
+      "shares": 300,
+      "avg_cost": 27.31,
+      "track": "base",
+      "buy_date": "2026-08-15"
+    }
+  },
+  "track": {
+    "base": 22344.0,
+    "swing": 0.0
+  }
+}
