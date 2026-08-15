@@ -259,12 +259,11 @@ def verify_financial_rules() -> dict[str, Any]:
 
 def verify_s2_bull_market() -> dict[str, Any]:
     """K 验证（书 L290-300：牛市布林上轨卖出无效——S2 限定）——回测对比
-    沪深300 {YEARS} 年——机械上轨卖出 vs 牛市（周 MA20 上升）不卖
+    龙头池聚合（2026-08-15 审查后扩池：原单股招行 N=2-3 样本不足）——
+    机械上轨卖出 vs 牛市（周 MA20 上升）不卖
     """
     from tools.strategy_engine import backtest as bt
     from tools.strategy_engine import indicators as ind
-
-    weeks = bt.load_weekly("600036", YEARS)
 
     def sell_mechanical(hist):
         b = ind.bollinger(hist, 20, 2)
@@ -284,24 +283,36 @@ def verify_s2_bull_market() -> dict[str, Any]:
                 return False  # 中轨上升（牛市）——不卖
         return True
 
-    buy = lambda h: bt.make_buy("b+r")(h)
-    r1 = bt.run_backtest(weeks, buy, sell_mechanical)
-    r2 = bt.run_backtest(weeks, buy, sell_bullaware)
+    # 扩池：B3 聚合池 10 只 × 10 年（2026-08-15——单股 N=2-3 → 聚合 N 可统计）
+    import time
+
+    agg = {seg: {"机械": {"n": 0, "wins": 0, "sum": 0.0}, "牛熊限定": {"n": 0, "wins": 0, "sum": 0.0}}
+           for seg in ("训练", "验证")}
+    for code in POOL:
+        try:
+            weeks = bt.load_weekly(code, YEARS)
+        except Exception as e:
+            print(f"  {code} 数据失败: {str(e)[:50]}")
+            continue
+        buy = lambda h: bt.make_buy("b+r")(h)
+        r1 = bt.run_backtest(weeks, buy, sell_mechanical)
+        r2 = bt.run_backtest(weeks, buy, sell_bullaware)
+        for seg in ("训练", "验证"):
+            for key, m in (("机械", r1[seg]), ("牛熊限定", r2[seg])):
+                a = agg[seg][key]
+                a["n"] += m["trades"]
+                a["wins"] += m["trades"] * m["win_rate"] / 100
+                a["sum"] += m["avg_ret"] * m["trades"]
+        time.sleep(1.5)  # 节流（新浪限流——红线③）
     out = {}
-    for seg in ("训练", "验证"):
-        m1, m2 = r1[seg], r2[seg]
-        out[f"K_机械卖出_{seg}"] = {
-            "n": m1["trades"],
-            "win_rate": m1["win_rate"],
-            "avg_ret": m1["avg_ret"],
-            "max_dd": m1["max_dd"],
-        }
-        out[f"K_牛熊限定_{seg}"] = {
-            "n": m2["trades"],
-            "win_rate": m2["win_rate"],
-            "avg_ret": m2["avg_ret"],
-            "max_dd": m2["max_dd"],
-        }
+    for seg, variants in agg.items():
+        for key, a in variants.items():
+            n = a["n"]
+            out[f"K_机械卖出_{seg}" if key == "机械" else f"K_牛熊限定_{seg}"] = {
+                "n": n,
+                "win_rate": round(a["wins"] / n * 100, 1) if n else 0.0,
+                "avg_ret": round(a["sum"] / n, 2) if n else 0.0,
+            }
     return out
 
 
