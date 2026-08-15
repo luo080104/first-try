@@ -88,7 +88,7 @@ def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
     失败返回 []（不抛异常——源链自动降级）
     """
     rows = _bs_fetch(
-        code, "date,close,high,low", f"{2026 - years}-01-01", "2026-12-31", "w", "2"
+        code, "date,open,close,high,low", f"{2026 - years}-01-01", "2026-12-31", "w", "2"
     )
     out = []
     for r in rows:
@@ -96,9 +96,10 @@ def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
             out.append(
                 {
                     "date": r[0],
-                    "close": float(r[1]),
-                    "high": float(r[2]),
-                    "low": float(r[3]),
+                    "open": float(r[1]),
+                    "close": float(r[2]),
+                    "high": float(r[3]),
+                    "low": float(r[4]),
                 }
             )
         except (ValueError, IndexError):

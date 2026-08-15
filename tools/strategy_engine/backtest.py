@@ -2,16 +2,17 @@
 """回测框架（backtest.py——战术层验证——方案红线：回测达标才启用）
 
 红线（Vibe-Trading 三条——直接抄）：
-- 纯本地（akshare 数据）｜不碰真钱｜严格防未来函数（T 日收盘决策、T+1 开盘成交）
+- 纯本地数据｜不碰真钱｜严格防未来函数（T 日收盘决策、T+1 开盘成交）
 - 强制交易成本（佣金万 2.5 + 卖出印花税 0.05%）
 
-方法：walk-forward（2005-2020 训练 / 2021-2025 验证——样本外）——分段报告
+方法：walk-forward（2016-2020 训练 / 2021-2025 验证——样本外）——分段报告
+数据边界（2026-08-15 定案）：10 年（2016 起——制度可比性——覆盖 1.5 轮牛熊）
 指标：交易数/胜率/平均收益/总收益/最大回撤/卡玛比率
 
 策略：信号函数注入（B3/S2/S3——signals.py）——买入=信号触发 T+1 开盘——
 卖出=S2 上轨 / 持有超 52 周强制（周期保护）——v0 简化（Q11 校准）
 
-运行：python -m tools.strategy_engine.backtest --code sh000300 --years 20
+运行：python -m tools.strategy_engine.backtest --code 600036
 """
 
 from __future__ import annotations
@@ -19,10 +20,12 @@ from __future__ import annotations
 import argparse
 from typing import Any, Callable
 
+from tools.strategy_engine import data as d
 from tools.strategy_engine import indicators as ind
 from tools.strategy_engine import signals as sg  # pyright: ignore
 
 SPLIT_DATE = "2021-01-01"  # walk-forward 分界（训练/验证）
+DEFAULT_YEARS = 10  # 数据边界定案（2026-08-15）
 
 
 def _f(x) -> float:
@@ -81,8 +84,16 @@ def _fetch_daily(symbol: str, years: int, retries: int = 2) -> Any:
     raise RuntimeError(f"多源获取失败: {symbol}（新浪/东财均不可用）")
 
 
-def load_weekly(code: str, years: int = 20) -> list[dict[str, Any]]:
-    """历史周线（日线重采样——2006 起——多源重试链）"""
+def load_weekly(code: str, years: int = DEFAULT_YEARS) -> list[dict[str, Any]]:
+    """历史周线（baostock 主源 → akshare 多源重试链兜底——红线③）
+
+    10 年窗口（数据边界定案）——baostock 免费无限流（2006 起）——新浪常限流
+    """
+    # 主源：baostock（P0-1 已接——SQLite 缓存——稳定）
+    wk = d.bs_kline_weekly(code, years)
+    if len(wk) >= 100:
+        return wk
+    # 兜底：akshare 日线重采样（多源重试链）
     import os
 
     # 绕过代理/直连（东财源被反爬拒——腾讯源不封 IP）
@@ -97,12 +108,12 @@ def load_weekly(code: str, years: int = 20) -> list[dict[str, Any]]:
     weeks: list[dict[str, Any]] = []
     cur = None
     for _, row in df.iterrows():
-        d = str(row["date"])
-        if cur is None or d[:10] != cur["date"][:10]:
+        dstr = str(row["date"])
+        if cur is None or dstr[:10] != cur["date"][:10]:
             if cur:
                 weeks.append(cur)
             cur = {
-                "date": d,
+                "date": dstr,
                 "open": _f(row["open"]),
                 "close": _f(row["close"]),
                 "high": _f(row["high"]),
@@ -238,7 +249,9 @@ POOL_DEFAULT = [
 
 
 def run_pool(
-    codes: list[str], years: int = 20, variants: tuple[str, ...] = ("b+r+t", "b+r")
+    codes: list[str],
+    years: int = DEFAULT_YEARS,
+    variants: tuple[str, ...] = ("b+r+t", "b+r"),
 ) -> dict:
     """多股聚合回测：每只 load_weekly+run_backtest——按段聚合交易（N 提升到可统计）"""
     import time
@@ -273,7 +286,7 @@ def run_pool(
 def main():
     ap = argparse.ArgumentParser(description="观复战术层回测（walk-forward）")
     ap.add_argument("--code", default="600036", help="标的（默认招行——个股——指数二期）")
-    ap.add_argument("--years", type=int, default=20)
+    ap.add_argument("--years", type=int, default=DEFAULT_YEARS)
     ap.add_argument(
         "--pool",
         nargs="*",
