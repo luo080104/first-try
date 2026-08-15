@@ -71,3 +71,31 @@ def test_simulate_buy_retry_on_limit():
     res = bt._simulate(weeks, opens, events)
     assert res["trades"] == 1  # 顺延后成交（不丢单）
     assert res["avg_ret"] > 0  # 买 @36 卖 @40——上涨段——正收益
+
+
+def test_buy_signal_not_expired_during_limit_chain():
+    """R1 审查修复：触板顺延中信号不因有效期丢弃（5周涨停后第6周应成交）"""
+    n = 60
+    closes = [10.0 + i * 0.1 for i in range(n)]
+    opens = closes[:]
+    weeks = _weeks_with(opens, closes)
+    # 买点 @35——35-39 连续 5 周涨停 → 40 周恢复可成交
+    weeks[34]["close"] = 10.0
+    for i in range(35, 40):
+        weeks[i]["open"] = 12.0
+        weeks[i - 1]["close"] = 10.0
+    events = [{"i": 35, "type": "buy"}, {"i": 45, "type": "sell"}]
+    res = bt._simulate(weeks, opens, events)
+    assert res["trades"] == 1  # 顺延 5 周后第 6 周成交（不丢弃）
+
+
+def test_buy_signal_expires_when_holding_blocked():
+    """有效期语义保持：持仓期间信号未成交——卖出后超期丢弃"""
+    n = 60
+    closes = [10.0 + i * 0.1 for i in range(n)]
+    opens = closes[:]
+    weeks = _weeks_with(opens, closes)
+    # 买@30 成交 → 买@31 被持仓挡住 → 卖@45 → 买@31 已过 14 周 → 丢弃
+    events = [{"i": 30, "type": "buy"}, {"i": 31, "type": "buy"}, {"i": 45, "type": "sell"}]
+    res = bt._simulate(weeks, opens, events)
+    assert res["trades"] == 1  # 只成交 30→45 一笔

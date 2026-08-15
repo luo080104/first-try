@@ -202,21 +202,30 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
     SIGNAL_VALID_WEEKS = 4  # v0 先验——Q11 校准
     buy_retry = 0
     sell_retry = 0
+    last_blocked_i: int | None = None  # 最近一次触板顺延周（超期从它之后重算——审查 2026-08-15）
     for i in range(30, len(weeks)):
         if pos is None and b_idx < len(buys):
             b_sig = buys[b_idx]
             if b_sig["i"] > i:
                 continue  # 信号在未来（未触发）——等（修复 2026-08-15：原逻辑提前成交）
-            # 信号超期失效（触发 4 周后仍无法成交——放弃该信号——Q6）
-            if i - b_sig["i"] > SIGNAL_VALID_WEEKS:
+            blocked = _limit_blocked(weeks, i, is_buy=True)
+            # 触板顺延中 → 豁免有效期（2026-08-15 审查修复：原有效期 4 周先于顺延上限触发——
+            # 5 周涨停后第 6 周本可成交却被丢弃——顺延上限形同虚设）
+            if blocked and buy_retry < MAX_LIMIT_RETRY:
+                buy_retry += 1
+                last_blocked_i = i  # 记住最后触板周——超期从它之后重算
+                continue
+            # 信号超期失效（未触板却 N 周未成交——放弃该信号——Q6）
+            # 基准 = 最后触板周之后（顺延中的周不计入有效期——真实市场排队等待合理）
+            effective_base = max(b_sig["i"], last_blocked_i or 0)
+            if i - effective_base > SIGNAL_VALID_WEEKS:
                 b_idx += 1
                 buy_retry = 0
+                last_blocked_i = None
                 continue
-            # 买单：涨停封板买不进——顺延（限期内重试）
-            if _limit_blocked(weeks, i, is_buy=True) and buy_retry < MAX_LIMIT_RETRY:
-                buy_retry += 1
-                continue
+            # 顺延上限耗尽仍触板 → 按真实市场排队（不丢弃——继续等）
             buy_retry = 0
+            last_blocked_i = None
             px = opens[i] * (1 + COMMISSION)
             pos = {"entry_i": i, "entry_px": px}
             b_idx += 1
