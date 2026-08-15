@@ -19,9 +19,10 @@ from __future__ import annotations
 import argparse
 from typing import Any, Callable
 
+from tools.strategy_engine import indicators as ind
 from tools.strategy_engine import signals as sg  # pyright: ignore
 
-SPLIT_DATE = "2021-01-01"   # walk-forward 分界（训练/验证）
+SPLIT_DATE = "2021-01-01"  # walk-forward 分界（训练/验证）
 
 
 def _f(x) -> float:
@@ -30,10 +31,12 @@ def _f(x) -> float:
         return float(x)
     except (TypeError, ValueError):
         return 0.0
-COMMISSION = 0.00025        # 佣金万 2.5
-STAMP_TAX = 0.0005          # 卖出印花税 0.05%
-MAX_HOLD_WEEKS = 52         # 周期保护（v0）
-LOT = 100                   # 一手（A股整手交易）
+
+
+COMMISSION = 0.00025  # 佣金万 2.5
+STAMP_TAX = 0.0005  # 卖出印花税 0.05%
+MAX_HOLD_WEEKS = 52  # 周期保护（v0）
+LOT = 100  # 一手（A股整手交易）
 
 
 def _fetch_daily(symbol: str, years: int, retries: int = 2) -> Any:
@@ -45,19 +48,32 @@ def _fetch_daily(symbol: str, years: int, retries: int = 2) -> Any:
     start = f"{2026 - years}0101"
     for attempt in range(retries + 1):
         try:
-            df = ak.stock_zh_a_daily(symbol=symbol, start_date=start,
-                                     end_date="20261231", adjust="qfq")
+            df = ak.stock_zh_a_daily(
+                symbol=symbol, start_date=start, end_date="20261231", adjust="qfq"
+            )
             if df is not None and "date" in df.columns and len(df) > 100:
                 return df
         except Exception:
             pass
         try:
-            df = ak.stock_zh_a_hist(symbol=symbol.replace("sh", "").replace("sz", ""),
-                                    period="daily", start_date=start,
-                                    end_date="20261231", adjust="qfq")
+            df = ak.stock_zh_a_hist(
+                symbol=symbol.replace("sh", "").replace("sz", ""),
+                period="daily",
+                start_date=start,
+                end_date="20261231",
+                adjust="qfq",
+            )
             if df is not None and "日期" in df.columns and len(df) > 100:
-                df = df.rename(columns={"日期": "date", "开盘": "open", "收盘": "close",
-                                        "最高": "high", "最低": "low", "成交量": "volume"})
+                df = df.rename(
+                    columns={
+                        "日期": "date",
+                        "开盘": "open",
+                        "收盘": "close",
+                        "最高": "high",
+                        "最低": "low",
+                        "成交量": "volume",
+                    }
+                )
                 return df
         except Exception:
             pass
@@ -72,7 +88,11 @@ def load_weekly(code: str, years: int = 20) -> list[dict[str, Any]]:
     # 绕过代理/直连（东财源被反爬拒——腾讯源不封 IP）
     os.environ.pop("HTTP_PROXY", None)
     os.environ.pop("HTTPS_PROXY", None)
-    symbol = code if code.startswith(("sh", "sz", "bj")) else ("sh" + code if code.startswith("6") else "sz" + code)
+    symbol = (
+        code
+        if code.startswith(("sh", "sz", "bj"))
+        else ("sh" + code if code.startswith("6") else "sz" + code)
+    )
     df = _fetch_daily(symbol, years)  # 多源重试链（红线③：数据失误真实风险）
     weeks: list[dict[str, Any]] = []
     cur = None
@@ -81,9 +101,14 @@ def load_weekly(code: str, years: int = 20) -> list[dict[str, Any]]:
         if cur is None or d[:10] != cur["date"][:10]:
             if cur:
                 weeks.append(cur)
-            cur = {"date": d, "open": _f(row["open"]), "close": _f(row["close"]),
-                   "high": _f(row["high"]), "low": _f(row["low"]),
-                   "volume": _f(row["volume"])}
+            cur = {
+                "date": d,
+                "open": _f(row["open"]),
+                "close": _f(row["close"]),
+                "high": _f(row["high"]),
+                "low": _f(row["low"]),
+                "volume": _f(row["volume"]),
+            }
         else:
             cur["close"] = _f(row["close"])
             cur["high"] = max(cur["high"], _f(row["high"]))
@@ -94,17 +119,19 @@ def load_weekly(code: str, years: int = 20) -> list[dict[str, Any]]:
     return weeks
 
 
-def run_backtest(weeks: list[dict[str, Any]],
-                 buy_fn: Callable[[list[float]], bool],
-                 sell_fn: Callable[[list[float]], bool],
-                 split_date: str = SPLIT_DATE) -> dict[str, Any]:
+def run_backtest(
+    weeks: list[dict[str, Any]],
+    buy_fn: Callable[[list[float]], bool],
+    sell_fn: Callable[[list[float]], bool],
+    split_date: str = SPLIT_DATE,
+) -> dict[str, Any]:
     """事件循环回测：信号（T 收盘）→ T+1 开盘成交——分段统计"""
     closes = [w["close"] for w in weeks]
     opens = [w["open"] for w in weeks]
     segments = {"训练": [], "验证": []}
     for i in range(30, len(weeks)):
         seg = "训练" if weeks[i]["date"][:10] < split_date else "验证"
-        hist = closes[max(0, i - 250):i]  # 防未来：只用 T 日及之前
+        hist = closes[max(0, i - 250) : i]  # 防未来：只用 T 日及之前
         if buy_fn(hist):
             segments[seg].append({"i": i, "type": "buy"})
         if sell_fn(hist):
@@ -133,16 +160,27 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
             if exit_sig or over_hold:
                 px = opens[i] * (1 - COMMISSION - STAMP_TAX)
                 ret = (px - pos["entry_px"]) / pos["entry_px"] * 100
-                trades.append({"entry": pos["entry_px"], "exit": px,
-                               "ret_pct": round(ret, 2),
-                               "weeks": i - pos["entry_i"],
-                               "reason": "S2/估值" if exit_sig else "周期保护"})
+                trades.append(
+                    {
+                        "entry": pos["entry_px"],
+                        "exit": px,
+                        "ret_pct": round(ret, 2),
+                        "weeks": i - pos["entry_i"],
+                        "reason": "S2/估值" if exit_sig else "周期保护",
+                    }
+                )
                 pos = None
                 if exit_sig:
                     s_idx += 1
     if not trades:
-        return {"trades": 0, "win_rate": 0.0, "avg_ret": 0.0,
-                "total_ret": 0.0, "max_dd": 0.0, "calmar": 0.0}
+        return {
+            "trades": 0,
+            "win_rate": 0.0,
+            "avg_ret": 0.0,
+            "total_ret": 0.0,
+            "max_dd": 0.0,
+            "calmar": 0.0,
+        }
     rets = [t["ret_pct"] for t in trades]
     wins = sum(1 for r in rets if r > 0)
     total = 1.0
@@ -153,26 +191,97 @@ def _simulate(weeks, opens, events) -> dict[str, Any]:
         peak = max(peak, total)
         max_dd = max(max_dd, (peak - total) / peak * 100)
     avg = sum(rets) / len(rets)
-    return {"trades": len(trades), "win_rate": round(wins / len(trades) * 100, 1),
-            "avg_ret": round(avg, 2), "total_ret": round((total - 1) * 100, 1),
-            "max_dd": round(max_dd, 1),
-            "calmar": round(avg * len(trades) / max_dd, 2) if max_dd > 0 else 0.0}
+    return {
+        "trades": len(trades),
+        "win_rate": round(wins / len(trades) * 100, 1),
+        "avg_ret": round(avg, 2),
+        "total_ret": round((total - 1) * 100, 1),
+        "max_dd": round(max_dd, 1),
+        "calmar": round(avg * len(trades) / max_dd, 2) if max_dd > 0 else 0.0,
+    }
+
+
+def make_buy(variant):
+    """B3 变体工厂（网格调参——三重/两重/放宽——回测工具）"""
+    def buy(hist):
+        b = ind.bollinger(hist, 20, 2)
+        r = ind.rsi(hist, 6)
+        td = ind.td_sequential(hist)
+        lower = bool(b["lower"] and hist[-1] <= b["lower"])
+        rsi30 = r is not None and r < 30
+        rsi40 = r is not None and r < 40
+        td9 = td.get("setup") == "buy" and td.get("completed")
+        return {"b+r+t": lower and rsi30 and td9, "b+r": lower and rsi30,
+                "r+t": rsi30 and td9, "b+t": lower and td9,
+                "b+r40+t": lower and rsi40 and td9}[variant]
+    return buy
+
+
+POOL_DEFAULT = ["600036", "600519", "601318", "601088", "600900",
+                "600028", "601857", "601398", "600030", "000651"]
+
+
+def run_pool(codes: list[str], years: int = 20,
+             variants: tuple[str, ...] = ("b+r+t", "b+r")) -> dict:
+    """多股聚合回测：每只 load_weekly+run_backtest——按段聚合交易（N 提升到可统计）"""
+    import time
+
+    agg = {seg: {} for seg in ("训练", "验证")}
+    for code in codes:
+        try:
+            weeks = load_weekly(code, years)
+        except Exception as e:
+            print(f"  {code} 数据失败: {str(e)[:60]}")
+            continue
+        for v in variants:
+            res = run_backtest(weeks, make_buy(v),
+                               lambda h: sg.s2_weekly_upper_exit(h)["signal"])
+            for seg, m in res.items():
+                a = agg[seg].setdefault(v, {"n": 0, "wins": 0, "sum": 0.0})
+                a["n"] += m["trades"]
+                a["wins"] += m["trades"] * m["win_rate"] / 100
+                a["sum"] += m["avg_ret"] * m["trades"]
+        time.sleep(1.5)  # 节流（新浪限流——红线③）
+    out = {}
+    for seg, vstats in agg.items():
+        out[seg] = {}
+        for v, a in vstats.items():
+            wr = round(a["wins"] / a["n"] * 100, 1) if a["n"] else 0.0
+            avg = round(a["sum"] / a["n"], 2) if a["n"] else 0.0
+            out[seg][v] = {"n": a["n"], "win_rate": wr, "avg_ret": avg}
+    return out
 
 
 def main():
     ap = argparse.ArgumentParser(description="观复战术层回测（walk-forward）")
     ap.add_argument("--code", default="600036", help="标的（默认招行——个股——指数二期）")
     ap.add_argument("--years", type=int, default=20)
+    ap.add_argument("--pool", nargs="*", default=None,
+                    help="聚合回测（龙头池代码列表——不传用默认 10 只）")
     args = ap.parse_args()
+    if args.pool is not None:
+        codes = args.pool or POOL_DEFAULT
+        print(f"聚合回测 {len(codes)} 只 × {args.years} 年（变体: b+r+t 三重/b+r 两重）")
+        agg = run_pool(codes, args.years)
+        for seg, vstats in agg.items():
+            print(f"\n【{seg}段】")
+            for v, m in vstats.items():
+                name = {"b+r+t": "三重(布林+RSI30+九转)", "b+r": "两重(布林+RSI30)"}[v]
+                print(f"  {name}: N={m['n']} 笔 | 胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}%")
+        return
     weeks = load_weekly(args.code, args.years)
-    print(f"加载 {len(weeks)} 根周线（{weeks[0]['date'][:10]} → {weeks[-1]['date'][:10]}）")
+    print(
+        f"加载 {len(weeks)} 根周线（{weeks[0]['date'][:10]} → {weeks[-1]['date'][:10]}）"
+    )
     buy = lambda hist: sg.b3_triple_confirm(hist)["signal"]
     sell = lambda hist: sg.s2_weekly_upper_exit(hist)["signal"]
     res = run_backtest(weeks, buy, sell)
     for seg, m in res.items():
-        print(f"\n【{seg}段】{SPLIT_DATE} 分界——交易 {m['trades']} 笔 | "
-              f"胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}% | "
-              f"累计 {m['total_ret']}% | 最大回撤 {m['max_dd']}% | 卡玛 {m['calmar']}")
+        print(
+            f"\n【{seg}段】{SPLIT_DATE} 分界——交易 {m['trades']} 笔 | "
+            f"胜率 {m['win_rate']}% | 均收益 {m['avg_ret']}% | "
+            f"累计 {m['total_ret']}% | 最大回撤 {m['max_dd']}% | 卡玛 {m['calmar']}"
+        )
 
 
 if __name__ == "__main__":
