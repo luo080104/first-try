@@ -1,4 +1,5 @@
 """信号在线评分单测（signal_ledger.online_score——2026-08-15 整改②——mock K 线）"""
+
 import json
 import os
 import sys
