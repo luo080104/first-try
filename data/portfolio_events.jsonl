@@ -316,3 +316,14 @@
 {"ts": "2026-08-15T13:20:37", "action": "buy", "code": "601088", "name": "", "price": 14, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 94000}
 {"ts": "2026-08-15T13:20:37", "action": "buy", "code": "600900", "name": "", "price": 15, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 92500}
 {"ts": "2026-08-15T13:20:37", "action": "buy", "code": "600036", "name": "招商银行", "price": 38.46, "shares": 1300, "track": "base", "reason": "", "grid": null, "cash_after": 50002.0}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600036", "name": "招商银行", "price": 38.46, "shares": 1300, "track": "base", "reason": "", "grid": null, "cash_after": 50002.0}
+{"ts": "2026-08-15T13:21:18", "action": "sell", "code": "600036", "name": "招商银行", "price": 39.5, "shares": 500, "track": "base", "reason": "", "cash_after": 69752.0}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600036", "name": "招行", "price": 38.46, "shares": 1000, "track": "base", "reason": "", "grid": null, "cash_after": 61540.0}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600519", "name": "茅台", "price": 1341.99, "shares": 40, "track": "swing", "reason": "", "grid": null, "cash_after": 7860.4}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600036", "name": "", "price": 10, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 99000}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600519", "name": "", "price": 11, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 97900}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "601318", "name": "", "price": 12, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 96700}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600028", "name": "", "price": 13, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 95400}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "601088", "name": "", "price": 14, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 94000}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600900", "name": "", "price": 15, "shares": 100, "track": "base", "reason": "", "grid": null, "cash_after": 92500}
+{"ts": "2026-08-15T13:21:18", "action": "buy", "code": "600036", "name": "招商银行", "price": 38.46, "shares": 1300, "track": "base", "reason": "", "grid": null, "cash_after": 50002.0}

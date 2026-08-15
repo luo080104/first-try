@@ -26,7 +26,7 @@ TRADES_FILE = os.path.join(DATA_DIR, "bigv_trades.jsonl")
 LIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bigv_list.yaml")
 FOLLOW_CAP = 0.20  # 跟随仓 ≤20%（v1.5 定案——风险隔离红线）
 DECAY_DAYS = 30     # X 证据链衰减窗（30 天无记录 → 权重 ×0.9——v0 待校准）
-REASON_MIN_LEN = 20  # 披露质量：有实质理由（≥20 字）
+REASON_MIN_LEN = 10  # 披露质量：有实质理由（≥10 字——v0 待校准）
 
 
 def load_list() -> list[dict[str, Any]]:
