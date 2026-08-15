@@ -75,7 +75,11 @@ def remove(code: str, direction: str = "below") -> bool:
     """移除盯价条目"""
     data = _load()
     before = len(data["items"])
-    data["items"] = [it for it in data["items"] if not (it["code"] == code and it.get("direction") == direction)]
+    data["items"] = [
+        it
+        for it in data["items"]
+        if not (it["code"] == code and it.get("direction") == direction)
+    ]
     if len(data["items"]) != before:
         _save(data)
         return True
@@ -109,7 +113,11 @@ def check(retries: int = 2) -> list[dict[str, Any]]:
         if not q or not q.get("price"):
             continue
         price = q["price"]
-        hit = price <= it["target"] if it["direction"] == "below" else price >= it["target"]
+        hit = (
+            price <= it["target"]
+            if it["direction"] == "below"
+            else price >= it["target"]
+        )
         if hit:
             it["alerted"] = True
             hits.append({**it, "price": price})
@@ -128,7 +136,9 @@ def push_hits(hits: list[dict[str, Any]]) -> None:
         lines = ["⚡ 盘中盯价命中："]
         for h in hits:
             arrow = "跌破" if h["direction"] == "below" else "涨破"
-            lines.append(f"  {h['name']}({h['code']}) {arrow} {h['target']}（现价 {h['price']}）")
+            lines.append(
+                f"  {h['name']}({h['code']}) {arrow} {h['target']}（现价 {h['price']}）"
+            )
         push_signal("\n".join(lines))
     except Exception:
         pass  # 推送失败不阻塞（红线③）
@@ -138,17 +148,26 @@ if __name__ == "__main__":
     import argparse
 
     ap = argparse.ArgumentParser(description="观复盘中盯价")
-    ap.add_argument("cmd", choices=["add", "remove", "check"], default="check", nargs="?")
+    ap.add_argument(
+        "cmd", choices=["add", "remove", "check"], default="check", nargs="?"
+    )
     ap.add_argument("--code", default="")
     ap.add_argument("--target", type=float, default=0)
     ap.add_argument("--direction", default="below", choices=["below", "above"])
     ap.add_argument("--note", default="")
     args = ap.parse_args()
     if args.cmd == "add":
-        print("已添加" if add(args.code, args.target, args.direction, args.note) else "添加失败/已存在")
+        print(
+            "已添加"
+            if add(args.code, args.target, args.direction, args.note)
+            else "添加失败/已存在"
+        )
     elif args.cmd == "remove":
         print("已移除" if remove(args.code, args.direction) else "未找到")
     else:
         hits = check()
         push_hits(hits)
-        print(f"检查完成——命中 {len(hits)} 条" + (f": {[h['name'] for h in hits]}" if hits else ""))
+        print(
+            f"检查完成——命中 {len(hits)} 条"
+            + (f": {[h['name'] for h in hits]}" if hits else "")
+        )

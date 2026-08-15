@@ -68,24 +68,25 @@ def dual_low_strategy(
 
     # 经典双低值 ≈ 转股溢价率 + (债现价 / 100) × 10
     filtered["双低值"] = (
-        filtered[_COL_PREMIUM] * 0.5
-        + (filtered[_COL_PRICE] / 100) * 50
+        filtered[_COL_PREMIUM] * 0.5 + (filtered[_COL_PRICE] / 100) * 50
     )
     filtered = filtered.sort_values("双低值", ascending=True).head(top_n)
 
     results = []
     for _, row in filtered.iterrows():
-        results.append({
-            "代码": str(row.get(_COL_CODE, "")),
-            "名称": str(row.get(_COL_NAME, "")),
-            "现价": _to_float(row.get(_COL_PRICE)),
-            "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
-            "双低值": _to_float(row.get("双低值")),
-            "转股价值": _to_float(row.get(_COL_CONV_VALUE)),
-            "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
-            "正股价": _to_float(row.get(_COL_STOCK)),
-            "强赎触发价": _to_float(row.get(_COL_REDEEM_TRIG)),
-        })
+        results.append(
+            {
+                "代码": str(row.get(_COL_CODE, "")),
+                "名称": str(row.get(_COL_NAME, "")),
+                "现价": _to_float(row.get(_COL_PRICE)),
+                "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
+                "双低值": _to_float(row.get("双低值")),
+                "转股价值": _to_float(row.get(_COL_CONV_VALUE)),
+                "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
+                "正股价": _to_float(row.get(_COL_STOCK)),
+                "强赎触发价": _to_float(row.get(_COL_REDEEM_TRIG)),
+            }
+        )
     return results
 
 
@@ -103,9 +104,14 @@ def triple_low_strategy(
     条件: 发行规模 ≤ max_balance (亿)
     """
     df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
-    df = _ensure_numeric(df, [
-        _COL_PRICE, _COL_PREMIUM, _COL_ISSUE_AMT,
-    ])
+    df = _ensure_numeric(
+        df,
+        [
+            _COL_PRICE,
+            _COL_PREMIUM,
+            _COL_ISSUE_AMT,
+        ],
+    )
 
     # 过滤退市债
     df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
@@ -124,8 +130,7 @@ def triple_low_strategy(
 
     # 双低值
     filtered["双低值"] = (
-        filtered[_COL_PREMIUM] * 0.5
-        + (filtered[_COL_PRICE] / 100) * 50
+        filtered[_COL_PREMIUM] * 0.5 + (filtered[_COL_PRICE] / 100) * 50
     )
     # 规模越小分越高 (0~10)
     max_s = filtered[_COL_ISSUE_AMT].max()
@@ -139,16 +144,18 @@ def triple_low_strategy(
 
     results = []
     for _, row in filtered.iterrows():
-        results.append({
-            "代码": str(row.get(_COL_CODE, "")),
-            "名称": str(row.get(_COL_NAME, "")),
-            "现价": _to_float(row.get(_COL_PRICE)),
-            "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
-            "双低值": _to_float(row.get("双低值")),
-            "三低值": _to_float(row.get("三低值")),
-            "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
-            "正股价": _to_float(row.get(_COL_STOCK)),
-        })
+        results.append(
+            {
+                "代码": str(row.get(_COL_CODE, "")),
+                "名称": str(row.get(_COL_NAME, "")),
+                "现价": _to_float(row.get(_COL_PRICE)),
+                "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
+                "双低值": _to_float(row.get("双低值")),
+                "三低值": _to_float(row.get("三低值")),
+                "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
+                "正股价": _to_float(row.get(_COL_STOCK)),
+            }
+        )
     return results
 
 
@@ -169,13 +176,19 @@ def ytm_ranking(
     df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     # YTM proxy: 现价越低, YTM 越高
-    mask = (df[_COL_PRICE] > 80) & (df[_COL_PRICE] < 115) & (df[_COL_ISSUE_AMT].fillna(0) > 0.3)
+    mask = (
+        (df[_COL_PRICE] > 80)
+        & (df[_COL_PRICE] < 115)
+        & (df[_COL_ISSUE_AMT].fillna(0) > 0.3)
+    )
     filtered = df.loc[mask].copy()
     if filtered.empty:
         return []
 
     # 简单YTM估算: (110 - 现价) / 6 (假设6年到期, 赎回价110)
-    filtered["预估YTM"] = ((110 - filtered[_COL_PRICE]) / 6 * 100 / filtered[_COL_PRICE] * 100).round(2)
+    filtered["预估YTM"] = (
+        (110 - filtered[_COL_PRICE]) / 6 * 100 / filtered[_COL_PRICE] * 100
+    ).round(2)
     # YTM封顶 50%
     filtered["预估YTM"] = filtered["预估YTM"].clip(upper=50.0)
 
@@ -185,15 +198,17 @@ def ytm_ranking(
 
     results = []
     for _, row in filtered.iterrows():
-        results.append({
-            "代码": str(row.get(_COL_CODE, "")),
-            "名称": str(row.get(_COL_NAME, "")),
-            "现价": _to_float(row.get(_COL_PRICE)),
-            "预估YTM": f"{_to_float(row.get('预估YTM'))}%",
-            "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
-            "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
-            "转股价值": _to_float(row.get(_COL_CONV_VALUE)),
-        })
+        results.append(
+            {
+                "代码": str(row.get(_COL_CODE, "")),
+                "名称": str(row.get(_COL_NAME, "")),
+                "现价": _to_float(row.get(_COL_PRICE)),
+                "预估YTM": f"{_to_float(row.get('预估YTM'))}%",
+                "转股溢价率": _to_float(row.get(_COL_PREMIUM)),
+                "发行规模": f"{_to_float(row.get(_COL_ISSUE_AMT))}亿",
+                "转股价值": _to_float(row.get(_COL_CONV_VALUE)),
+            }
+        )
     return results
 
 
@@ -234,22 +249,28 @@ def early_redemption_monitor(
         elif ratio >= 100:
             status = "⚠️ 接近强赎"
 
-        pct_display = f"{ratio}%" if not pd.isna(ratio) and ratio != float("inf") else "N/A"
+        pct_display = (
+            f"{ratio}%" if not pd.isna(ratio) and ratio != float("inf") else "N/A"
+        )
 
-        results.append({
-            "代码": code,
-            "名称": name,
-            "正股价": stock,
-            "强赎触发价": trig,
-            "正股/触发价": pct_display,
-            "债现价": _to_float(row.get(_COL_PRICE)),
-            "状态": status,
-        })
+        results.append(
+            {
+                "代码": code,
+                "名称": name,
+                "正股价": stock,
+                "强赎触发价": trig,
+                "正股/触发价": pct_display,
+                "债现价": _to_float(row.get(_COL_PRICE)),
+                "状态": status,
+            }
+        )
 
     results.sort(
-        key=lambda x: _to_float(x["正股/触发价"].replace("%", ""))
-        if "N/A" not in x["正股/触发价"]
-        else 0.0,
+        key=lambda x: (
+            _to_float(x["正股/触发价"].replace("%", ""))
+            if "N/A" not in x["正股/触发价"]
+            else 0.0
+        ),
         reverse=True,
     )
     return results
@@ -264,9 +285,16 @@ def revision_arbitrage_analysis(
     博弈评分 = 回售压力分 + 下修空间分
     """
     df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
-    df = _ensure_numeric(df, [
-        _COL_STOCK, _COL_PUT_TRIG, _COL_PREMIUM, _COL_PRICE, _COL_ISSUE_AMT,
-    ])
+    df = _ensure_numeric(
+        df,
+        [
+            _COL_STOCK,
+            _COL_PUT_TRIG,
+            _COL_PREMIUM,
+            _COL_PRICE,
+            _COL_ISSUE_AMT,
+        ],
+    )
 
     # 过滤退市债
     df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
@@ -305,16 +333,18 @@ def revision_arbitrage_analysis(
         if score < 10:
             continue
 
-        results.append({
-            "代码": code,
-            "名称": name,
-            "现价": price,
-            "正股价": stock,
-            "回售触发价": trig,
-            "正股/回售价": f"{ratio}%",
-            "转股溢价率": premium,
-            "博弈评分": round(score, 1),
-        })
+        results.append(
+            {
+                "代码": code,
+                "名称": name,
+                "现价": price,
+                "正股价": stock,
+                "回售触发价": trig,
+                "正股/回售价": f"{ratio}%",
+                "转股溢价率": premium,
+                "博弈评分": round(score, 1),
+            }
+        )
 
     results.sort(key=lambda x: x["博弈评分"], reverse=True)
     return results

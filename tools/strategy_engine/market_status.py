@@ -52,7 +52,13 @@ def fair_pe_grid(
     for r in rates:
         for erp in erps:
             fp = 1 / (r + erp)
-            out.append({"rate": round(r * 100, 1), "erp": round(erp * 100, 0), "fair_pe": round(fp, 1)})
+            out.append(
+                {
+                    "rate": round(r * 100, 1),
+                    "erp": round(erp * 100, 0),
+                    "fair_pe": round(fp, 1),
+                }
+            )
     return out
 
 

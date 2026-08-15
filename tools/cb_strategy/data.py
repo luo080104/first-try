@@ -129,7 +129,9 @@ def _fetch_comparison_fallback() -> pd.DataFrame:
             return pd.DataFrame()
         # type: ignore[arg-type]——同上（akshare 无类型标注）
         df: pd.DataFrame = pd.DataFrame(raw)  # type: ignore[arg-type]
-        df = _ensure_numeric(df, ["正股价", "转股价", "转股价值", "债现价", "转股溢价率", "发行规模"])
+        df = _ensure_numeric(
+            df, ["正股价", "转股价", "转股价值", "债现价", "转股溢价率", "发行规模"]
+        )
         return df
     except Exception:
         return pd.DataFrame()

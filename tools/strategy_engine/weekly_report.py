@@ -37,7 +37,11 @@ def _week_events() -> list[dict[str, Any]]:
                 except ValueError:
                     continue
                 ts = (e.get("ts") or "")[:10]
-                if ts and (datetime.date.today() - datetime.date.fromisoformat(ts)).days <= 7:
+                if (
+                    ts
+                    and (datetime.date.today() - datetime.date.fromisoformat(ts)).days
+                    <= 7
+                ):
                     out.append(e)
     except OSError:
         pass
@@ -50,7 +54,9 @@ def _behavior_check(events: list[dict[str, Any]]) -> list[str]:
     buys = [e for e in events if e.get("action") in ("buy", "加仓", "加仓")]
     sells = [e for e in events if e.get("action") in ("sell", "减仓", "减仓")]
     if len(buys) + len(sells) > 5:
-        notes.append(f"⚠️ 本周操作 {len(buys) + len(sells)} 笔——偏频繁（书：低频合并——计划外不动）")
+        notes.append(
+            f"⚠️ 本周操作 {len(buys) + len(sells)} 笔——偏频繁（书：低频合并——计划外不动）"
+        )
     if buys and not sells:
         notes.append("✅ 本周只加仓未减仓——拿住纪律（Q10）")
     if sells and not buys:
@@ -80,11 +86,15 @@ def build_report() -> str:
 
     # ② 盈亏
     pnl = s.get("total", 0) - s.get("init_cash", 0)
-    lines.append(f"\n【持仓】{s.get('n_holdings', 0)} 只 | 总资产 {s.get('total', 0):.0f} | "
-                 f"现金 {s.get('cash_pct', 0):.0f}% | 浮动 {pnl:+.0f} 元（{pnl / s.get('init_cash', 1) * 100:+.1f}%）")
+    lines.append(
+        f"\n【持仓】{s.get('n_holdings', 0)} 只 | 总资产 {s.get('total', 0):.0f} | "
+        f"现金 {s.get('cash_pct', 0):.0f}% | 浮动 {pnl:+.0f} 元（{pnl / s.get('init_cash', 1) * 100:+.1f}%）"
+    )
     for pos in s.get("positions", []):
-        lines.append(f"  {pos.get('name', '')}({pos.get('code', '')}) "
-                     f"{pos.get('shares', 0)}股 盈亏 {pos.get('pnl', 0):+.0f}（{pos.get('pnl_pct', 0):+.1f}%）")
+        lines.append(
+            f"  {pos.get('name', '')}({pos.get('code', '')}) "
+            f"{pos.get('shares', 0)}股 盈亏 {pos.get('pnl', 0):+.0f}（{pos.get('pnl_pct', 0):+.1f}%）"
+        )
 
     # ③ 策略表现（signal_ledger 信号回顾）
     lines.append("\n【信号表现】本周信号记录：")

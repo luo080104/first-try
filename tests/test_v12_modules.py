@@ -1,4 +1,5 @@
 """v1.2 模块单测（price_watch / risk_dashboard / weekly_report）"""
+
 import os
 import sys
 import tempfile
@@ -14,7 +15,9 @@ from tools.strategy_engine import risk_dashboard as rd
 @pytest.fixture(autouse=True)
 def _isolate_watch_file():
     """每个测试独立盯价文件（uuid 唯一——防跨测试污染）"""
-    pw._WATCH_FILE = os.path.join(tempfile.mkdtemp(), f"watch_{uuid.uuid4().hex[:8]}.json")
+    pw._WATCH_FILE = os.path.join(
+        tempfile.mkdtemp(), f"watch_{uuid.uuid4().hex[:8]}.json"
+    )
     yield
     if os.path.exists(pw._WATCH_FILE):
         try:

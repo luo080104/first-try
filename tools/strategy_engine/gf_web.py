@@ -65,11 +65,14 @@ def overview():
         f"<tr><td>{p['name']}</td><td>{p['code']}</td><td>{p['pnl_pct']:+.1f}%</td></tr>"
         for p in r["positions"]
     )
-    alerts = "".join(f"<div class='{cls}'>{a}</div>" for a in r["alerts"]) or "<div class='ok'>✅ 风险合规</div>"
+    alerts = (
+        "".join(f"<div class='{cls}'>{a}</div>" for a in r["alerts"])
+        or "<div class='ok'>✅ 风险合规</div>"
+    )
     content = f"""
 <h2>总览</h2>
-<div class='card'>总资产 {r['total']:.0f} ｜ 盈亏 {r['pnl']:+.0f}（{r['pnl_pct']:+.1f}%）
-｜ 现金 {r['cash_pct']:.0f}% ｜ 持仓 {r['holdings']} 只</div>
+<div class='card'>总资产 {r["total"]:.0f} ｜ 盈亏 {r["pnl"]:+.0f}（{r["pnl_pct"]:+.1f}%）
+｜ 现金 {r["cash_pct"]:.0f}% ｜ 持仓 {r["holdings"]} 只</div>
 {alerts}
 <h2>持仓</h2><div class='card'><table><tr><th>名称</th><th>代码</th><th>盈亏</th></tr>{pos_rows}</table></div>
 """
@@ -79,13 +82,16 @@ def overview():
 @app.get("/watch", response_class=HTMLResponse)
 def watch_page():
     items = pw._load()["items"]
-    rows = "".join(
-        f"<tr><td>{it['name']}</td><td>{it['code']}</td><td>{it['target']}</td>"
-        f"<td>{'跌破' if it['direction']=='below' else '涨破'}</td>"
-        f"<td>{'🔔已提醒' if it.get('alerted') else '监视中'}</td>"
-        f"<td><a href='/watch/del?code={it['code']}&d={it['direction']}'>删</a></td></tr>"
-        for it in items
-    ) or "<tr><td colspan='6'>暂无盯价</td></tr>"
+    rows = (
+        "".join(
+            f"<tr><td>{it['name']}</td><td>{it['code']}</td><td>{it['target']}</td>"
+            f"<td>{'跌破' if it['direction'] == 'below' else '涨破'}</td>"
+            f"<td>{'🔔已提醒' if it.get('alerted') else '监视中'}</td>"
+            f"<td><a href='/watch/del?code={it['code']}&d={it['direction']}'>删</a></td></tr>"
+            for it in items
+        )
+        or "<tr><td colspan='6'>暂无盯价</td></tr>"
+    )
     content = f"""
 <h2>盘中盯价</h2>
 <div class='card'><table><tr><th>名称</th><th>代码</th><th>目标价</th><th>方向</th><th>状态</th><th></th></tr>{rows}</table></div>
@@ -101,7 +107,12 @@ def watch_page():
 
 
 @app.post("/watch/add")
-def watch_add(note: str = Form(""), code: str = Form(...), target: float = Form(...), direction: str = Form("below")):
+def watch_add(
+    note: str = Form(""),
+    code: str = Form(...),
+    target: float = Form(...),
+    direction: str = Form("below"),
+):
     pw.add(code, target, direction, note)
     return RedirectResponse("/watch", status_code=303)
 
@@ -125,9 +136,11 @@ def history():
                     e = json.loads(line)
                 except ValueError:
                     continue
-                rows += (f"<tr><td>{e.get('ts','')[:16]}</td><td>{e.get('action','')}</td>"
-                         f"<td>{e.get('name','')}</td><td>{e.get('shares','')}</td>"
-                         f"<td>{e.get('price','')}</td></tr>")
+                rows += (
+                    f"<tr><td>{e.get('ts', '')[:16]}</td><td>{e.get('action', '')}</td>"
+                    f"<td>{e.get('name', '')}</td><td>{e.get('shares', '')}</td>"
+                    f"<td>{e.get('price', '')}</td></tr>"
+                )
     except OSError:
         pass
     content = f"<h2>事件历史</h2><div class='card'><table><tr><th>时间</th><th>操作</th><th>名称</th><th>数量</th><th>价格</th></tr>{rows}</table></div>"
@@ -143,7 +156,9 @@ def brief_page():
         msg = "✅ 晨报已推送（看微信）" if ok else "⚠️ 推送失败/达上限（今日≤3条）"
     except Exception:
         msg = "⚠️ 推送异常"
-    return _PAGE.format(content=f"<h2>晨报</h2><div class='card'>{msg}</div><a href='/'>返回</a>")
+    return _PAGE.format(
+        content=f"<h2>晨报</h2><div class='card'>{msg}</div><a href='/'>返回</a>"
+    )
 
 
 if __name__ == "__main__":

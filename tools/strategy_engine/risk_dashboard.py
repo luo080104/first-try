@@ -41,14 +41,20 @@ def dashboard() -> dict[str, Any]:
     for pos in s.get("positions", []):
         pos_pct = pos.get("market", 0) / total * 100 if total else 0
         if pos_pct > MAX_POSITION_PCT * 100:
-            alerts.append(f"🔴 单只超限：{pos.get('name', '')} {pos_pct:.0f}% > {MAX_POSITION_PCT * 100}%")
+            alerts.append(
+                f"🔴 单只超限：{pos.get('name', '')} {pos_pct:.0f}% > {MAX_POSITION_PCT * 100}%"
+            )
 
     # ② 现金纪律：<10% 防守 / >15% 闲置
     cash_pct = s.get("cash_pct", 0) or 0
     if cash_pct < MIN_CASH_PCT * 100:
-        alerts.append(f"🔴 现金不足：{cash_pct:.0f}% < {MIN_CASH_PCT * 100}%（防守金线）")
+        alerts.append(
+            f"🔴 现金不足：{cash_pct:.0f}% < {MIN_CASH_PCT * 100}%（防守金线）"
+        )
     elif cash_pct > MAX_CASH_PCT * 100:
-        alerts.append(f"🟡 现金偏高：{cash_pct:.0f}% > {MAX_CASH_PCT * 100}%（闲置——找机会）")
+        alerts.append(
+            f"🟡 现金偏高：{cash_pct:.0f}% > {MAX_CASH_PCT * 100}%（闲置——找机会）"
+        )
 
     # ③ 回撤（v0：用盈亏代替——真实回撤需净值序列）
     if pnl_pct < -MAX_DRAWDOWN_PCT:
@@ -68,8 +74,11 @@ def dashboard() -> dict[str, Any]:
         "cash_pct": round(cash_pct, 0),
         "holdings": n,
         "positions": [
-            {"name": pos.get("name", ""), "code": pos.get("code", ""),
-             "pnl_pct": pos.get("pnl_pct", 0)}
+            {
+                "name": pos.get("name", ""),
+                "code": pos.get("code", ""),
+                "pnl_pct": pos.get("pnl_pct", 0),
+            }
             for pos in s.get("positions", [])
         ],
         "alerts": alerts,
@@ -79,8 +88,10 @@ def dashboard() -> dict[str, Any]:
 
 if __name__ == "__main__":
     r = dashboard()
-    print(f"📊 风险仪表盘：总资产 {r['total']:.0f} | 盈亏 {r['pnl']:+.0f}（{r['pnl_pct']:+.1f}%）| "
-          f"现金 {r['cash_pct']:.0f}% | 持仓 {r['holdings']} 只")
+    print(
+        f"📊 风险仪表盘：总资产 {r['total']:.0f} | 盈亏 {r['pnl']:+.0f}（{r['pnl_pct']:+.1f}%）| "
+        f"现金 {r['cash_pct']:.0f}% | 持仓 {r['holdings']} 只"
+    )
     for pos in r["positions"]:
         print(f"  {pos['name']}({pos['code']}) {pos['pnl_pct']:+.1f}%")
     if r["alerts"]:

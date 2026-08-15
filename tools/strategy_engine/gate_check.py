@@ -88,7 +88,9 @@ def check() -> dict[str, Any]:
     buys = [e for e in events if e.get("action") == "buy"]
     start = min((e.get("ts") or e.get("date") or "")[:10] for e in buys) if buys else ""
     days = (
-        (datetime.date.today() - datetime.date.fromisoformat(start)).days if start else 0
+        (datetime.date.today() - datetime.date.fromisoformat(start)).days
+        if start
+        else 0
     )
     # 满 3 个月（先到为准）
     if days >= MAX_DAYS:
@@ -152,7 +154,11 @@ def _week_last_day(week_key: str) -> str:
 
         # ISO 周: 周一为第 1 天——周日 = 周一 + 6 天
         jan4 = dt.date(y, 1, 4)
-        monday = jan4 - dt.timedelta(days=jan4.isocalendar()[2] - 1) + dt.timedelta(weeks=w - 1)
+        monday = (
+            jan4
+            - dt.timedelta(days=jan4.isocalendar()[2] - 1)
+            + dt.timedelta(weeks=w - 1)
+        )
         return (monday + dt.timedelta(days=6)).isoformat()
     except (ValueError, IndexError):
         return ""

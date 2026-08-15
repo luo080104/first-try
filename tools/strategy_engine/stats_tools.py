@@ -40,9 +40,7 @@ def bootstrap_winrate(
     }
 
 
-def bootstrap_diff(
-    n1: int, w1: float, n2: int, w2: float, iters: int = 10000
-) -> dict:
+def bootstrap_diff(n1: int, w1: float, n2: int, w2: float, iters: int = 10000) -> dict:
     """两组胜率差异显著性：H0 无差异——置换检验（合并重采样）
 
     返回 {diff, p_value, significant}——p<0.05 才显著
@@ -82,9 +80,7 @@ def min_samples(target_diff: float, iters: int = 2000) -> int:
     return 500
 
 
-def check_rule(
-    rule_name: str, wins: int, n: int, baseline: float = 0.5
-) -> dict:
+def check_rule(rule_name: str, wins: int, n: int, baseline: float = 0.5) -> dict:
     """规则验证入口：胜率显著性检查——'未验证不落地'红线的量化关卡
 
     用法：verify_book_rules / 回测结论——N 小且不显著 → 标'待积累'（Q11）

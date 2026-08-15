@@ -313,9 +313,7 @@ def main():
     args = ap.parse_args()
     if args.pool is not None:
         codes = args.pool or POOL_DEFAULT
-        sells: tuple[str, ...] = (
-            tuple(args.sells) if args.sells else ("A_书式S2上轨",)
-        )
+        sells: tuple[str, ...] = tuple(args.sells) if args.sells else ("A_书式S2上轨",)
         print(
             f"聚合回测 {len(codes)} 只 × {args.years} 年（买入: b+r 两重——卖出: {sells}）"
         )

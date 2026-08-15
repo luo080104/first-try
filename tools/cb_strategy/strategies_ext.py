@@ -56,7 +56,9 @@ _cache_jsl: pd.DataFrame | None = None
 _cache_jsl_time: float = 0
 
 
-def get_jsl_data(cookie: str | None = None, force_refresh: bool = False) -> pd.DataFrame:
+def get_jsl_data(
+    cookie: str | None = None, force_refresh: bool = False
+) -> pd.DataFrame:
     """获取集思录可转债数据（策略字段更全，cookie可选）
 
     无cookie: 返回30条样例
@@ -65,7 +67,11 @@ def get_jsl_data(cookie: str | None = None, force_refresh: bool = False) -> pd.D
     import time
 
     global _cache_jsl, _cache_jsl_time
-    if not force_refresh and _cache_jsl is not None and time.time() - _cache_jsl_time < 120:
+    if (
+        not force_refresh
+        and _cache_jsl is not None
+        and time.time() - _cache_jsl_time < 120
+    ):
         return _cache_jsl
     try:
         raw = ak.bond_cb_jsl(cookie=cookie or "")  # stub 要求 str——None 转空串
@@ -96,7 +102,9 @@ def filter_profit_due(cookie: str | None = None, top_n: int = 20) -> list[dict]:
     df = get_jsl_data(cookie=cookie)
     if df.empty:
         return []
-    df = _ensure_num(df, [JSL_PRICE, JSL_YTM, JSL_PB, JSL_CONV_PRICE, JSL_PREMIUM, JSL_YEAR_LEFT])
+    df = _ensure_num(
+        df, [JSL_PRICE, JSL_YTM, JSL_PB, JSL_CONV_PRICE, JSL_PREMIUM, JSL_YEAR_LEFT]
+    )
     # 到期税前收益>0（保本）
     df = df.loc[df[JSL_YTM] > 0]
     # 已到转股期（剩余年限<5.5，6年期转债转股期通常最后5年）
@@ -134,9 +142,14 @@ def filter_return_lucky(cookie: str | None = None, top_n: int = 20) -> list[dict
     return _format_results(df, strategy_name="回售摸彩")
 
 
-def filter_double_low_enhanced(cookie: str | None = None, top_n: int = 20,
-                                max_price: float = 128, max_premium: float = 10,
-                                max_price2: float = 125, max_premium2: float = 15) -> list[dict]:
+def filter_double_low_enhanced(
+    cookie: str | None = None,
+    top_n: int = 20,
+    max_price: float = 128,
+    max_premium: float = 10,
+    max_price2: float = 125,
+    max_premium2: float = 15,
+) -> list[dict]:
     """低价格低溢价策略（增强版——双条件）
 
     条件：(价格<128 且 溢价率<10) 或 (价格<125 且 溢价率<15)
@@ -145,17 +158,23 @@ def filter_double_low_enhanced(cookie: str | None = None, top_n: int = 20,
     df = get_jsl_data(cookie=cookie)
     if df.empty:
         return []
-    df = _ensure_num(df, [JSL_PRICE, JSL_PREMIUM, JSL_PB, JSL_CONV_PRICE, JSL_STOCK, JSL_YEAR_LEFT])
+    df = _ensure_num(
+        df, [JSL_PRICE, JSL_PREMIUM, JSL_PB, JSL_CONV_PRICE, JSL_STOCK, JSL_YEAR_LEFT]
+    )
     df["cb_to_pb"] = df[JSL_CONV_PRICE] * df[JSL_PB] / df[JSL_STOCK]
     mask = (
-        (((df[JSL_PRICE] < max_price) & (df[JSL_PREMIUM] < max_premium)) |
-         ((df[JSL_PRICE] < max_price2) & (df[JSL_PREMIUM] < max_premium2)))
+        (
+            ((df[JSL_PRICE] < max_price) & (df[JSL_PREMIUM] < max_premium))
+            | ((df[JSL_PRICE] < max_price2) & (df[JSL_PREMIUM] < max_premium2))
+        )
         & (df[JSL_YEAR_LEFT] < 5.5)  # 已到转股期
         & (df["cb_to_pb"] > 1.0)
     )
     df = df.loc[mask]
     df = df.loc[~df[JSL_NAME].str.contains("EB", na=False)]
-    df = df.sort_values(JSL_DOUBLE_LOW if JSL_DOUBLE_LOW in df.columns else JSL_PRICE, ascending=True).head(top_n)
+    df = df.sort_values(
+        JSL_DOUBLE_LOW if JSL_DOUBLE_LOW in df.columns else JSL_PRICE, ascending=True
+    ).head(top_n)
     return _format_results(df, strategy_name="低价格低溢价(增强)")
 
 
@@ -168,9 +187,7 @@ def filter_three_low_enhanced(cookie: str | None = None, top_n: int = 20) -> lis
     if df.empty:
         return []
     df = _ensure_num(df, [JSL_PRICE, JSL_PREMIUM, JSL_REMAIN, JSL_STOCK, JSL_PB])
-    mask = (
-        (df[JSL_PREMIUM] < 30) | (df[JSL_PRICE] < 130)
-    )
+    mask = (df[JSL_PREMIUM] < 30) | (df[JSL_PRICE] < 130)
     df = df.loc[mask]
     df = df.loc[~df[JSL_NAME].str.contains("EB", na=False)]
     # 三低值 = 双低 + 规模小
@@ -188,7 +205,9 @@ def filter_downward_revise(cookie: str | None = None, top_n: int = 20) -> list[d
     df = get_jsl_data(cookie=cookie)
     if df.empty:
         return []
-    df = _ensure_num(df, [JSL_PRICE, JSL_PREMIUM, JSL_PB, JSL_CONV_PRICE, JSL_STOCK, JSL_YEAR_LEFT])
+    df = _ensure_num(
+        df, [JSL_PRICE, JSL_PREMIUM, JSL_PB, JSL_CONV_PRICE, JSL_STOCK, JSL_YEAR_LEFT]
+    )
     df["cb_to_pb"] = df[JSL_CONV_PRICE] * df[JSL_PB] / df[JSL_STOCK]
     mask = (
         (df["cb_to_pb"] > 1.2)
@@ -245,21 +264,23 @@ def classify_quadrants(cookie: str | None = None) -> dict[str, list[dict]]:
 def _format_results(df: pd.DataFrame, strategy_name: str = "") -> list[dict]:
     results = []
     for _, row in df.iterrows():
-        results.append({
-            "策略": strategy_name,
-            "代码": str(row.get(JSL_CODE, "")),
-            "名称": str(row.get(JSL_NAME, "")),
-            "现价": _to_f(row.get(JSL_PRICE)),
-            "转股溢价率": _to_f(row.get(JSL_PREMIUM)),
-            "正股价": _to_f(row.get(JSL_STOCK)),
-            "正股PB": _to_f(row.get(JSL_PB)),
-            "剩余年限": _to_f(row.get(JSL_YEAR_LEFT)),
-            "剩余规模": _to_f(row.get(JSL_REMAIN)),
-            "到期税前收益": _to_f(row.get(JSL_YTM)),
-            "双低值": _to_f(row.get(JSL_DOUBLE_LOW)),
-            "回售触发价": _to_f(row.get(JSL_PUT_TRIG)),
-            "强赎触发价": _to_f(row.get(JSL_REDEEM_TRIG)),
-        })
+        results.append(
+            {
+                "策略": strategy_name,
+                "代码": str(row.get(JSL_CODE, "")),
+                "名称": str(row.get(JSL_NAME, "")),
+                "现价": _to_f(row.get(JSL_PRICE)),
+                "转股溢价率": _to_f(row.get(JSL_PREMIUM)),
+                "正股价": _to_f(row.get(JSL_STOCK)),
+                "正股PB": _to_f(row.get(JSL_PB)),
+                "剩余年限": _to_f(row.get(JSL_YEAR_LEFT)),
+                "剩余规模": _to_f(row.get(JSL_REMAIN)),
+                "到期税前收益": _to_f(row.get(JSL_YTM)),
+                "双低值": _to_f(row.get(JSL_DOUBLE_LOW)),
+                "回售触发价": _to_f(row.get(JSL_PUT_TRIG)),
+                "强赎触发价": _to_f(row.get(JSL_REDEEM_TRIG)),
+            }
+        )
     return results
 
 

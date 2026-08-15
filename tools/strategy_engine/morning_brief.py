@@ -29,7 +29,6 @@ LEADER_POOL = [
 ]
 
 
-
 def _valuation_scan(codes: list[str], top_n: int = 5) -> list[dict]:
     """龙头池估值扫描（B5——PE<15 或 PB<2——返回达标候选）"""
     quotes = data.tencent_quote(codes)
@@ -76,9 +75,7 @@ def build_brief() -> str:
     g = m.get("cash_guidance", {})
     lo, hi = g.get("cash_range", (0, 0))
     hint = g.get("hint", "")
-    lines.append(
-        f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{hint}）"
-    )
+    lines.append(f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{hint}）")
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
