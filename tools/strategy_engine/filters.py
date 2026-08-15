@@ -114,7 +114,9 @@ def check_no_buy(q: dict[str, Any]) -> list[str]:
     if q.get("sw_code"):
         chg = _sector_2y_surge(q["sw_code"])
         if chg is not None and chg > 100:
-            blocked.append(f"N10 板块连逆 2 年走牛（行业指数 2 年 +{chg:.0f}%——走输大盘风险）")
+            blocked.append(
+                f"N10 板块连逆 2 年走牛（行业指数 2 年 +{chg:.0f}%——走输大盘风险）"
+            )
     # N11 平台连拉 3 根巨量阳线
     if q.get("recent_surge", False):
         blocked.append("N11 连续小阳后 3 根巨量阳线（90% 套）")

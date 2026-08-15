@@ -96,6 +96,10 @@ def test_buy_signal_expires_when_holding_blocked():
     opens = closes[:]
     weeks = _weeks_with(opens, closes)
     # 买@30 成交 → 买@31 被持仓挡住 → 卖@45 → 买@31 已过 14 周 → 丢弃
-    events = [{"i": 30, "type": "buy"}, {"i": 31, "type": "buy"}, {"i": 45, "type": "sell"}]
+    events = [
+        {"i": 30, "type": "buy"},
+        {"i": 31, "type": "buy"},
+        {"i": 45, "type": "sell"},
+    ]
     res = bt._simulate(weeks, opens, events)
     assert res["trades"] == 1  # 只成交 30→45 一笔

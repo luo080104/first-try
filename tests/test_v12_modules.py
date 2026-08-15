@@ -104,7 +104,9 @@ def test_weekly_equity_png_too_few_points(monkeypatch):
     from tools.strategy_engine.weekly_report import _equity_curve_png
 
     monkeypatch.setattr(
-        pf.Portfolio, "equity_series", lambda self: [{"date": "2026-08-15", "total": 100000}]
+        pf.Portfolio,
+        "equity_series",
+        lambda self: [{"date": "2026-08-15", "total": 100000}],
     )
     assert _equity_curve_png() is None
 
