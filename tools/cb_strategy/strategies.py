@@ -49,11 +49,11 @@ def dual_low_strategy(
     双低值 = 转股溢价率 + (债现价 / 100) × 10
     筛选范围: 90-130元, 溢价率 ≤ 50%, 发行规模 > 0.3亿
     """
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [_COL_PRICE, _COL_PREMIUM, _COL_ISSUE_AMT])
 
     # 过滤退市债
-    df = df[~df[_COL_NAME].str.contains("退", na=False)]
+    df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     mask = (
         (df[_COL_PRICE] >= min_price)
@@ -62,7 +62,7 @@ def dual_low_strategy(
         & (df[_COL_ISSUE_AMT].fillna(0) > 0.3)
     )
 
-    filtered = df[mask].copy()
+    filtered = df.loc[mask].copy()
     if filtered.empty:
         return []
 
@@ -102,13 +102,13 @@ def triple_low_strategy(
     小型转债弹性更大, 容易受游资关注
     条件: 发行规模 ≤ max_balance (亿)
     """
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [
         _COL_PRICE, _COL_PREMIUM, _COL_ISSUE_AMT,
     ])
 
     # 过滤退市债
-    df = df[~df[_COL_NAME].str.contains("退", na=False)]
+    df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     mask = (
         (df[_COL_PRICE] >= min_price)
@@ -118,7 +118,7 @@ def triple_low_strategy(
         & (df[_COL_ISSUE_AMT].fillna(0) <= max_balance)
     )
 
-    filtered = df[mask].copy()
+    filtered = df.loc[mask].copy()
     if filtered.empty:
         return []
 
@@ -162,15 +162,15 @@ def ytm_ranking(
     用 (100 - 债现价) / 到期年限 作为 YTM 代理指标
     加上价格越接近面值 YTM 越高的逻辑
     """
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [_COL_PRICE, _COL_PREMIUM, _COL_ISSUE_AMT])
 
     # 过滤退市债
-    df = df[~df[_COL_NAME].str.contains("退", na=False)]
+    df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     # YTM proxy: 现价越低, YTM 越高
     mask = (df[_COL_PRICE] > 80) & (df[_COL_PRICE] < 115) & (df[_COL_ISSUE_AMT].fillna(0) > 0.3)
-    filtered = df[mask].copy()
+    filtered = df.loc[mask].copy()
     if filtered.empty:
         return []
 
@@ -205,11 +205,11 @@ def early_redemption_monitor(
     强赎触发价 = 转股价 × 130%
     判断: 正股价 / 强赎触发价 比例
     """
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [_COL_STOCK, _COL_REDEEM_TRIG, _COL_PRICE, _COL_ISSUE_AMT])
 
     # 过滤退市债
-    df = df[~df[_COL_NAME].str.contains("退", na=False)]
+    df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     results = []
     for _, row in df.iterrows():
@@ -234,7 +234,7 @@ def early_redemption_monitor(
         elif ratio >= 100:
             status = "⚠️ 接近强赎"
 
-        pct_display = f"{ratio}%" if not pd.isna(ratio) and ratio != float('inf') else "N/A"
+        pct_display = f"{ratio}%" if not pd.isna(ratio) and ratio != float("inf") else "N/A"
 
         results.append({
             "代码": code,
@@ -246,7 +246,12 @@ def early_redemption_monitor(
             "状态": status,
         })
 
-    results.sort(key=lambda x: float(x["正股/触发价"].replace("%", "")) if "N/A" not in x["正股/触发价"] else 0, reverse=True)
+    results.sort(
+        key=lambda x: _to_float(x["正股/触发价"].replace("%", ""))
+        if "N/A" not in x["正股/触发价"]
+        else 0.0,
+        reverse=True,
+    )
     return results
 
 
@@ -258,13 +263,13 @@ def revision_arbitrage_analysis(
     回售触发价 = 转股价 × 70%
     博弈评分 = 回售压力分 + 下修空间分
     """
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [
         _COL_STOCK, _COL_PUT_TRIG, _COL_PREMIUM, _COL_PRICE, _COL_ISSUE_AMT,
     ])
 
     # 过滤退市债
-    df = df[~df[_COL_NAME].str.contains("退", na=False)]
+    df = df.loc[~df[_COL_NAME].str.contains("退", na=False)]
 
     results = []
     for _, row in df.iterrows():
@@ -317,11 +322,12 @@ def revision_arbitrage_analysis(
 
 def market_overview(force_refresh: bool = False) -> dict[str, Any]:
     """市场概览"""
-    df = data.get_bond_comparison(force_refresh=force_refresh)
+    df: pd.DataFrame = data.get_bond_comparison(force_refresh=force_refresh)
     df = _ensure_numeric(df, [_COL_PRICE, _COL_PREMIUM, _COL_ISSUE_AMT])
 
-    prices = df[_COL_PRICE].dropna()
-    premiums = df[_COL_PREMIUM].dropna()
+    # .loc[:, col] 明确列访问（pandas-stub：df[col] 返回 DataFrame|Series 联合——float() 会误报）
+    prices = df.loc[:, _COL_PRICE].dropna()
+    premiums = df.loc[:, _COL_PREMIUM].dropna()
 
     below_100 = int((prices < 100).sum())
     btwn_100_120 = int(((prices >= 100) & (prices < 120)).sum())
