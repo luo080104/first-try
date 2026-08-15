@@ -200,6 +200,19 @@ def run_daily_loop() -> dict[str, Any]:
         except Exception:
             pass  # 入队失败不阻塞循环（红线：不因边缘错误中断每日闭环）
 
+    # ⑥ 信号推送（v1.1——达标信号即时推微信——半自动红线：AI 提示带理由）
+    if signals:
+        try:
+            from tools.strategy_engine.notify_gf import push_signal
+
+            lines = [f"{len(signals)} 个达标信号待确认（门槛 {threshold}）："]
+            for c in signals:
+                tag = f"{c['score']}分" if c.get("score") is not None else "B3战术"
+                lines.append(f"  🔔 {c['name']}({c['code']}) {tag}——{c['reason']}")
+            push_signal("\n".join(lines))
+        except Exception:
+            pass  # 推送失败不阻塞（红线③：数据失误不静默但也不中断）
+
     # 自检段（每日健康检查——数据源命中/打分分布/异常）
     scores = [x["score"] for x in candidates]
     anomalies = []
