@@ -108,6 +108,7 @@ def get_fundamentals(
         "debt_ratio": 0,
         "ocf_gt_profit": False,
         "dividend_yield": 0,
+        "payout_ratio": 0,  # 分红率%（书 L2761：40-75% 诚信区域——H）
         "growth_ok": False,
         "debt_exempt": debt_exempt,
     }
@@ -158,6 +159,10 @@ def get_fundamentals(
             per_share = [d["bonus_rmb"] / 10 for d in divs[:2] if d["bonus_rmb"]]
             if per_share:
                 f["dividend_yield"] = round(sum(per_share) / price * 100, 2)
+            # 分红率 = 每股分红 / 基本每股收益（书 L2761：40-75% 区域——H）
+            eps = _to_float(lrb[0].get("基本每股收益")) if lrb else 0
+            if per_share and eps > 0:
+                f["payout_ratio"] = round(sum(per_share) / eps * 100, 1)
     except Exception:
         pass  # 数据源失败——保留 0 值（打分自然偏低——安全方向）
 
