@@ -11,10 +11,10 @@ def test_push_brief_records_equity(monkeypatch, tmp_path):
     """晨报入口必须顺带 record_equity（净值序列积累——gate_check 判定依赖）"""
     from tools.strategy_engine import portfolio as pf
 
-    # 隔离数据文件（不污染真实虚拟盘）
+    # 隔离数据文件（直接传路径——不能改模块属性：__init__ 默认参数已绑定真实路径——
+    # 2026-08-15 教训：改 PORTFOLIO_FILE 会污染真实虚拟盘——持仓被清空的 bug）
     test_portfolio = tmp_path / "portfolio.json"
-    pf.PORTFOLIO_FILE = str(test_portfolio)
-    p = pf.Portfolio()
+    p = pf.Portfolio(path=str(test_portfolio))
     p.data = {"init_cash": 100000, "cash": 100000, "holdings": {}, "track": {}}
     p.save()
 

@@ -47,7 +47,10 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
         except ValueError:
             continue
         key = f"{iso[0]}-W{iso[1]:02d}"
-        weekly[key] = float(pt.get("total", 0))
+        try:
+            weekly[key] = float(pt.get("total", 0))
+        except (TypeError, ValueError):
+            continue  # 坏数据跳过（不崩——红线③容错）
     return [{"week": k, "total": v} for k, v in sorted(weekly.items())]
 
 
@@ -164,5 +167,49 @@ def _week_last_day(week_key: str) -> str:
         return ""
 
 
+def _plot_ascii(series: list[dict[str, Any]], width: int = 60) -> str:
+    """ASCII 净值曲线（2026-08-15——可视化进度——纯 stdlib 无依赖）
+
+    series: [{date, total}]——横向折线（归一化到固定高度）
+    """
+    if len(series) < 2:
+        return f"  净值点不足（{len(series)} 个——每天 9:00 晨报自动记录）"
+    totals = [s["total"] for s in series]
+    lo, hi = min(totals), max(totals)
+    span = hi - lo
+    if span <= 0:
+        span = hi * 0.01 or 1.0
+    height = 10
+    # 归一化到网格
+    grid: list[list[str]] = [[" " for _ in range(width)] for _ in range(height)]
+    n = len(totals)
+    step = max(1, (n - 1) // (width - 1))
+    pts = [(i, totals[i]) for i in range(0, n, step)][:width]
+    for x, (i, t) in enumerate(pts):
+        try:
+            y = int((t - lo) / span * (height - 1))
+        except (ZeroDivisionError, ValueError):
+            y = height // 2
+        y = max(0, min(height - 1, y))
+        grid[height - 1 - y][x] = "*"
+    lines = ["".join(row) for row in grid]
+    out = [f"  净值: {lo:,.0f} → {hi:,.0f}（{n} 个交易日）"]
+    for i, row in enumerate(lines):
+        label = f"{hi - (hi - lo) * i / height:,.0f}".rjust(9)
+        out.append(f"{label} |{row}|")
+    out.append(" " * 10 + "+" + "-" * width + "+")
+    # 日期标注（首/中/尾）
+    dates = [s["date"] for s in series]
+    first, mid, last = dates[0], dates[len(dates) // 2], dates[-1]
+    out.append(f"   {first:<{width // 3}}{mid:<{width // 3}}{last}")
+    return "\n".join(out)
+
+
 if __name__ == "__main__":
-    print(check())
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "--plot":
+        p = pf.Portfolio()
+        print(_plot_ascii(p.equity_series()))
+    else:
+        print(check())

@@ -57,3 +57,25 @@ def test_dashboard_alert_on_cash():
     """现金偏高 → 告警（当前 78% > 15%——闲置提示）"""
     r = rd.dashboard()
     assert any("现金" in a for a in r["alerts"])
+
+
+def test_plot_ascii_curve():
+    """ASCII 净值曲线渲染（纯 stdlib——进度可视化）"""
+    from tools.strategy_engine.gate_check import _plot_ascii
+
+    series = [
+        {"date": f"2026-08-{d:02d}", "total": 100000 + i * 500}
+        for i, d in enumerate(range(1, 16))
+    ]
+    out = _plot_ascii(series, width=30)
+    assert "100,000" in out or "101" in out  # 起点标签
+    assert "2026-08-01" in out and "2026-08-15" in out  # 首尾日期
+    assert "*" in out  # 有点
+
+
+def test_plot_ascii_too_few_points():
+    """不足 2 个点 → 提示（不崩）"""
+    from tools.strategy_engine.gate_check import _plot_ascii
+
+    out = _plot_ascii([{"date": "2026-08-15", "total": 100000}])
+    assert "不足" in out
