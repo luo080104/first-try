@@ -32,6 +32,8 @@ def _mk_portfolio_with_holding():
 @contextmanager
 def _patch_env(score_total):
     """模拟环境：假行情 + 假打分（只测 Q14 判定逻辑——不测打分本身）"""
+    import uuid
+    hr.REVIEW_FILE = os.path.join(TMP, f"review_{uuid.uuid4().hex[:8]}.json")  # 每测独立——防顺序污染
     path = _mk_portfolio_with_holding()
     real_portfolio = hr.pf.Portfolio  # patch 前保存原类（避免 lambda 自递归）
     patches = [
