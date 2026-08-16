@@ -152,6 +152,15 @@ def build_brief() -> str:
         pass  # 判定失败不阻塞晨报（红线③容错）
     # 数据源健康（2026-08-15 UZI data_gap 落地——缺口显式承认——不静默）
     lines.append("\n【数据源】" + "；".join(_data_source_status()))
+    # S4 逻辑变化监测（2026-08-16 架构师 B3 落地——减持/暴雷公告——只提醒不自动卖）
+    try:
+        from tools.strategy_engine.s4_monitor import build_alert_section
+
+        s4 = build_alert_section()
+        if s4:
+            lines.append("\n" + s4)
+    except Exception:
+        pass  # S4 监测失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
