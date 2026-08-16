@@ -46,7 +46,9 @@ def b3_triple_confirm(
     return {"signal": signal, "reasons": reasons}
 
 
-def s2_weekly_upper_exit(closes: list[float], bull_filter: bool = False) -> dict[str, Any]:
+def s2_weekly_upper_exit(
+    closes: list[float], bull_filter: bool = False
+) -> dict[str, Any]:
     """S2 周布林降本（波段仓）：周线收盘 > 布林上轨 → 波段仓卖出信号（Q16 swing 轨）
 
     bull_filter（2026-08-16 Q11 预研——默认关闭）：书自限"牛市（周布林中轨上升）
@@ -64,7 +66,9 @@ def s2_weekly_upper_exit(closes: list[float], bull_filter: bool = False) -> dict
             if ma_now > ma_prev:
                 return {
                     "signal": False,
-                    "reasons": ["触上轨但牛市（MA20 上升）——书：牛市上轨不卖（Q11 待裁决）"],
+                    "reasons": [
+                        "触上轨但牛市（MA20 上升）——书：牛市上轨不卖（Q11 待裁决）"
+                    ],
                 }
         return {
             "signal": True,
