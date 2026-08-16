@@ -21,3 +21,9 @@ data/*.log
 .env.bak*
 data/backup/
 .wbs_tmp/
+data/xq_*
+data/bigv_*
+data/wb_*
+data/s4_*
+data/cninfo_tb.html
+data/wb_plan.html

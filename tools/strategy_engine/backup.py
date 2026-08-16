@@ -22,7 +22,16 @@ BACKUP_FILES = [
     "pending_trades.json",  # 待确认交易队列
     "price_watch.json",  # 盯价清单
     "valuation_cache.db",  # 估值缓存（PE/PB 历史积累）
+    # 大V 数据（2026-08-16 补——重抓需重新登录+解析——不能丢）
+    "xq_cubes.json",  # 大V→组合映射（48 个——含活跃标记/调仓锚点）
+    "xq_nav.json",  # 大V 组合净值快照
+    "xq_cube_desc.json",  # 组合自述（实盘贴近度分级依据）
+    "bigv_trades.jsonl",  # 大V 调仓记录（239 条）
+    "bigv_ideas.jsonl",  # 大V 思路假设库（B1）
+    "wb_statuses.jsonl",  # 鹿鼎公微博（幂等 id 集合依赖）
+    "s4_alerts.jsonl",  # S4 公告提醒去重记录
 ]
+# 明确不备份：xq_cookies.json（登录态敏感——过期重新扫码即可）
 
 KEEP_DAYS = 30
 
