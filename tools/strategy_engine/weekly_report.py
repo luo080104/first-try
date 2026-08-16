@@ -67,74 +67,140 @@ def _behavior_check(events: list[dict[str, Any]]) -> list[str]:
 
 
 def build_report() -> str:
-    """组装周报文本"""
+    """组装周报文本 v2（2026-08-16——界面美化升级——UZI Bento 布局借鉴）
+
+    结构（微信 Markdown 友好）：
+    ① 头部（品牌+日期+周次）
+    ② 数据面板（总资产/盈亏/现金/持仓数——一行 KPI）
+    ③ 本周操作（事件流）
+    ④ 持仓明细（逐只盈亏）
+    ⑤ 策略表现（信号/在线评分/漂移）
+    ⑥ 行为画像（Q10）
+    ⑦ 下周关注（行动项）
+    ⑧ 尾注（数据源状态/净值图提示）
+    """
     p = pf.Portfolio()
     s = p.summary()
     events = _week_events()
-    lines = [f"📋 观复周报（{datetime.date.today().isoformat()}）", "=" * 30]
+    today = datetime.date.today()
+    week_no = today.isocalendar()[1]
+    lines = [
+        f"📊 **观复周报** · 第 {week_no} 周",
+        f"🗓️ {today.isoformat()} · 书体系执行器",
+        "━━━━━━━━━━━━━━━━━━━━━━━━",
+    ]
 
-    # ① 操作
-    ops = [e for e in events if e.get("action") in ("buy", "sell")]
-    lines.append(f"\n【本周操作】{len(ops)} 笔")
-    for e in ops:
-        lines.append(
-            f"  {e['action']} {e.get('name', '')}({e.get('code', '')}) "
-            f"{e.get('shares', 0)}股 @{e.get('price', 0)}"
-        )
-    if not ops:
-        lines.append("  （无操作——持有不动）")
-
-    # ② 盈亏
+    # ① KPI 数据面板（Bento 头卡——一行看全）
     pnl = s.get("total", 0) - s.get("init_cash", 0)
+    pnl_pct = pnl / s.get("init_cash", 1) * 100
+    pnl_icon = "📈" if pnl >= 0 else "📉"
+    n_hold = s.get("n_holdings", 0)
+    cash_pct = s.get("cash_pct", 0)
     lines.append(
-        f"\n【持仓】{s.get('n_holdings', 0)} 只 | 总资产 {s.get('total', 0):.0f} | "
-        f"现金 {s.get('cash_pct', 0):.0f}% | 浮动 {pnl:+.0f} 元（{pnl / s.get('init_cash', 1) * 100:+.1f}%）"
+        f"{pnl_icon} **总资产 {s.get('total', 0):,.0f}** ｜ "
+        f"盈亏 {pnl:+,.0f}（{pnl_pct:+.1f}%）\n"
+        f"🏦 持仓 {n_hold} 只 ｜ 💰 现金 {cash_pct:.0f}% ｜ 建仓 {_days_since_start()} 天"
     )
-    for pos in s.get("positions", []):
-        lines.append(
-            f"  {pos.get('name', '')}({pos.get('code', '')}) "
-            f"{pos.get('shares', 0)}股 盈亏 {pos.get('pnl', 0):+.0f}（{pos.get('pnl_pct', 0):+.1f}%）"
-        )
 
-    # ③ 策略表现（signal_ledger 信号回顾 + 在线评分——整改② 2026-08-15）
-    lines.append("\n【信号表现】本周信号记录：")
+    # ② 本周操作（事件流）
+    ops = [e for e in events if e.get("action") in ("buy", "sell")]
+    lines.append("\n**📋 本周操作**")
+    if ops:
+        for e in ops:
+            icon = "🟢" if e["action"] == "buy" else "🔴"
+            lines.append(
+                f"{icon} {'买入' if e['action'] == 'buy' else '卖出'} "
+                f"**{e.get('name', '')}**({e.get('code', '')}) "
+                f"{e.get('shares', 0)}股 @ {e.get('price', 0)}"
+            )
+    else:
+        lines.append("🤝 无操作——持有不动（纪律）")
+
+    # ③ 持仓明细（逐只盈亏）
+    lines.append("\n**📦 持仓明细**")
+    positions = s.get("positions", [])
+    if positions:
+        for pos in positions:
+            pp = pos.get("pnl_pct", 0)
+            icon = "🟢" if pp >= 0 else "🔴"
+            lines.append(
+                f"{icon} {pos.get('name', '')}({pos.get('code', '')}) "
+                f"{pos.get('shares', 0)}股 {pp:+.1f}%"
+            )
+    else:
+        lines.append("🈳 空仓——持币等待是纪律")
+
+    # ④ 策略表现（信号账本 + 在线评分——整改②）
+    lines.append("\n**🎯 策略表现**")
     try:
         from tools.strategy_engine import signal_ledger as sl
 
         rep = sl.report()
         if isinstance(rep, dict) and rep.get("total"):
-            lines.append(f"  累计信号 {rep['total']} 笔——回填验证随 Q11 积累")
+            lines.append(f"📒 累计信号 {rep['total']} 笔")
         else:
-            lines.append("  （账本采集中——3/6/12 月后回填验证）")
-        # 在线评分（20 日窗——漂移检测——整改②）
+            lines.append("📒 账本采集中（3/6/12 月后回填验证）")
         try:
             oscore = sl.online_score(window=20)
             if oscore.get("monthly"):
                 for m, st in list(oscore["monthly"].items())[-3:]:
                     lines.append(
-                        f"  在线评分 {m}: N={st['n']} 胜率 {st['win_rate']}% "
+                        f"📊 {m}: N={st['n']} 胜率 {st['win_rate']}% "
                         f"均{st['avg']:+.1f}%"
                     )
             if oscore.get("drift"):
-                lines.append(f"  {oscore['note']}")
+                lines.append(f"⚠️ {oscore['note']}")
         except Exception:
             pass  # 在线评分失败不阻塞周报（红线③容错）
     except Exception:
-        lines.append("  （账本采集中——3/6/12 月后回填验证）")
+        lines.append("📒 账本采集中（3/6/12 月后回填验证）")
 
-    # ④ 行为画像（Q10）
-    lines.append("\n【行为画像】")
-    lines.extend(f"  {n}" for n in _behavior_check(events))
+    # ⑤ 行为画像（Q10）
+    lines.append("\n**🧭 行为画像**")
+    lines.extend(f"{n}" for n in _behavior_check(events))
 
-    # ⑤ 下周关注
-    lines.append("\n【下周关注】")
-    if not s.get("n_holdings"):
-        lines.append("  空仓中——等待达标信号（持币等待是纪律）")
-    elif s.get("cash_pct", 0) > 15:
-        lines.append("  现金偏高——关注买入信号（B3 低潮/打分达标）")
+    # ⑥ 下周关注（行动项）
+    lines.append("\n**🎯 下周关注**")
+    if not n_hold:
+        lines.append("🈳 空仓中——等待达标信号（持币等待是纪律）")
+    elif cash_pct > 15:
+        lines.append("💰 现金偏高——关注买入信号（B3 低潮/打分达标）")
     else:
-        lines.append("  持仓观察——跌破门槛→观察标记，连续两季→换仓建议（Q14）")
+        lines.append("🔍 持仓观察——跌破门槛→观察标记，连续两季→换仓建议（Q14）")
+
+    # ⑦ 尾注（数据源状态）
+    lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━")
+    lines.append("📌 数据源：东财封锁→同花顺降级（当日快照）｜净值图见网页版")
     return "\n".join(lines)
+
+
+def _days_since_start() -> int:
+    """建仓天数（事件日志最早 buy——与 gate_check 同逻辑——健壮版）"""
+    try:
+        import json as _json
+        import os as _os
+
+        events_path = _os.path.join(
+            _os.path.dirname(_os.path.abspath(pf.__file__)), "..", "..", "data", "portfolio_events.jsonl"
+        )
+        buys = []
+        with open(events_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    e = _json.loads(line)
+                except ValueError:
+                    continue
+                if e.get("action") == "buy" and e.get("ts"):
+                    buys.append(e["ts"][:10])
+        if buys:
+            start = min(buys)
+            return (datetime.date.today() - datetime.date.fromisoformat(start)).days
+    except Exception:
+        pass
+    return 0
 
 
 def _equity_curve_png() -> str | None:

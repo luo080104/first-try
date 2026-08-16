@@ -43,7 +43,7 @@ input,select{{padding:6px;margin:2px 0}} button{{padding:6px 12px;background:#25
 table{{width:100%;border-collapse:collapse}} td,th{{padding:6px;text-align:left;border-bottom:1px solid #eee}}
 </style></head><body>
 <h1>📊 观复</h1>
-<nav><a href="/">总览</a><a href="/watch">盯价</a><a href="/history">历史</a><a href="/brief">晨报</a></nav>
+<nav><a href="/">总览</a><a href="/watch">盯价</a><a href="/history">历史</a><a href="/weekly">周报</a><a href="/brief">晨报</a></nav>
 {content}
 </body></html>"""
 
@@ -227,3 +227,11 @@ if __name__ == "__main__":
 
     print("观复配置页：http://127.0.0.1:8201")
     uvicorn.run(app, host="127.0.0.1", port=8201, log_level="warning")
+
+
+@app.get("/weekly", response_class=HTMLResponse)
+def weekly_page():
+    """周报 HTML 版（2026-08-16 界面美化——Bento 卡片布局）"""
+    from tools.strategy_engine.weekly_report_html import build_html
+
+    return HTMLResponse(build_html())
