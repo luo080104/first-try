@@ -361,7 +361,17 @@ def trust_level(bigv: str, desc: str, last_trade_ts: str | None) -> dict:
     reasons: list[str] = []
     d = desc or ""
     # ① 自述关键词（组合 description——虚拟 vs 实盘声明）
-    for kw in ["虚拟", "并非实盘", "没精力", "不必当真", "测试", "模拟", "欢乐豆", "暂无投资建议", "新手"]:
+    for kw in [
+        "虚拟",
+        "并非实盘",
+        "没精力",
+        "不必当真",
+        "测试",
+        "模拟",
+        "欢乐豆",
+        "暂无投资建议",
+        "新手",
+    ]:
         if kw in d:
             score -= 25
             reasons.append(f"自述虚拟/娱乐（{kw}）")

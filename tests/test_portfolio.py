@@ -13,7 +13,7 @@ TMP = tempfile.mkdtemp()
 
 def test_init_cash():
     p = pf.Portfolio(os.path.join(TMP, "t1.json"))
-    assert p.data["cash"] == pf.INIT_CASH == 100000
+    assert p.data["cash"] == pf.INIT_CASH == 80000
     assert p.data["holdings"] == {}
 
 
@@ -21,14 +21,14 @@ def test_buy_and_sell():
     p = pf.Portfolio(os.path.join(TMP, "t2.json"))
     ok, _ = p.buy("600036", 38.46, 1300, track="base", name="招商银行")
     assert ok
-    assert p.data["cash"] == round(100000 - 38.46 * 1300, 2)
+    assert p.data["cash"] == round(80000 - 38.46 * 1300, 2)
     assert p.data["holdings"]["600036"]["shares"] == 1300
     assert p.data["holdings"]["600036"]["track"] == "base"
     # 卖出
     ok, _ = p.sell("600036", 500, 39.5)
     assert ok
     assert p.data["holdings"]["600036"]["shares"] == 800
-    assert p.data["cash"] == round(100000 - 38.46 * 1300 + 39.5 * 500, 2)
+    assert p.data["cash"] == round(80000 - 38.46 * 1300 + 39.5 * 500, 2)
     # 事件日志（实例跟随——临时目录——不污染真实事件流——2026-08-15 修复）
     events = [json.loads(l) for l in open(p.events_file, encoding="utf-8")]
     assert [e["action"] for e in events[-2:]] == ["buy", "sell"]
@@ -37,11 +37,13 @@ def test_buy_and_sell():
 
 def test_track_accounting():
     p = pf.Portfolio(os.path.join(TMP, "t3.json"))
-    p.buy("600036", 38.46, 1000, track="base", name="招行")
+    p.buy(
+        "600036", 38.46, 500, track="base", name="招行"
+    )  # 500 股 19230——8 万初始下给茅台留位
     p.buy(
         "600519", 1341.99, 40, track="swing", name="茅台"
-    )  # 40 股 53679.6 < 剩余 61540
-    assert p.data["track"]["base"] == 38460
+    )  # 40 股 53679.6 < 剩余 60770
+    assert p.data["track"]["base"] == 19230
     assert p.data["track"]["swing"] == 53679.6
 
 

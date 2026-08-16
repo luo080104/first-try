@@ -181,13 +181,10 @@ def check() -> dict[str, Any]:
         max_wins = max(max_wins, wins)
     style_txt = ""
     if style_max >= 0:
-        style_txt = (
-            f"——风格对照：vs 中证红利连续跑赢 {style_max} 周"
-            + (
-                "⚠️ 对红利无持续超额——超额可能含红利风格 Beta（观测提示）"
-                if style_max < max_wins
-                else "（对红利亦有超额——风格 Beta 嫌疑低）"
-            )
+        style_txt = f"——风格对照：vs 中证红利连续跑赢 {style_max} 周" + (
+            "⚠️ 对红利无持续超额——超额可能含红利风格 Beta（观测提示）"
+            if style_max < max_wins
+            else "（对红利亦有超额——风格 Beta 嫌疑低）"
         )
     if max_wins >= CONSECUTIVE_WEEKS:
         # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）

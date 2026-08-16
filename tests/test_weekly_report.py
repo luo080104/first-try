@@ -31,7 +31,7 @@ def test_text_report_sections():
 
 def test_html_report_structure():
     h = build_html()
-    assert "class=\"kpi\"" in h  # KPI 面板
+    assert 'class="kpi"' in h  # KPI 面板
     assert "持仓明细" in h  # 持仓卡
     assert "echarts" in h  # 净值图
     assert "观复" in h  # 品牌

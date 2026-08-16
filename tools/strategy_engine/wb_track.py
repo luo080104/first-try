@@ -69,7 +69,9 @@ def _run_cli(args: list[str]) -> dict | None:
         if r.returncode != 0:
             # 体验包配额耗尽（免费档总配额有限——08-16 实测 TRIAL_API_QUOTA_EXCEEDED）
             if "QUOTA" in r.stderr.upper():
-                print("⚠️ 微博体验包配额耗尽——今日额度已用完（免费档总配额有限——明日自动恢复或考虑正式档）")
+                print(
+                    "⚠️ 微博体验包配额耗尽——今日额度已用完（免费档总配额有限——明日自动恢复或考虑正式档）"
+                )
             return None
         return json.loads(r.stdout)
     except (subprocess.SubprocessError, ValueError, OSError):
@@ -83,7 +85,16 @@ def fetch(page: int = 1, count: int = 20) -> int:
     注意：体验包配额有限——每日 1 次（count=20 已够——鹿鼎公日更几条）
     """
     d = _run_cli(
-        ["statuses", "user_timeline/other", "--uid", str(LUDING_UID), "--page", str(page), "--count", str(count)]
+        [
+            "statuses",
+            "user_timeline/other",
+            "--uid",
+            str(LUDING_UID),
+            "--page",
+            str(page),
+            "--count",
+            str(count),
+        ]
     )
     if not d:
         print("⚠️ 微博抓取失败（token 失效/接口限流/体验包过期？）")
@@ -152,7 +163,12 @@ def digest() -> str:
     if not rows:
         return "微博跟踪：暂无数据（首次抓取后可见）"
     # 本周（ISO 周相同）
-    this_week = [r for r in rows if r.get("fetched_at", "")[:10] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 7 * 86400))]
+    this_week = [
+        r
+        for r in rows
+        if r.get("fetched_at", "")[:10]
+        >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 7 * 86400))
+    ]
     n_repost = sum(1 for r in this_week if r.get("retweeted"))
     lines = [
         f"📣 超级鹿鼎公微博（本周 {len(this_week)} 条——转发 {n_repost}）",

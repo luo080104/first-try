@@ -85,7 +85,11 @@ def _data_source_status() -> list[str]:
         import os as _os
 
         pj = _os.path.join(
-            _os.path.dirname(_os.path.abspath(data.__file__)), "..", "..", "data", "portfolio.json"
+            _os.path.dirname(_os.path.abspath(data.__file__)),
+            "..",
+            "..",
+            "data",
+            "portfolio.json",
         )
         with open(pj, encoding="utf-8") as _f:
             eq = _json.load(_f).get("equity_curve", [])
@@ -93,9 +97,15 @@ def _data_source_status() -> list[str]:
             last_eq = eq[-1]["date"]
             days = (datetime.date.today() - datetime.date.fromisoformat(last_eq)).days
             if days > 5:
-                notes.append(f"⚠️ 净值记录停更 {days} 天（最后 {last_eq}——晨报 record_equity 异常？）")
+                notes.append(
+                    f"⚠️ 净值记录停更 {days} 天（最后 {last_eq}——晨报 record_equity 异常？）"
+                )
         xq_nav = _os.path.join(
-            _os.path.dirname(_os.path.abspath(data.__file__)), "..", "..", "data", "xq_nav.json"
+            _os.path.dirname(_os.path.abspath(data.__file__)),
+            "..",
+            "..",
+            "data",
+            "xq_nav.json",
         )
         if _os.path.exists(xq_nav):
             with open(xq_nav, encoding="utf-8") as _f:
