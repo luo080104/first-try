@@ -19,3 +19,5 @@ data/tb_test_mobile/
 data/tb_profile/
 data/*.log
 .env.bak*
+data/backup/
+.wbs_tmp/
