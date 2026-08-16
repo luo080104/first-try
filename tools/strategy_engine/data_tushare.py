@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any
 
 _TOKEN: str | None = None
@@ -60,12 +61,17 @@ def _pro():
 
 
 def kline_daily(
-    code: str, start: str = "20260101", end: str = "20261231"
+    code: str, start: str = "", end: str = ""
 ) -> list[dict[str, Any]]:
     """日线（tushare daily——2000 积分权限）——返回 [{date, close, open, high, low}] 升序
 
     code 需 TS 代码（600519.SH/000001.SZ/000300.SH）——失败返回 []（不抛）
+    start/end 默认动态（一年前→今天——数据边界防前视）
     """
+    if not end:
+        end = time.strftime("%Y%m%d")
+    if not start:
+        start = f"{time.localtime().tm_year - 1}0101"
     pro = _pro()
     if pro is None:
         return []
@@ -89,9 +95,16 @@ def kline_daily(
 
 
 def kline_weekly(
-    code: str, start: str = "20160101", end: str = "20261231"
+    code: str, start: str = "", end: str = ""
 ) -> list[dict[str, Any]]:
-    """周线（tushare weekly——2000 积分）——与 baostock 周线同构（交叉验证用）"""
+    """周线（tushare weekly——2000 积分）——与 baostock 周线同构（交叉验证用）
+
+    start/end 默认动态（十年→今天——防前视）
+    """
+    if not end:
+        end = time.strftime("%Y%m%d")
+    if not start:
+        start = f"{time.localtime().tm_year - 10}0101"
     pro = _pro()
     if pro is None:
         return []
@@ -141,9 +154,13 @@ def daily_basic(code: str, trade_date: str = "") -> dict[str, Any]:
 
 
 def moneyflow(
-    code: str, start: str = "20260101", end: str = "20261231"
+    code: str, start: str = "", end: str = ""
 ) -> list[dict[str, Any]]:
     """个股资金流（tushare moneyflow——东财/同花顺第三源）——返回 [{date, net}]"""
+    if not end:
+        end = time.strftime("%Y%m%d")
+    if not start:
+        start = f"{time.localtime().tm_year - 1}0101"
     pro = _pro()
     if pro is None:
         return []

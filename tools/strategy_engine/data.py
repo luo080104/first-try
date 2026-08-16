@@ -14,7 +14,6 @@ import time
 import urllib.request
 from typing import Any
 
-
 # baostock 估值/历史主源（2026-08-13 方案定稿——数据层升级：AkShare 统一层 + baostock 历史主源）
 # Sequoia-X 验证方案：免费/无需注册/无限流/后复权——彻底规避东财反爬
 # SQLite 本地缓存（Sequoia-X 架构：日增量拉取 → 本地库 → 估值随积累变准）
@@ -90,8 +89,8 @@ def bs_kline_daily(code: str, years: int = 1) -> list[dict[str, Any]]:
     rows = _bs_fetch(
         code,
         "date,close",
-        f"{2026 - years}-01-01",
-        "2026-12-31",
+        f"{time.localtime().tm_year - years}-01-01",
+        time.strftime("%Y-%m-%d"),  # 数据边界=今天（防前视——2026-08-16 吴老师质疑）
         "d",
         "2",
     )
@@ -113,8 +112,8 @@ def bs_kline_weekly(code: str, years: int = 10) -> list[dict[str, Any]]:
     rows = _bs_fetch(
         code,
         "date,open,close,high,low",
-        f"{2026 - years}-01-01",
-        "2026-12-31",
+        f"{time.localtime().tm_year - years}-01-01",
+        time.strftime("%Y-%m-%d"),  # 数据边界=今天
         "w",
         "2",
     )
@@ -142,7 +141,7 @@ def bs_pe_pb_history(code: str, years: int = 10) -> list[dict[str, Any]]:
     缓存：首次全量拉 → 之后日增量（当天已缓存则直接读）
     """
     conn = _bs_conn()
-    start = f"{2026 - years}-01-01"
+    start = f"{time.localtime().tm_year - years}-01-01"
     min_d: str | None = None
     max_d: str | None = None
     try:
@@ -172,7 +171,7 @@ def bs_pe_pb_history(code: str, years: int = 10) -> list[dict[str, Any]]:
         code,
         "date,peTTM,pbMRQ",
         fetch_start,
-        "2026-12-31",
+        time.strftime("%Y-%m-%d"),  # 数据边界=今天（防前视）
         "d",
         "3",
     )

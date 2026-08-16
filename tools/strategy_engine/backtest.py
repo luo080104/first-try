@@ -48,11 +48,14 @@ def _fetch_daily(symbol: str, years: int, retries: int = 2) -> Any:
 
     import akshare as ak
 
-    start = f"{2026 - years}0101"
+    start = f"{time.localtime().tm_year - years}0101"
     for attempt in range(retries + 1):
         try:
             df = ak.stock_zh_a_daily(
-                symbol=symbol, start_date=start, end_date="20261231", adjust="qfq"
+                symbol=symbol,
+                start_date=start,
+                end_date=time.strftime("%Y%m%d"),
+                adjust="qfq",
             )
             if df is not None and "date" in df.columns and len(df) > 100:
                 return df
@@ -63,7 +66,7 @@ def _fetch_daily(symbol: str, years: int, retries: int = 2) -> Any:
                 symbol=symbol.replace("sh", "").replace("sz", ""),
                 period="daily",
                 start_date=start,
-                end_date="20261231",
+                end_date=time.strftime("%Y%m%d"),
                 adjust="qfq",
             )
             if df is not None and "日期" in df.columns and len(df) > 100:

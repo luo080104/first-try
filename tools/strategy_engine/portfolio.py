@@ -25,7 +25,7 @@ from datetime import datetime
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data")
 PORTFOLIO_FILE = os.path.join(DATA_DIR, "portfolio.json")
 EVENTS_FILE = os.path.join(DATA_DIR, "portfolio_events.jsonl")
-INIT_CASH = 100000  # 虚拟盘初始资金 10 万（5-10 万操作方案）
+INIT_CASH = 80000  # 虚拟盘初始资金 8 万（2026-08-16 甲方定：实盘用 8 万——虚拟盘对齐）
 MAX_POSITION_PCT = 0.10  # P1：单只个股 ≤10% 仓位
 MAX_INDUSTRY_PCT = 0.25  # P1：行业 ≤25%
 MIN_HOLDINGS = 3  # Q4：3-5 只集中

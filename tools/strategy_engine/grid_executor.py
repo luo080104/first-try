@@ -70,7 +70,10 @@ def check_grid(code, price, total_assets=pf.INIT_CASH):
         if i in st["triggered"]:
             continue
         if price <= base * (1 - step):
-            shares = int(total_assets * GRID_ADD_PCT / price // 100 * 100) or 100
+            try:
+                shares = int(total_assets * GRID_ADD_PCT / price // 100 * 100) or 100
+            except (TypeError, ValueError):
+                shares = 100  # 异常兜底——默认一手（pi-lens 红线：int() 需 try）
             return {
                 "code": code,
                 "grid": i,

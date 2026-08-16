@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import statistics
+import time
 from typing import Any
 
 from tools.strategy_engine import data
@@ -23,7 +24,7 @@ def _rate_trend() -> str | None:
     import akshare as ak
 
     try:
-        df = ak.bond_zh_us_rate(start_date="20260101")
+        df = ak.bond_zh_us_rate(start_date=time.strftime("%Y0101"))
         r = df["中国国债收益率10年"].dropna().tolist()
         if len(r) < 40:
             return None

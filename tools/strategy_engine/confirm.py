@@ -46,7 +46,7 @@ def append_pending(signal, total_assets=None):
     items = _load_pending()
     if any(i["code"] == signal["code"] and i.get("status") == "pending" for i in items):
         return False, f"{signal['code']} 已在待确认队列"
-    assets = total_assets or 100000  # 虚拟盘初始 10 万（v0）
+    assets = total_assets or 80000  # 虚拟盘初始 8 万（2026-08-16 对齐实盘）
     try:
         shares = int(assets * MAX_POSITION_PCT / signal["price"] // 100 * 100) or 100
     except (KeyError, TypeError, ZeroDivisionError, ValueError):

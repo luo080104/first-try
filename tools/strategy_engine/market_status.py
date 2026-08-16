@@ -9,6 +9,7 @@ MVP 简化：日 K 重采样周线（书用周/月级别）——估值温度用
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from tools.strategy_engine import data
@@ -30,7 +31,7 @@ def _rate_fair_pe() -> float | None:
     import akshare as ak
 
     try:
-        df = ak.bond_zh_us_rate(start_date="20260801")
+        df = ak.bond_zh_us_rate(start_date=time.strftime("%Y%m01"))
         r10 = float(df["中国国债收益率10年"].iloc[-1])
         return round(1 / (r10 / 100 + 0.03), 1)
     except Exception:

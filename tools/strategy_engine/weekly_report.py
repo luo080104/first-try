@@ -181,7 +181,11 @@ def _days_since_start() -> int:
         import os as _os
 
         events_path = _os.path.join(
-            _os.path.dirname(_os.path.abspath(pf.__file__)), "..", "..", "data", "portfolio_events.jsonl"
+            _os.path.dirname(_os.path.abspath(pf.__file__)),
+            "..",
+            "..",
+            "data",
+            "portfolio_events.jsonl",
         )
         buys = []
         with open(events_path, encoding="utf-8") as f:

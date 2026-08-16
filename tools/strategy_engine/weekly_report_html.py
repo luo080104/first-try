@@ -68,8 +68,8 @@ def _kpis(s: dict[str, Any]) -> str:
 <div class="grid">
   <div class="kpi"><div class="label">总资产</div><div class="value">{total:,.0f}</div></div>
   <div class="kpi"><div class="label">累计盈亏</div><div class="value {cls}">{pnl:+,.0f}（{pct:+.1f}%）</div></div>
-  <div class="kpi"><div class="label">现金占比</div><div class="value">{s.get('cash_pct', 0):.0f}%</div></div>
-  <div class="kpi"><div class="label">持仓</div><div class="value">{s.get('n_holdings', 0)} 只</div></div>
+  <div class="kpi"><div class="label">现金占比</div><div class="value">{s.get("cash_pct", 0):.0f}%</div></div>
+  <div class="kpi"><div class="label">持仓</div><div class="value">{s.get("n_holdings", 0)} 只</div></div>
 </div>"""
 
 
@@ -136,7 +136,7 @@ def _strategy() -> str:
         total = rep.get("total", 0) if isinstance(rep, dict) else 0
         return (
             f'<div class="card"><h2>🎯 策略表现</h2>'
-            f'<p>📒 累计信号 {total} 笔——回填验证随 Q11 积累</p></div>'
+            f"<p>📒 累计信号 {total} 笔——回填验证随 Q11 积累</p></div>"
         )
     except Exception:
         return '<div class="card"><h2>🎯 策略表现</h2><p style="color:var(--muted)">账本采集中</p></div>'
@@ -175,6 +175,6 @@ if __name__ == "__main__":
         os.makedirs(os.path.dirname(OUT_FILE), exist_ok=True)
         with open(OUT_FILE, "w", encoding="utf-8") as f:
             f.write(html)
-        print(f"✅ 周报 HTML 已生成: {OUT_FILE}（{len(html)//1024}KB）")
+        print(f"✅ 周报 HTML 已生成: {OUT_FILE}（{len(html) // 1024}KB）")
     except OSError as e:
         print(f"❌ 周报 HTML 写入失败: {e}")

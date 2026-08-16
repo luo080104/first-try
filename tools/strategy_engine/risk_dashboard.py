@@ -33,7 +33,7 @@ def dashboard() -> dict[str, Any]:
     alerts: list[str] = []
 
     total = s.get("total", 0) or 0
-    init = s.get("init_cash", 100000) or 100000
+    init = s.get("init_cash", 80000) or 80000
     pnl = total - init
     pnl_pct = pnl / init * 100 if init else 0
 

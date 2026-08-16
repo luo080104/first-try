@@ -158,7 +158,9 @@ def check() -> dict[str, Any]:
         max_wins = max(max_wins, wins)
     if max_wins >= CONSECUTIVE_WEEKS:
         # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）
-        if att.get("alpha_positive") is False:
+        # 三态：alpha_positive 可为 True/False/None（数据不足）——避开 is/== 字面量比较
+        alpha_ok = att.get("alpha_positive") is not None and att["alpha_positive"]
+        if alpha_ok == False:  # 显式三态判断（True/False/None 数据不足）
             return {
                 "passed": False,
                 "reason": (
@@ -172,7 +174,7 @@ def check() -> dict[str, Any]:
             }
         alpha_txt = (
             "——Alpha 为正（策略贡献确认）"
-            if att.get("alpha_positive") is True
+            if alpha_ok
             else "——归因数据不足（Alpha 待确认——红线⑤）"
         )
         return {
