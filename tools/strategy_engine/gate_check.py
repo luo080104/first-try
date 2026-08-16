@@ -139,6 +139,29 @@ def check() -> dict[str, Any]:
     # 沪深300 周线（同窗口——baostock）
     bench_weeks = d.bs_kline_weekly("000300", 10)
     bench = {w["date"][:10]: w["close"] for w in bench_weeks}
+    # 风格对照（2026-08-16 架构师 P1 落地——观测先行——判定不变）：
+    # 中证红利 000922 周线——组合超额 vs 红利——若连续跑赢沪深300 但对红利无超额
+    # → 说明超额可能只是红利风格 Beta（vs 风格基准 归因污染警示）
+    style_beat = 0  # 组合 vs 红利指数 连续超额周数
+    style_max = 0
+    try:
+        div_weeks = d.bs_kline_weekly("000922", 10)
+        div_bench = {w["date"][:10]: w["close"] for w in div_weeks}
+        for i in range(1, len(weekly)):
+            prev_t, cur_t = weekly[i - 1]["total"], weekly[i]["total"]
+            if prev_t <= 0:
+                continue
+            port_ret = (cur_t - prev_t) / prev_t
+            cur_date = _week_last_day(weekly[i]["week"])
+            prev_date = _week_last_day(weekly[i - 1]["week"])
+            dc, dp = div_bench.get(cur_date), div_bench.get(prev_date)
+            if not dc or not dp or dp <= 0:
+                continue
+            div_ret = (dc - dp) / dp
+            style_beat = style_beat + 1 if port_ret > div_ret else 0
+            style_max = max(style_max, style_beat)
+    except Exception:
+        style_max = -1  # 红利数据不可用——标注（不阻塞判定）
     # 逐周对比：组合周收益 vs 基准周收益
     wins = 0
     max_wins = 0
@@ -156,6 +179,16 @@ def check() -> dict[str, Any]:
         bench_ret = (bc - bp) / bp
         wins = wins + 1 if port_ret > bench_ret else 0
         max_wins = max(max_wins, wins)
+    style_txt = ""
+    if style_max >= 0:
+        style_txt = (
+            f"——风格对照：vs 中证红利连续跑赢 {style_max} 周"
+            + (
+                "⚠️ 对红利无持续超额——超额可能含红利风格 Beta（观测提示）"
+                if style_max < max_wins
+                else "（对红利亦有超额——风格 Beta 嫌疑低）"
+            )
+        )
     if max_wins >= CONSECUTIVE_WEEKS:
         # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）
         # 三态：alpha_positive 可为 True/False/None（数据不足）——避开 is/== 字面量比较
@@ -187,9 +220,10 @@ def check() -> dict[str, Any]:
         }
     return {
         "passed": False,
-        "reason": f"运行 {days} 天——最高连续跑赢 {max_wins} 周（需 {CONSECUTIVE_WEEKS} 周——满 {MAX_DAYS} 天也通过）",
+        "reason": f"运行 {days} 天——最高连续跑赢 {max_wins} 周（需 {CONSECUTIVE_WEEKS} 周——满 {MAX_DAYS} 天也通过）{style_txt}",
         "days": days,
         "weeks_beat": max_wins,
+        "style_beat": style_max,
         "alpha_positive": att.get("alpha_positive"),
         "attribution_note": att.get("attribution_note", ""),
     }

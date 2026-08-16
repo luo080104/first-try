@@ -47,6 +47,13 @@ def append_pending(signal, total_assets=None):
     if any(i["code"] == signal["code"] and i.get("status") == "pending" for i in items):
         return False, f"{signal['code']} 已在待确认队列"
     assets = total_assets or 80000  # 虚拟盘初始 8 万（2026-08-16 对齐实盘）
+    # 最小资金约束提示（2026-08-16 架构师 B1：候选策略必须 8 万可执行——观测提示不拦截）
+    min_cash = signal.get("min_cash") or 0
+    if min_cash and assets < min_cash:
+        print(
+            f"⚠️ 资金约束提示：{signal.get('name') or signal['code']} 最小资金需求"
+            f" {min_cash} > 当前 {assets}——该信号可能不可执行（观测提示——不拦截）"
+        )
     try:
         shares = int(assets * MAX_POSITION_PCT / signal["price"] // 100 * 100) or 100
     except (KeyError, TypeError, ZeroDivisionError, ValueError):

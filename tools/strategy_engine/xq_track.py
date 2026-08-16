@@ -35,6 +35,7 @@ STATE_FILE = os.path.join(
 CUBES_FILE = os.path.join(DATA_DIR, "xq_cubes.json")
 NAV_FILE = os.path.join(DATA_DIR, "xq_nav.json")
 TRADES_FILE = os.path.join(DATA_DIR, "bigv_trades.jsonl")
+DESC_FILE = os.path.join(DATA_DIR, "xq_cube_desc.json")
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 XQ = "https://xueqiu.com"
@@ -277,7 +278,8 @@ def track() -> dict[str, int]:
                     # created_at 是毫秒时间戳 → 转日期（1472520654 → 2016-08-30）
                     try:
                         ts_date = time.strftime(
-                            "%Y-%m-%d", time.localtime(int(reb.get("created_at", 0)) / 1000)
+                            "%Y-%m-%d",
+                            time.localtime(int(reb.get("created_at", 0)) / 1000),
                         )
                     except (TypeError, ValueError, OSError):
                         ts_date = time.strftime("%Y-%m-%d")
@@ -312,7 +314,12 @@ def track() -> dict[str, int]:
     _write_json(CUBES_FILE, cubes)
     _write_json(NAV_FILE, navs)
     n_active = sum(1 for v in cubes.values() if v.get("active"))
-    return {"resolved": len(cubes), "active": n_active, "tracked": len(navs), "new_trades": new_trades}
+    return {
+        "resolved": len(cubes),
+        "active": n_active,
+        "tracked": len(navs),
+        "new_trades": new_trades,
+    }
 
 
 def _append_trade_if_new(ev: dict) -> bool:
@@ -342,8 +349,62 @@ def _append_trade_if_new(ev: dict) -> bool:
         return False
 
 
+def trust_level(bigv: str, desc: str, last_trade_ts: str | None) -> dict:
+    """实盘贴近度分级（2026-08-16 架构师 C2 落地——三指标：自述/调仓活跃）
+
+    返回 {level: 高|中|低, score, reasons}——供周报大V 段过滤/显示
+    只做观测分级——不参与交易决策（红线：跟踪≠跟随）
+    """
+    import datetime as _dt
+
+    score = 50
+    reasons: list[str] = []
+    d = desc or ""
+    # ① 自述关键词（组合 description——虚拟 vs 实盘声明）
+    for kw in ["虚拟", "并非实盘", "没精力", "不必当真", "测试", "模拟", "欢乐豆", "暂无投资建议", "新手"]:
+        if kw in d:
+            score -= 25
+            reasons.append(f"自述虚拟/娱乐（{kw}）")
+    for kw in ["实盘", "近似", "贴近", "匹配"]:
+        if kw in d:
+            score += 25
+            reasons.append(f"自述实盘（{kw}）")
+    # ② 调仓活跃度（最近调仓距今——>180 天停更嫌疑）
+    if last_trade_ts:
+        try:
+            days = (_dt.date.today() - _dt.date.fromisoformat(last_trade_ts)).days
+        except ValueError:
+            days = -1
+        if days > 180:
+            score -= 20
+            reasons.append(f"{days} 天无调仓记录")
+        elif 0 <= days < 30:
+            score += 10
+            reasons.append("近期调仓活跃")
+    level = "高" if score >= 70 else ("中" if score >= 45 else "低")
+    return {"level": level, "score": score, "reasons": reasons}
+
+
+def _latest_trade_ts(bigv: str) -> str | None:
+    """某大V 最近一次调仓日期（bigv_trades.jsonl）"""
+    latest: str | None = None
+    if os.path.exists(TRADES_FILE):
+        try:
+            with open(TRADES_FILE, encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        t = json.loads(line)
+                        if t.get("bigv") == bigv and t.get("ts"):
+                            latest = max(latest or "", str(t["ts"])[:10])
+                    except ValueError:
+                        continue
+        except OSError:
+            pass
+    return latest
+
+
 def status() -> str:
-    """当前跟踪状态摘要"""
+    """当前跟踪状态摘要（含实盘贴近度分级统计——2026-08-16）"""
     cubes: dict = _load_json(CUBES_FILE, {}) or {}
     navs: dict = _load_json(NAV_FILE, {}) or {}
     n_trades = 0
@@ -352,8 +413,16 @@ def status() -> str:
             n_trades = sum(1 for _ in open(TRADES_FILE, encoding="utf-8"))
         except OSError:
             pass
+    # 贴近度分级统计
+    descs: dict = _load_json(DESC_FILE, {}) or {}
+    levels = {"高": 0, "中": 0, "低": 0}
+    for name, info in cubes.items():
+        d = descs.get(name, {}).get("desc", "")
+        t = trust_level(name, d, _latest_trade_ts(name))
+        levels[t["level"]] = levels.get(t["level"], 0) + 1
     return (
         f"组合映射 {len(cubes)} 个 | 净值跟踪 {len(navs)} 个 | 调仓记录 {n_trades} 条 | "
+        f"贴近度 高{levels['高']}/中{levels['中']}/低{levels['低']} | "
         f"登录态 {'✅' if _load_cookies() else '❌ 未登录'}"
     )
 

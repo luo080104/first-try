@@ -79,6 +79,33 @@ def _data_source_status() -> list[str]:
             notes.append("⚠️ 估值百分位：数据不足或源异常（返回中性 50%）")
     except Exception:
         notes.append("⚠️ 估值百分位：探测失败")
+    # ③ 数据新鲜度（2026-08-16 架构师 P2 落地——静默停更检测）
+    try:
+        import json as _json
+        import os as _os
+
+        pj = _os.path.join(
+            _os.path.dirname(_os.path.abspath(data.__file__)), "..", "..", "data", "portfolio.json"
+        )
+        with open(pj, encoding="utf-8") as _f:
+            eq = _json.load(_f).get("equity_curve", [])
+        if eq:
+            last_eq = eq[-1]["date"]
+            days = (datetime.date.today() - datetime.date.fromisoformat(last_eq)).days
+            if days > 5:
+                notes.append(f"⚠️ 净值记录停更 {days} 天（最后 {last_eq}——晨报 record_equity 异常？）")
+        xq_nav = _os.path.join(
+            _os.path.dirname(_os.path.abspath(data.__file__)), "..", "..", "data", "xq_nav.json"
+        )
+        if _os.path.exists(xq_nav):
+            with open(xq_nav, encoding="utf-8") as _f:
+                navs = _json.load(_f)
+            if navs:
+                last_ts = max(v.get("ts", "") for v in navs.values())
+                if last_ts[:10] != datetime.date.today().isoformat():
+                    notes.append(f"ℹ️ 大V 净值快照：{last_ts[:10]}（每日 16:00 更新）")
+    except Exception:
+        pass  # 新鲜度探测失败不阻塞晨报（红线③）
     return notes or ["✅ 数据源正常"]
 
 
