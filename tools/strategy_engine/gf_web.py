@@ -222,16 +222,16 @@ def brief_page():
     )
 
 
-if __name__ == "__main__":
-    import uvicorn
-
-    print("观复配置页：http://127.0.0.1:8201")
-    uvicorn.run(app, host="127.0.0.1", port=8201, log_level="warning")
-
-
 @app.get("/weekly", response_class=HTMLResponse)
 def weekly_page():
     """周报 HTML 版（2026-08-16 界面美化——Bento 卡片布局）"""
     from tools.strategy_engine.weekly_report_html import build_html
 
     return HTMLResponse(build_html())
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    print("观复配置页：http://127.0.0.1:8201")
+    uvicorn.run(app, host="127.0.0.1", port=8201, log_level="warning")
