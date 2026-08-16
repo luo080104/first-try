@@ -69,6 +69,61 @@ def record_trade(
     return ev
 
 
+IDEAS_FILE = os.path.join(DATA_DIR, "bigv_ideas.jsonl")
+
+
+def add_idea(bigv: str, idea: str, rule_draft: str = "") -> dict[str, Any]:
+    """录入大V 思路假设（2026-08-16 B1 落地——Q6 红线：候选≠启用）
+
+    状态流：candidate → backtesting（回测裁决中）→ accepted/rejected
+    — 思路只当假设输入——过回测+虚拟盘裁决才入策略（与书观点同权）
+    """
+    ev = {
+        "ts": datetime.now().isoformat(timespec="seconds")[:10],
+        "bigv": bigv,
+        "idea": idea.strip(),
+        "rule_draft": rule_draft.strip(),
+        "status": "candidate",
+        "source": "大V 观点/调仓归纳",
+    }
+    try:
+        with open(IDEAS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+    return ev
+
+
+def load_ideas(status: str | None = None) -> list[dict[str, Any]]:
+    """读假设库——按状态过滤（None=全部）——失败返回 []"""
+    rows: list[dict[str, Any]] = []
+    if not os.path.exists(IDEAS_FILE):
+        return rows
+    try:
+        with open(IDEAS_FILE, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                if status is None or r.get("status") == status:
+                    rows.append(r)
+    except OSError:
+        pass
+    return rows
+
+
+def ideas_digest() -> str:
+    """假设库汇总（周报/探讨引用）——candidate 计数 + 已裁决结果"""
+    rows = load_ideas()
+    if not rows:
+        return "假设库空（大V 思路待录入）"
+    n_cand = sum(1 for r in rows if r.get("status") == "candidate")
+    n_acc = sum(1 for r in rows if r.get("status") == "accepted")
+    n_rej = sum(1 for r in rows if r.get("status") == "rejected")
+    return f"📒 大V 假设库：{len(rows)} 条（候选 {n_cand} / 已接受 {n_acc} / 已否决 {n_rej}）"
+
+
 def _load_trades(bigv: str | None = None) -> list[dict[str, Any]]:
     if not os.path.exists(TRADES_FILE):
         return []
@@ -156,7 +211,33 @@ def follow_cap_check() -> dict[str, Any]:
 
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "list"
-    if cmd == "record" and len(sys.argv) >= 5:
+    if cmd == "idea" and len(sys.argv) >= 3:
+        sub = sys.argv[2]
+        if sub == "add" and len(sys.argv) >= 4:
+            bigv, idea = sys.argv[3], " ".join(sys.argv[4:])
+            rule = ""
+            if "--rule" in sys.argv:
+                i = sys.argv.index("--rule")
+                rule = " ".join(sys.argv[i + 1 :])
+                idea = idea.replace(" --rule", "").strip()
+            ev = add_idea(bigv, idea, rule)
+            print(
+                f"✅ 假设已录: {ev['bigv']} · {ev['idea'][:40]}…"
+                f"（{ev['status']}——回测裁决后流转）"
+            )
+        elif sub == "list":
+            rows = load_ideas(sys.argv[3] if len(sys.argv) > 3 else None)
+            if not rows:
+                print("假设库空——先录: idea add <大V> <思路> [--rule 规则草稿]")
+            else:
+                for r in rows:
+                    print(
+                        f"  [{r['status']}] {r['bigv']}: {r['idea'][:45]}"
+                        f"——规则: {r.get('rule_draft', '')[:40]}"
+                    )
+        else:
+            print("idea 子命令: add | list")
+    elif cmd == "record" and len(sys.argv) >= 5:
         bigv, code, action = sys.argv[2], sys.argv[3], sys.argv[4]
         try:
             price = float(sys.argv[5]) if len(sys.argv) > 5 else 0.0
