@@ -66,3 +66,79 @@
   - 简介: financial advisor LLM using llama 3.2 3B and RAG with PDF file compatibility.
   - 地址: https://github.com/cookieclicker123/Expert-Agent
   - 本地: ~/Expert-Agent_ref
+- **obra/superpowers**（272500星，2026-08-16 自动收录）
+  - 简介: An agentic skills framework & software development methodology that works.
+  - 地址: https://github.com/obra/superpowers
+  - 本地: ~/superpowers_ref (已存在，跳过)
+- **NousResearch/hermes-agent**（231086星，2026-08-16 自动收录）
+  - 简介: The agent that grows with you
+  - 地址: https://github.com/NousResearch/hermes-agent
+  - 本地: ~/hermes-agent_ref
+- **Snailclimb/JavaGuide**（157782星，2026-08-16 自动收录）
+  - 简介: Java 面试 & 后端通用面试指南，覆盖计算机基础、数据库、分布式、高并发、系统设计与 AI 应用开发
+  - 地址: https://github.com/Snailclimb/JavaGuide
+  - 本地: ~/JavaGuide_ref
+- **langflow-ai/langflow**（153279星，2026-08-16 自动收录）
+  - 简介: Langflow is a powerful tool for building and deploying AI-powered agents and workflows.
+  - 地址: https://github.com/langflow-ai/langflow
+  - 本地: ~/langflow_ref
+- **langgenius/dify**（152552星，2026-08-16 自动收录）
+  - 简介: Build Agentic workflows, RAG pipelines, with rich AI model and tool support on one collaborative wor
+  - 地址: https://github.com/langgenius/dify
+  - 本地: ~/dify_ref
+- **firecrawl/firecrawl**（167810星，2026-08-16 自动收录）
+  - 简介: The context API to search, scrape, and interact with the web at scale. 🔥
+  - 地址: https://github.com/firecrawl/firecrawl
+  - 本地: ~/firecrawl_ref
+- **D4Vinci/Scrapling**（74175星，2026-08-16 自动收录）
+  - 简介: 🕷️ An adaptive Web Scraping framework that handles everything from a single request to a full-scale 
+  - 地址: https://github.com/D4Vinci/Scrapling
+  - 本地: ~/Scrapling_ref
+- **scrapy/scrapy**（63863星，2026-08-16 自动收录）
+  - 简介: Scrapy, a fast high-level web crawling & scraping framework for Python.
+  - 地址: https://github.com/scrapy/scrapy
+  - 本地: ~/scrapy_ref
+- **soimort/you-get**（56872星，2026-08-16 自动收录）
+  - 简介: :arrow_double_down: Dumb downloader that scrapes the web
+  - 地址: https://github.com/soimort/you-get
+  - 本地: ~/you-get_ref
+- **apify/crawlee**（25401星，2026-08-16 自动收录）
+  - 简介: Crawlee—A web scraping and browser automation library for Node.js to build reliable crawlers. In Jav
+  - 地址: https://github.com/apify/crawlee
+  - 本地: ~/crawlee_ref
+- **go-gitea/gitea**（57390星，2026-08-16 自动收录）
+  - 简介: Git with a cup of tea! Painless self-hosted all-in-one software development service, including Git h
+  - 地址: https://github.com/go-gitea/gitea
+  - 本地: ~/gitea_ref
+- **hashicorp/terraform**（49465星，2026-08-16 自动收录）
+  - 简介: Terraform enables you to safely and predictably create, change, and improve infrastructure. It is a 
+  - 地址: https://github.com/hashicorp/terraform
+  - 本地: ~/terraform_ref
+- **Imbad0202/academic-research-skills**（42597星，2026-08-16 自动收录）
+  - 简介: Academic Research Skills for Claude Code: research → write → review → revise → finalize
+  - 地址: https://github.com/Imbad0202/academic-research-skills
+  - 本地: ~/academic-research-skills_ref
+- **openai/codex-plugin-cc**（31918星，2026-08-16 自动收录）
+  - 简介: Use Codex from Claude Code to review code or delegate tasks.
+  - 地址: https://github.com/openai/codex-plugin-cc
+  - 本地: ~/codex-plugin-cc_ref
+- **tirth8205/code-review-graph**（30268星，2026-08-16 自动收录）
+  - 简介: Local-first code intelligence graph for MCP and CLI. Builds a persistent map of your codebase so AI 
+  - 地址: https://github.com/tirth8205/code-review-graph
+  - 本地: ~/code-review-graph_ref (已存在，跳过)
+- **vuejs/vue**（210222星，2026-08-16 自动收录）
+  - 简介: This is the repo for Vue 2. For Vue 3, go to https://github.com/vuejs/core
+  - 地址: https://github.com/vuejs/vue
+  - 本地: ~/vue_ref
+- **Chalarangelo/30-seconds-of-code**（128720星，2026-08-16 自动收录）
+  - 简介: Coding articles to level up your development skills
+  - 地址: https://github.com/Chalarangelo/30-seconds-of-code
+  - 本地: ~/30-seconds-of-code_ref
+- **d3/d3**（113459星，2026-08-16 自动收录）
+  - 简介: Bring data to life with SVG, Canvas and HTML. :bar_chart::chart_with_upwards_trend::tada:
+  - 地址: https://github.com/d3/d3
+  - 本地: ~/d3_ref
+- **fighting41love/funNLP**（82481星，2026-08-16 自动收录）
+  - 简介: 中英文敏感词、语言检测、中外手机/电话归属地/运营商查询、名字推断性别、手机号抽取、身份证抽取、邮箱抽取、中日文人名库、中文缩写库、拆字词典、词汇情感值、停用词、反动词表、暴恐词表、繁简体转换、英文模
+  - 地址: https://github.com/fighting41love/funNLP
+  - 本地: ~/funNLP_ref

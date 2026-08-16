@@ -76,6 +76,33 @@ def test_s2_bull_filter_on_sells_in_downtrend():
     from tools.strategy_engine import signals as sg
 
     # 高波动锯齿 + 末端反弹触轨 + MA 微降
-    closes = [10, 14, 8, 13, 9, 12, 8, 11, 9, 10, 8, 9, 7, 9, 6, 8, 6, 7, 5, 6, 6.2, 6.8, 7.5, 8.3, 9.2, 10.2]
+    closes = [
+        10,
+        14,
+        8,
+        13,
+        9,
+        12,
+        8,
+        11,
+        9,
+        10,
+        8,
+        9,
+        7,
+        9,
+        6,
+        8,
+        6,
+        7,
+        5,
+        6,
+        6.2,
+        6.8,
+        7.5,
+        8.3,
+        9.2,
+        10.2,
+    ]
     r = sg.s2_weekly_upper_exit(closes, bull_filter=True)
     assert isinstance(r["signal"], bool)
