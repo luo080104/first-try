@@ -267,9 +267,9 @@ def build_report() -> str:
                 )["level"]
                 == "高"
             ]
-            _top = sorted(
-                _high, key=lambda k: (_navs[k].get("gain") or 0), reverse=True
-            )[:5]
+            _top = sorted(_high, key=lambda k: _navs[k].get("gain") or 0, reverse=True)[
+                :5
+            ]
             if _top:
                 lines.append("👀 高贴近度组合（实盘自述）前 5：")
                 for k in _top:

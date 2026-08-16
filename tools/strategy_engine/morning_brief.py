@@ -181,7 +181,11 @@ def build_brief() -> str:
             for _pos in _positions[:5]:
                 _vp = data.valuation_percentile(_pos["code"])
                 _pe, _pb = _vp.get("pe_percentile", 50), _vp.get("pb_percentile", 50)
-                _mark = "🟢" if (_pe < 30 and _pb < 30) else ("🔴" if (_pe > 80 or _pb > 80) else "🟡")
+                _mark = (
+                    "🟢"
+                    if (_pe < 30 and _pb < 30)
+                    else ("🔴" if (_pe > 80 or _pb > 80) else "🟡")
+                )
                 lines.append(
                     f"  {_mark} {_pos['name']}: PE百分位 {_pe:.0f}% / PB百分位 {_pb:.0f}%"
                 )
