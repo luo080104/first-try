@@ -80,6 +80,13 @@ def push_brief() -> bool:
         Portfolio().record_equity()
     except Exception:
         pass  # 净值记录失败不阻塞晨报（红线③容错）
+    # 每日备份（A1 完善——2026-08-16——数据保险——失败不阻塞）
+    try:
+        from tools.strategy_engine import backup
+
+        backup.daily_backup()
+    except Exception:
+        pass
     if push_wechat is None:
         return False
     text = mb.build_brief()
