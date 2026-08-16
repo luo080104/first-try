@@ -48,6 +48,68 @@ def _week_events() -> list[dict[str, Any]]:
     return out
 
 
+def behavior_alert() -> str:
+    """过早卖出行为提醒（2026-08-16 A3 落地——Q10 主动干预）
+
+    判定：卖出事件后 20 日最高价 > 卖出价 ×1.1 → 记一次过早卖出
+    累计 ≥3 次 → 返回提醒文本（晨报显示）——连续 3 次过早卖出是行为模式
+    而非偶发——提醒而非命令（红线：卖出决策始终归甲方）
+    """
+    import json as _json
+    import os as _os
+
+    events = []
+    try:
+        ev_path = _os.path.join(
+            _os.path.dirname(_os.path.abspath(pf.__file__)), "..", "..", "data", "portfolio_events.jsonl"
+        )
+        with open(ev_path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    events.append(_json.loads(line))
+                except ValueError:
+                    continue
+    except OSError:
+        return ""
+    sells = [e for e in events if e.get("action") == "sell" and e.get("price")]
+    if not sells:
+        return ""
+    from tools.strategy_engine import data as d
+
+    early = 0
+    details: list[str] = []
+    for e in sells[-10:]:  # 最近 10 次卖出
+        code = e.get("code", "")
+        sold_at = (e.get("ts") or "")[:10]
+        try:
+            price = float(e.get("price", 0))
+        except (TypeError, ValueError):
+            continue
+        if not code or not sold_at or price <= 0:
+            continue
+        try:
+            days = d.bs_kline_daily(code, 1)
+        except Exception:
+            continue
+        after = [x for x in days if x["date"] >= sold_at][:20]
+        if len(after) < 5:
+            continue  # 卖出后数据不足（太近）——不算
+        hi = max(x["close"] for x in after)
+        if hi > price * 1.10:
+            early += 1
+            details.append(f"{e.get('name', code)} 卖出 {price} 后 20 日最高 {hi:.2f}（+{(hi/price-1)*100:.0f}%）")
+    if early >= 3:
+        return (
+            "🧭 **行为提醒（Q10）：过早卖出模式**\n"
+            + "\n".join(f"  · {x}" for x in details)
+            + "\n  连续 3 次过早卖出——书：拿住是纪律——卖出前重查 S2/S3/S4 是否真触发"
+        )
+    return ""
+
+
 def _behavior_check(events: list[dict[str, Any]]) -> list[str]:
     """行为画像（Q10——纪律检查——Q7 教训：拿住是纪律）"""
     notes: list[str] = []
@@ -171,6 +233,15 @@ def build_report() -> str:
     # ⑦ 尾注（数据源状态）
     lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━")
     lines.append("📌 数据源：东财封锁→同花顺降级（当日快照）｜净值图见网页版")
+    # 双源对账（2026-08-16 架构师 R1——静默数据漂移检测——无差异不显示）
+    try:
+        from tools.strategy_engine.data_reconcile import report as _rec_report
+
+        rec = _rec_report()
+        if rec:
+            lines.append("\n" + rec)
+    except Exception:
+        pass  # 对账失败不阻塞周报（红线③容错）
     return "\n".join(lines)
 
 

@@ -161,6 +161,15 @@ def build_brief() -> str:
             lines.append("\n" + s4)
     except Exception:
         pass  # S4 监测失败不阻塞晨报（红线③容错）
+    # 行为提醒（2026-08-16 A3 落地——Q10 过早卖出模式——连续 3 次才提醒）
+    try:
+        from tools.strategy_engine.weekly_report import behavior_alert
+
+        ba = behavior_alert()
+        if ba:
+            lines.append("\n" + ba)
+    except Exception:
+        pass  # 行为提醒失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
