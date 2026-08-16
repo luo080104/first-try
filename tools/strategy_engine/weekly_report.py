@@ -61,7 +61,11 @@ def behavior_alert() -> str:
     events = []
     try:
         ev_path = _os.path.join(
-            _os.path.dirname(_os.path.abspath(pf.__file__)), "..", "..", "data", "portfolio_events.jsonl"
+            _os.path.dirname(_os.path.abspath(pf.__file__)),
+            "..",
+            "..",
+            "data",
+            "portfolio_events.jsonl",
         )
         with open(ev_path, encoding="utf-8") as f:
             for line in f:
@@ -100,7 +104,9 @@ def behavior_alert() -> str:
         hi = max(x["close"] for x in after)
         if hi > price * 1.10:
             early += 1
-            details.append(f"{e.get('name', code)} 卖出 {price} 后 20 日最高 {hi:.2f}（+{(hi/price-1)*100:.0f}%）")
+            details.append(
+                f"{e.get('name', code)} 卖出 {price} 后 20 日最高 {hi:.2f}（+{(hi / price - 1) * 100:.0f}%）"
+            )
     if early >= 3:
         return (
             "🧭 **行为提醒（Q10）：过早卖出模式**\n"
@@ -229,6 +235,64 @@ def build_report() -> str:
         lines.append("💰 现金偏高——关注买入信号（B3 低潮/打分达标）")
     else:
         lines.append("🔍 持仓观察——跌破门槛→观察标记，连续两季→换仓建议（Q14）")
+
+    # ⑦ 大V 观察（2026-08-16 B2 落地——高贴近度组合 + 鹿鼎公微博）
+    lines.append("\n**📡 大V 观察**")
+    try:
+        import json as _json
+        import os as _os
+
+        _data_dir = _os.path.join(
+            _os.path.dirname(_os.path.abspath(pf.__file__)), "..", "..", "data"
+        )
+        _navs = {}
+        _nav_path = _os.path.join(_data_dir, "xq_nav.json")
+        if _os.path.exists(_nav_path):
+            with open(_nav_path, encoding="utf-8") as _f:
+                _navs = _json.load(_f)
+        _descs = {}
+        _desc_path = _os.path.join(_data_dir, "xq_cube_desc.json")
+        if _os.path.exists(_desc_path):
+            with open(_desc_path, encoding="utf-8") as _f:
+                _descs = _json.load(_f)
+        if _navs:
+            # 高贴近度过滤（trust_level——实盘自述优先）
+            from tools.strategy_engine.xq_track import _latest_trade_ts, trust_level
+
+            _high = [
+                k
+                for k, v in _navs.items()
+                if trust_level(
+                    k, _descs.get(k, {}).get("desc", ""), _latest_trade_ts(k)
+                )["level"]
+                == "高"
+            ]
+            _top = sorted(
+                _high, key=lambda k: (_navs[k].get("gain") or 0), reverse=True
+            )[:5]
+            if _top:
+                lines.append("👀 高贴近度组合（实盘自述）前 5：")
+                for k in _top:
+                    v = _navs[k]
+                    lines.append(
+                        f"  · {v.get('name', k)}: 净值 {v.get('nav')} "
+                        f"总收益 {v.get('gain')}%（{v.get('ts', '')[:10]}）"
+                    )
+            else:
+                lines.append("👀 暂无高贴近度组合（分级积累中）")
+        # 鹿鼎公微博（本周）
+        try:
+            from tools.strategy_engine.wb_track import digest as _wb_digest
+
+            _wb = _wb_digest()
+            if "暂无数据" not in _wb:
+                lines.append(_wb)
+        except Exception:
+            pass  # 微博摘要失败不阻塞周报（红线③容错）
+        if not _navs:
+            lines.append("📡 大V 数据采集中（16:00 后自动积累）")
+    except Exception:
+        lines.append("📡 大V 数据采集中（16:00 后自动积累）")
 
     # ⑦ 尾注（数据源状态）
     lines.append("\n━━━━━━━━━━━━━━━━━━━━━━━━")

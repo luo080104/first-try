@@ -170,6 +170,23 @@ def build_brief() -> str:
             lines.append("\n" + ba)
     except Exception:
         pass  # 行为提醒失败不阻塞晨报（红线③容错）
+    # 持仓估值温度（2026-08-16 B5 落地——PE/PB 历史百分位——书 V1：<10 便宜 />80 贵）
+    try:
+        from tools.strategy_engine import portfolio as _pf
+
+        _p = _pf.Portfolio()
+        _positions, _ = _p.positions()
+        if _positions:
+            lines.append("\n【持仓估值温度】")
+            for _pos in _positions[:5]:
+                _vp = data.valuation_percentile(_pos["code"])
+                _pe, _pb = _vp.get("pe_percentile", 50), _vp.get("pb_percentile", 50)
+                _mark = "🟢" if (_pe < 30 and _pb < 30) else ("🔴" if (_pe > 80 or _pb > 80) else "🟡")
+                lines.append(
+                    f"  {_mark} {_pos['name']}: PE百分位 {_pe:.0f}% / PB百分位 {_pb:.0f}%"
+                )
+    except Exception:
+        pass  # 估值温度失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
