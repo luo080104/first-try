@@ -46,12 +46,26 @@ def b3_triple_confirm(
     return {"signal": signal, "reasons": reasons}
 
 
-def s2_weekly_upper_exit(closes: list[float]) -> dict[str, Any]:
-    """S2 周布林降本（波段仓）：周线收盘 > 布林上轨 → 波段仓卖出信号（Q16 swing 轨）"""
-    if len(closes) < 21:
+def s2_weekly_upper_exit(closes: list[float], bull_filter: bool = False) -> dict[str, Any]:
+    """S2 周布林降本（波段仓）：周线收盘 > 布林上轨 → 波段仓卖出信号（Q16 swing 轨）
+
+    bull_filter（2026-08-16 Q11 预研——默认关闭）：书自限"牛市（周布林中轨上升）
+    时上轨不是好卖出指标"——K 扩池已支持书（牛熊限定训练 +20.8% vs 机械 +8.1%）——
+    启用需虚拟盘数据裁决（红线——不预启用）。开启后：MA20 上升（牛市）→ 不触发卖出。
+    """
+    if len(closes) < 22:
         return {"signal": False, "reasons": ["数据不足"]}
     b = ind.bollinger(closes, 20, 2)
     if b["upper"] and closes[-1] > b["upper"]:
+        if bull_filter:
+            # 牛市过滤（Q11 预研）：中轨上升 = MA20 本周 > 上周——不卖
+            ma_now = sum(closes[-20:]) / 20
+            ma_prev = sum(closes[-21:-1]) / 20
+            if ma_now > ma_prev:
+                return {
+                    "signal": False,
+                    "reasons": ["触上轨但牛市（MA20 上升）——书：牛市上轨不卖（Q11 待裁决）"],
+                }
         return {
             "signal": True,
             "reasons": [f"周线收盘 {closes[-1]:.2f} > 上轨 {b['upper']:.2f}"],

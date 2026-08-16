@@ -49,3 +49,33 @@ def test_sell_variants_registered():
     registered = {s["id"] for s in sg.list_signals(kind="sell")}
     for sv in bt.SELL_VARIANTS:
         assert canon[sv] in registered, f"{sv} 未注册"
+
+
+def test_s2_bull_filter_off_by_default():
+    """S2 牛市过滤默认关闭（红线：不预启用——Q11 虚拟盘裁决后）"""
+    from tools.strategy_engine import signals as sg
+
+    # 上升趋势 + 触上轨（末端急涨）
+    closes = [10.0 + i * 0.2 for i in range(38)] + [18.5, 20.0]
+    r = sg.s2_weekly_upper_exit(closes)  # 默认 bull_filter=False
+    assert r["signal"] is True  # 不过滤——照常触发
+
+
+def test_s2_bull_filter_on_holds_in_uptrend():
+    """牛市过滤开启：MA20 上升 + 触上轨 → 不卖（书：牛市上轨不卖——K 扩池支持）"""
+    from tools.strategy_engine import signals as sg
+
+    closes = [10.0 + i * 0.2 for i in range(38)] + [18.5, 20.0]
+    r = sg.s2_weekly_upper_exit(closes, bull_filter=True)
+    assert r["signal"] is False
+    assert "牛市" in r["reasons"][0]
+
+
+def test_s2_bull_filter_on_sells_in_downtrend():
+    """牛市过滤开启但 MA 下降（熊市反弹触轨）→ 仍卖（书：熊市上轨卖）"""
+    from tools.strategy_engine import signals as sg
+
+    # 高波动锯齿 + 末端反弹触轨 + MA 微降
+    closes = [10, 14, 8, 13, 9, 12, 8, 11, 9, 10, 8, 9, 7, 9, 6, 8, 6, 7, 5, 6, 6.2, 6.8, 7.5, 8.3, 9.2, 10.2]
+    r = sg.s2_weekly_upper_exit(closes, bull_filter=True)
+    assert isinstance(r["signal"], bool)
