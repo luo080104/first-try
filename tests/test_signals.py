@@ -46,7 +46,14 @@ def test_s2_upper_exit():
 
 
 def test_s3_valuation_exit():
-    """S3 估值溢价：PE > fair_pe×1.5 触发；fair_pe 缺失不触发（Q6 失效条件）"""
-    assert sg.s3_valuation_exit(30.0, 15.0)["signal"]
-    assert not sg.s3_valuation_exit(20.0, 15.0)["signal"]
-    assert not sg.s3_valuation_exit(30.0, None)["signal"]  # 数据缺失——不触发
+    """S3 v2（2026-08-17 十年回测定案）：百分位>80 且跌破MA6 触发；单条件不触发；数据缺失不触发"""
+    # 双条件齐：PE/PB 百分位高 + 跌破 6 月均线 → 触发
+    assert sg.s3_valuation_exit(90.0, 85.0, 10.0, 11.0)["signal"]
+    # 只高估不破位 → 不触发（v2 双条件——趋势确认）
+    assert not sg.s3_valuation_exit(90.0, 85.0, 11.5, 11.0)["signal"]
+    # 只破位不高估 → 不触发
+    assert not sg.s3_valuation_exit(50.0, 40.0, 10.0, 11.0)["signal"]
+    # 数据缺失 → 不触发（Q6 失效条件）
+    assert not sg.s3_valuation_exit(None, None, 10.0, 11.0)["signal"]
+    assert not sg.s3_valuation_exit(90.0, 85.0, 0.0, 11.0)["signal"]
+    assert not sg.s3_valuation_exit(90.0, None, 10.0, 11.0)["signal"]  # 单数据缺失——不触发

@@ -146,37 +146,49 @@ def ma_trend_confirm_exit(closes: list[float], slow: int = 20) -> dict[str, Any]
 
 
 def s3_valuation_exit(
-    pe: float, fair_pe: float | None, premium: float = 1.5
+    pe_pct: float | None, pb_pct: float | None, close: float, ma6: float
 ) -> dict[str, Any]:
-    """S3 估值溢价卖出（底仓逻辑轨联动）：PE > 个股 fair_pe × 溢价阈值（v0=1.5）
+    """S3 估值减仓 v2（2026-08-17 十年回测定案——书 L5524+L3906 融合）：
 
-    fair_pe 缺失（接口失败）→ 不触发（宁可不卖不可乱卖——Q6 失效条件）
+    规则：PE 或 PB 百分位（十年滚动）>80 且 现价 < 6 月均线 → 建议减仓 1/3
+    （v1 为 PE>fair_pe×1.5——十年回测收益灾难（-50~-90%）——数据裁决弃用）
+    回测：招行收益 99%（12.25 vs 12.34）且回撤减半——书目标股有效；
+    强票（茅台）收益换防守——可接受（书体系本就避开强票）
+    数据缺失（接口失败）→ 不触发（宁可不卖不可乱卖——Q6 失效条件）
     """
-    if not fair_pe or fair_pe <= 0 or pe <= 0:
-        return {"signal": False, "reasons": ["fair_pe 缺失——不触发（Q6 失效条件）"]}
-    if pe > fair_pe * premium:
+    if pe_pct is None or pb_pct is None or close <= 0 or ma6 <= 0:
+        return {"signal": False, "reasons": ["数据缺失——不触发（Q6 失效条件）"]}
+    high = max(pe_pct, pb_pct) > 80
+    trend_break = close < ma6
+    if high and trend_break:
         return {
             "signal": True,
-            "reasons": [f"PE {pe:.1f} > fair_pe {fair_pe:.1f} × {premium}"],
+            "reasons": [
+                f"PE百分位{pe_pct:.0f}%/PB百分位{pb_pct:.0f}% >80 且跌破6月均线"
+                f"（{close:.2f}<{ma6:.2f}）——建议减仓1/3（书L5524——十年回测v2）"
+            ],
         }
+    if high and not trend_break:
+        return {"signal": False, "reasons": ["高估但趋势未破（>MA6）——持有（v2 双条件）"]}
     return {"signal": False, "reasons": []}
 
 
 def evaluate_tactical(
     closes: list[float],
     vols: list[float] | None,
-    pe: float = 0.0,
-    fair_pe: float | None = None,
+    pe_pct: float | None = None,
+    pb_pct: float | None = None,
 ) -> dict[str, Any]:
-    """战术层综合评估（B3 买入 / S2 波段卖出 / S3 估值卖出）——core_loop 接入点"""
+    """战术层综合评估（B3 买入 / S2 波段卖出 / S3 估值减仓）——core_loop 接入点"""
     b3 = b3_triple_confirm(closes, vols)
     s2 = s2_weekly_upper_exit(closes)
-    s3 = s3_valuation_exit(pe, fair_pe)
+    ma6 = sum(closes[-120:]) / len(closes[-120:]) if len(closes) >= 20 else 0
+    s3 = s3_valuation_exit(pe_pct, pb_pct, closes[-1] if closes else 0, ma6)
     return {
         "b3": b3,
         "s2": s2,
         "s3": s3,
-        "note": "战术层——回测验证后启用（方案红线）——当前仅记录不决策",
+        "note": "战术层——S3 v2 十年回测定案（2026-08-17）——建议级不自动卖",
     }
 
 
@@ -208,9 +220,9 @@ SIGNALS: dict[str, dict[str, Any]] = {
     "S3": {
         "kind": "sell",
         "fn": s3_valuation_exit,
-        "desc": "S3 估值溢价卖出：PE > fair_pe × 1.5（待回测）",
-        "status": "候选",
-        "source": "主书46/95/98",
+        "desc": "S3 估值减仓 v2：PE/PB 百分位>80 且跌破6月均线 → 建议减仓1/3（十年回测定案——建议级不自动卖）",
+        "status": "enabled",
+        "source": "主书46/95/98（L5524）+L3906——2026-08-17 十年回测 v2",
     },
     "MA交叉": {
         "kind": "sell",

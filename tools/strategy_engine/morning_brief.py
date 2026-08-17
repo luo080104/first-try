@@ -226,6 +226,34 @@ def build_brief() -> str:
                 )
     except Exception:
         pass  # 估值温度失败不阻塞晨报（红线③容错）
+    # S3 估值减仓 v2（2026-08-17 十年回测定案：PE/PB 百分位>80 且跌破 6 月均线 → 建议减仓 1/3）
+    try:
+        from tools.strategy_engine import portfolio as _pf2
+        from tools.strategy_engine.signals import s3_valuation_exit
+
+        _p2 = _pf2.Portfolio()
+        _pos2, _ = _p2.positions()
+        s3_hits = []
+        for _pos in _pos2[:5]:
+            _vp = data.valuation_percentile(_pos["code"])
+            _wk = data.bs_kline_weekly(_pos["code"], years=2)[:24]
+            if len(_wk) < 12:
+                continue
+            _ma24 = sum(_w["close"] for _w in _wk) / len(_wk)
+            _last = _wk[0]["close"]
+            _sig = s3_valuation_exit(
+                _vp.get("pe_percentile"), _vp.get("pb_percentile"), _last, _ma24
+            )
+            if _sig["signal"]:
+                s3_hits.append(f"  ⚠️ {_pos['name']}({_pos['code']})：{_sig['reasons'][0]}")
+        if s3_hits:
+            lines.append(
+                "\n【S3 估值减仓提示（书L5524——建议级——不自动卖）】\n"
+                + "\n".join(s3_hits)
+                + "\n  规则：PE/PB 百分位>80 且跌破6月均线——十年回测定案——减仓执行需你拍板"
+            )
+    except Exception:
+        pass  # S3 检查失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
