@@ -145,7 +145,7 @@ def push_brief() -> bool:
     text = mb.build_brief()
     if not _claim_slot():
         return False
-    ok = push_wechat(f"📊 观复日报 · 收盘总结\n\n{text}")
+    ok = push_wechat(f"📊 观复日报 · 收盘总结\n\n{text}", title="📊 观复日报")
     return ok
 
 
@@ -161,7 +161,7 @@ def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
         # 无图 → 普通文本推送
         if not _claim_slot():
             return False
-        return push_wechat(text)
+        return push_wechat(text, title="📊 观复周报")
     if not _claim_slot():
         return False
     try:
@@ -185,7 +185,7 @@ def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
         )
         if not sendkey:
             # 无 Server酱 → 纯文本降级
-            return push_wechat(text)
+            return push_wechat(text, title="📊 观复周报")
         body = urllib.parse.urlencode(
             {"title": "📊 观复周报", "desp": text, "pics": pic_data_url}
         ).encode("utf-8")
@@ -210,7 +210,7 @@ def push_signal(signal_text: str) -> bool:
         return False
     if not _claim_slot():
         return False
-    return push_wechat(f"🎯 观复信号\n\n{signal_text}")
+    return push_wechat(f"🎯 观复信号\n\n{signal_text}", title="🎯 观复信号")
 
 
 if __name__ == "__main__":

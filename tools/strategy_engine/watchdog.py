@@ -15,6 +15,7 @@
 判定规则：距"应跑时点"超过 TOLERANCE 小时仍未跑 → 告警。
 非应跑日（周末/盘前）不告警。
 """
+
 from __future__ import annotations
 
 import datetime
@@ -26,10 +27,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 # 任务 → (应跑时点 [时,分], 容忍小时, 周五例外)
 TASKS = {
-    "GFBrief": (17, 0, 3, False),   # 17:00 日报——容忍 3h（含数据拉取+网络重试）
-    "GFXQTrack": (16, 0, 3, False), # 16:00 雪球——容忍 3h
-    "GFWBTrack": (16, 5, 3, False), # 16:05 微博——容忍 3h
-    "GFWeekly": (15, 30, 6, True),  # 周五 15:30 周报——容忍 6h——周五例外（only 周五应跑）
+    "GFBrief": (17, 0, 3, False),  # 17:00 日报——容忍 3h（含数据拉取+网络重试）
+    "GFXQTrack": (16, 0, 3, False),  # 16:00 雪球——容忍 3h
+    "GFWBTrack": (16, 5, 3, False),  # 16:05 微博——容忍 3h
+    "GFWeekly": (
+        15,
+        30,
+        6,
+        True,
+    ),  # 周五 15:30 周报——容忍 6h——周五例外（only 周五应跑）
 }
 
 _POWERSHELL_SCRIPT = (
@@ -47,16 +53,26 @@ def _last_run(name: str) -> tuple[datetime.datetime | None, int]:
         return None, -2  # 非白名单任务名——拒绝
     try:
         r = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", _POWERSHELL_SCRIPT.format(name=name)],
-            capture_output=True, text=True, timeout=20,
-            encoding="utf-8", errors="replace",
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                _POWERSHELL_SCRIPT.format(name=name),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            encoding="utf-8",
+            errors="replace",
         )
         out = (r.stdout or "").strip().split("|")
         if len(out) == 2 and out[0] and out[0] != "12/30/1899 00:00:00":
             # PowerShell 区域设置可能是 MM/dd/yyyy——统一按多种格式解析
             for fmt in ("%Y-%m-%d %H:%M:%S", "%m/%d/%Y %H:%M:%S", "%Y/%m/%d %H:%M:%S"):
                 try:
-                    return datetime.datetime.strptime(out[0].strip(), fmt), int(out[1] or 0)
+                    return datetime.datetime.strptime(out[0].strip(), fmt), int(
+                        out[1] or 0
+                    )
                 except ValueError:
                     continue
         return None, 0  # 从未运行
@@ -86,7 +102,9 @@ def check() -> list[str]:
         if last is None:
             # 从未运行——若已过应跑时点即告警
             if now > due:
-                alerts.append(f"⚠️ {name} 从未运行——应于今日 {hh:02d}:{mm:02d} 触发——请查任务计划")
+                alerts.append(
+                    f"⚠️ {name} 从未运行——应于今日 {hh:02d}:{mm:02d} 触发——请查任务计划"
+                )
             continue
         # 上次运行是否覆盖本次应跑时点（容忍窗口内）
         window_start = due - datetime.timedelta(hours=tol_h)
@@ -97,7 +115,9 @@ def check() -> list[str]:
             )
         elif result != 0 and result != 267011:
             # 267011 = 任务从未运行（计划任务默认）——其余非 0 需注意
-            alerts.append(f"⚠️ {name} 上次运行结果异常——结果码 {result}（{last:%m-%d %H:%M}）")
+            alerts.append(
+                f"⚠️ {name} 上次运行结果异常——结果码 {result}（{last:%m-%d %H:%M}）"
+            )
     return alerts
 
 
@@ -113,7 +133,7 @@ def main() -> int:
         from src.notify import push_wechat
 
         if push_wechat:
-            ok = push_wechat(f"🛡️ 观复看门狗\n\n{msg}")
+            ok = push_wechat(f"🛡️ 观复看门狗\n\n{msg}", title="🛡️ 观复看门狗")
             print(f"[watchdog] 微信告警推送: {'✅' if ok else '❌'}")
     except Exception as e:
         print(f"[watchdog] 微信推送失败（不阻塞）: {str(e)[:80]}")

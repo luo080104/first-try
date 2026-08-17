@@ -20,9 +20,13 @@ def _get_env() -> dict:
     return env
 
 
-def push_wechat(text: str) -> bool:
-    """多渠道推送：Server酱 > PushPlus > 企业微信 webhook（任一成功即返回 True）"""
+def push_wechat(text: str, title: str = "") -> bool:
+    """多渠道推送：Server酱 > PushPlus > 企业微信 webhook（任一成功即返回 True）
+
+    title: 自定义推送标题（空=默认'Go购 盯价提醒'——观复调用方传'📊 观复日报'等）
+    """
     env = _get_env()
+    title = title or "🎯 Go购 盯价提醒"
     # ① Server酱（推荐，个人免拉群）
     sendkey = os.environ.get('SERVERCHAN_SENDKEY', '') or env.get('SERVERCHAN_SENDKEY', '')
     if sendkey:
@@ -30,7 +34,7 @@ def push_wechat(text: str) -> bool:
             import json
             import urllib.parse
             import urllib.request
-            body = urllib.parse.urlencode({'title': '🎯 Go购 盯价提醒', 'desp': text}).encode('utf-8')
+            body = urllib.parse.urlencode({'title': title, 'desp': text}).encode('utf-8')
             req = urllib.request.Request(f'https://sctapi.ftqq.com/{sendkey}.send', data=body)
             resp = json.loads(urllib.request.urlopen(req, timeout=10).read().decode('utf-8'))
             if resp.get('code') == 0:
@@ -45,7 +49,7 @@ def push_wechat(text: str) -> bool:
         try:
             import json
             import urllib.request
-            body = json.dumps({'token': token, 'title': '🎯 Go购 盯价提醒',
+            body = json.dumps({'token': token, 'title': title,
                                'content': text, 'template': 'markdown'}).encode('utf-8')
             req = urllib.request.Request('https://www.pushplus.plus/send', data=body,
                                          headers={'Content-Type': 'application/json'})
