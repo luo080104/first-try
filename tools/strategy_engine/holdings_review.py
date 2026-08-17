@@ -130,3 +130,47 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def eval_buy(code: str) -> dict:
+    """买入评估强制入口（2026-08-17 甲方要求——任何买入建议必须走全体系）
+
+    机制：代码强制"下意识"——只看估值就出建议的路径从根上堵死。
+    输出：完整打分 + 技术信号明细（布林位置/RSI/九转/量能）+ 估值百分位
+    + 价值 8 标准 + 否决 + 结论（达标/观察/否决）
+    """
+    from tools.strategy_engine import fundamentals as fd
+
+    q = data.tencent_quote([code]).get(code, {})
+    if not q:
+        return {"code": code, "error": "无行情"}
+    v = cl.valuation_input(code, q)
+    m = ms.market_status()
+    if m.get("fair_pe_rate_calibrated"):
+        v["fair_pe"] = m["fair_pe_rate_calibrated"]
+    t = cl.technical_signals(code)
+    f = fd.get_fundamentals(
+        code, q.get("price") or 0, debt_exempt=code in cl._FINANCIAL_EXEMPT
+    )
+    s = {"is_leader": True, "bigv_holding": False}
+    score = ss.score_stock(f, v, t, s, quote=q, market_status=m["status"])
+    # 技术明细（布林位置/RSI——可读——直接取 technical_signals 字段）
+    tech_detail = {k: t[k] for k in ("boll", "rsi", "td", "vol_div") if k in t}
+    threshold = ss.THRESHOLD_MAP.get(m["status"], 80)
+    if score.vetoed:
+        conclusion = "⛔ 否决（不买清单/红线）"
+    elif score.total >= threshold:
+        conclusion = "✅ 达标（可入候选池——仍需 B3 时机信号）"
+    else:
+        conclusion = f"❌ 未达门槛（{score.total} < {threshold}——等待）"
+    return {
+        "code": code,
+        "name": q.get("name", ""),
+        "score": score.total,
+        "threshold": threshold,
+        "market": m["status"],
+        "parts": score.parts,
+        "veto": score.veto_reasons,
+        "tech": tech_detail,
+        "conclusion": conclusion,
+    }

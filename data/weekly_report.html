@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>观复周报 · 第 33 周</title>
+<style>
+:root {
+  --bg: #0d1117; --card: #161b22; --border: #30363d;
+  --gold: #d4a72c; --blue: #58a6ff; --green: #3fb950; --red: #f85149;
+  --text: #e6edf3; --muted: #8b949e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI','Microsoft YaHei',sans-serif; padding:24px; max-width:900px; margin:0 auto; }
+h1 { font-size:24px; display:flex; align-items:center; gap:10px; }
+h1 .logo { color:var(--gold); font-size:28px; }
+.sub { color:var(--muted); font-size:13px; margin:6px 0 18px; }
+.grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0; }
+.kpi { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px; }
+.kpi .label { color:var(--muted); font-size:12px; }
+.kpi .value { font-size:20px; font-weight:700; margin-top:4px; }
+.kpi .value.pos { color:var(--green); } .kpi .value.neg { color:var(--red); }
+.card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin:14px 0; }
+.card h2 { font-size:15px; color:var(--gold); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+td,th { padding:8px 10px; text-align:left; border-bottom:1px solid var(--border); }
+th { color:var(--muted); font-weight:500; font-size:12px; }
+.pos { color:var(--green); } .neg { color:var(--red); }
+.tag { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; }
+.tag.buy { background:#1f6feb33; color:var(--blue); }
+.tag.sell { background:#f8514933; color:var(--red); }
+.footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px; }
+#chart { height:240px; }
+</style></head><body>
+<h1><span class="logo">观</span>观复周报 · 第 33 周</h1>
+<div class="sub">🗓️ 2026-08-16 · 书体系执行器 · 吴老师书体系</div>
+
+<div class="grid">
+  <div class="kpi"><div class="label">总资产</div><div class="value">100,000</div></div>
+  <div class="kpi"><div class="label">累计盈亏</div><div class="value pos">+0（+0.0%）</div></div>
+  <div class="kpi"><div class="label">现金占比</div><div class="value">78%</div></div>
+  <div class="kpi"><div class="label">持仓</div><div class="value">3 只</div></div>
+</div>
+
+<div class="card"><h2>📈 净值曲线（2 点）</h2>
+<div id="chart"></div></div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+const ch = echarts.init(document.getElementById('chart'));
+ch.setOption({
+  grid: {left:70, right:20, top:20, bottom:30},
+  xAxis: {type:'category', data:["2026-08-15", "2026-08-16"], axisLabel:{color:'#8b949e'}},
+  yAxis: {type:'value', scale:true, splitLine:{lineStyle:{color:'#30363d'}}, axisLabel:{color:'#8b949e'}},
+  series: [{type:'line', data:[100000.0, 100000.0], smooth:true, lineStyle:{color:'#d4a72c', width:2},
+    areaStyle:{color:'#d4a72c22'}, itemStyle:{color:'#d4a72c'}}]
+});
+</script>
+<div class="card"><h2>📋 本周操作（3 笔）</h2><table><tr><th></th><th>名称</th><th>代码</th><th>数量</th><th>价格</th></tr><tr><td><span class='tag buy'>买入</span></td><td>中国太保</td><td>601601</td><td>300 股</td><td>@29.92</td></tr><tr><td><span class='tag buy'>买入</span></td><td>中国平安</td><td>601318</td><td>100 股</td><td>@51.75</td></tr><tr><td><span class='tag buy'>买入</span></td><td>中信证券</td><td>600030</td><td>300 股</td><td>@27.31</td></tr></table></div>
+
+<div class="card"><h2>📦 持仓明细</h2>
+<table><tr><th>名称</th><th>代码</th><th>股数</th><th>盈亏</th></tr><tr><td>中国太保</td><td>601601</td><td>300</td><td class='pos'>+0.0%</td></tr><tr><td>中国平安</td><td>601318</td><td>100</td><td class='pos'>+0.0%</td></tr><tr><td>中信证券</td><td>600030</td><td>300</td><td class='pos'>+0.0%</td></tr></table></div>
+<div class="card"><h2>🎯 策略表现</h2><p>📒 累计信号 0 笔——回填验证随 Q11 积累</p></div>
+<div class="card"><h2>🧭 行为画像</h2><p>✅ 本周只加仓未减仓——拿住纪律（Q10）</p></div>
+<div class="footer">观复 · 一生项目 · 半自动（信号需人工确认）</div>
+</body></html>

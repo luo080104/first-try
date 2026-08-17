@@ -169,7 +169,10 @@ def s3_valuation_exit(
             ],
         }
     if high and not trend_break:
-        return {"signal": False, "reasons": ["高估但趋势未破（>MA6）——持有（v2 双条件）"]}
+        return {
+            "signal": False,
+            "reasons": ["高估但趋势未破（>MA6）——持有（v2 双条件）"],
+        }
     return {"signal": False, "reasons": []}
 
 

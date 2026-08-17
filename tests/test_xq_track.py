@@ -19,13 +19,13 @@ def test_append_dedup(tmp_path):
     f = tmp_path / "trades.jsonl"
     xq.TRADES_FILE = str(f)
     ev = {"ts": "2026-08-16", "bigv": "管我财", "code": "广和通", "action": "买"}
-    assert xq._append_trade_if_new(ev) is True
-    assert xq._append_trade_if_new(ev) is False  # 幂等
-    assert xq._append_trade_if_new(ev) is False
+    assert xq._append_trade_if_new(ev)
+    assert not xq._append_trade_if_new(ev)  # 幂等
+    assert not xq._append_trade_if_new(ev)
     assert sum(1 for _ in f.open(encoding="utf-8")) == 1
     # 不同 action 是另一条
     ev2 = dict(ev, action="卖")
-    assert xq._append_trade_if_new(ev2) is True
+    assert xq._append_trade_if_new(ev2)
     assert sum(1 for _ in f.open(encoding="utf-8")) == 2
 
 
@@ -34,7 +34,7 @@ def test_empty_code_rejected(tmp_path):
     f = tmp_path / "trades.jsonl"
     xq.TRADES_FILE = str(f)
     ev = {"ts": "2026-08-16", "bigv": "某人", "code": "", "action": "买"}
-    assert xq._append_trade_if_new(ev) is False
+    assert not xq._append_trade_if_new(ev)
     assert not f.exists()
 
 
@@ -44,7 +44,7 @@ def test_json_io_fallback(tmp_path):
     bad.write_text("{not valid json", encoding="utf-8")
     assert xq._load_json(str(bad), {"k": 1}) == {"k": 1}
     assert xq._load_json(str(tmp_path / "missing.json"), []) == []
-    assert xq._write_json(str(tmp_path / "ok" / "x.json"), {"a": 1}) is True
+    assert xq._write_json(str(tmp_path / "ok" / "x.json"), {"a": 1})
     assert xq._load_json(str(tmp_path / "ok" / "x.json")) == {"a": 1}
 
 
@@ -61,9 +61,12 @@ def test_clean_html():
     """发言 HTML 清洗（回复链接 → 纯文本）"""
     from tools.strategy_engine.xq_track import _clean_html
 
-    assert _clean_html('回复<a href="https://xueqiu.com/n/x">某人</a>：好') == "回复某人：好"
-    assert _clean_html('&amp;lt;测试&amp;gt;') == "&lt;测试&gt;"
-    assert _clean_html('') == ""
+    assert (
+        _clean_html('回复<a href="https://xueqiu.com/n/x">某人</a>：好')
+        == "回复某人：好"
+    )
+    assert _clean_html("&amp;lt;测试&amp;gt;") == "&lt;测试&gt;"
+    assert _clean_html("") == ""
 
 
 def test_append_posts_dedup(tmp_path):
@@ -72,7 +75,7 @@ def test_append_posts_dedup(tmp_path):
 
     xq.POSTS_FILE = str(tmp_path / "posts.jsonl")
     rec = {"id": "1001", "bigv": "陈嘉禾", "ts": "2026-08-17", "text": "观点"}
-    assert xq._append_posts(rec) is True
-    assert xq._append_posts(rec) is False
-    assert xq._append_posts(dict(rec, id="1002")) is True
-    assert sum(1 for _ in open(xq.POSTS_FILE, encoding="utf-8")) == 2
+    assert xq._append_posts(rec)
+    assert not xq._append_posts(rec)
+    assert xq._append_posts(dict(rec, id="1002"))
+    assert len((tmp_path / "posts.jsonl").read_text(encoding="utf-8").splitlines()) == 2

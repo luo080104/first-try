@@ -4,6 +4,7 @@
 {ts, component, fn, exc_type, exc_msg, hint}
 → data/diag.jsonl（append-only——backup.py 覆盖）——人可读可查
 """
+
 from __future__ import annotations
 
 import json
@@ -11,7 +12,9 @@ import os
 import time
 from typing import Any
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
+)
 FILE = os.path.join(DATA_DIR, "diag.jsonl")
 
 
@@ -19,14 +22,20 @@ def log_diag(component: str, fn: str, exc: BaseException, hint: str = "") -> Non
     """写一条诊断记录——失败不阻塞（诊断本身失败静默——最后一层）"""
     try:
         with open(FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "component": component,
-                "fn": fn,
-                "exc_type": type(exc).__name__,
-                "exc_msg": str(exc)[:200],
-                "hint": hint,
-            }, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                        "component": component,
+                        "fn": fn,
+                        "exc_type": type(exc).__name__,
+                        "exc_msg": str(exc)[:200],
+                        "hint": hint,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
     except OSError:
         pass
 
@@ -52,6 +61,8 @@ def recent_hints(component: str, days: int = 7) -> list[dict[str, Any]]:
     """近 N 天某组件的诊断——晨报/周报可引用（数据源健康段）"""
     out = []
     for d in load_diag(200):
-        if d.get("component") == component and d.get("ts", "")[:10] >= time.strftime("%Y-%m-%d", time.localtime(time.time() - days * 86400)):
+        if d.get("component") == component and d.get("ts", "")[:10] >= time.strftime(
+            "%Y-%m-%d", time.localtime(time.time() - days * 86400)
+        ):
             out.append(d)
     return out

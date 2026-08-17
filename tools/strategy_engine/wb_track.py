@@ -190,7 +190,9 @@ def main():
         from tools.strategy_engine.breaker import is_tripped
 
         if is_tripped("wb"):
-            print("⛔ 微博当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）")
+            print(
+                "⛔ 微博当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）"
+            )
             return
         fetch()
     else:

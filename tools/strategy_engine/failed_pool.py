@@ -5,6 +5,7 @@
 
 数据：{code, name, sell_price, sell_reason, ts}——append-only
 """
+
 from __future__ import annotations
 
 import json
@@ -12,7 +13,9 @@ import os
 import time
 from typing import Any
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
+)
 FILE = os.path.join(DATA_DIR, "failed_track.jsonl")
 
 
@@ -20,10 +23,19 @@ def record_sell(code: str, name: str, price: float, reason: str = "") -> None:
     """卖出时记录（portfolio.sell 挂钩）——失败不阻塞交易（容错红线）"""
     try:
         with open(FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                "code": code, "name": name, "sell_price": price, "reason": reason,
-            }, ensure_ascii=False) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                        "code": code,
+                        "name": name,
+                        "sell_price": price,
+                        "reason": reason,
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n"
+            )
     except OSError:
         pass  # 黑名单写入失败不影响卖出执行
 

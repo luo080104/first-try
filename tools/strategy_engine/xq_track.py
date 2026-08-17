@@ -577,7 +577,9 @@ def main():
         from tools.strategy_engine.breaker import is_tripped
 
         if is_tripped("xq"):
-            print("⛔ 雪球当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）")
+            print(
+                "⛔ 雪球当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）"
+            )
             return
         r = track()
         print(f"✅ 抓取完成: {r}")

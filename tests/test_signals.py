@@ -56,4 +56,6 @@ def test_s3_valuation_exit():
     # 数据缺失 → 不触发（Q6 失效条件）
     assert not sg.s3_valuation_exit(None, None, 10.0, 11.0)["signal"]
     assert not sg.s3_valuation_exit(90.0, 85.0, 0.0, 11.0)["signal"]
-    assert not sg.s3_valuation_exit(90.0, None, 10.0, 11.0)["signal"]  # 单数据缺失——不触发
+    assert not sg.s3_valuation_exit(90.0, None, 10.0, 11.0)[
+        "signal"
+    ]  # 单数据缺失——不触发

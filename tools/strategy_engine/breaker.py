@@ -3,6 +3,7 @@
 防"反复重试烧钱/刷接口"循环：xq_track/wb_track 等外部调用当日失败达阈值
 → 当日剩余工作跳过（次日自动重置）——失败原因进 diag.jsonl。
 """
+
 from __future__ import annotations
 
 import json
@@ -10,7 +11,9 @@ import os
 import time
 from typing import Any
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data")
+DATA_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
+)
 FILE = os.path.join(DATA_DIR, "breaker.json")
 
 
