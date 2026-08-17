@@ -191,7 +191,13 @@ def eval_buy(code: str) -> dict:
     from tools.strategy_engine.core_loop import _enrich_quote
 
     score = ss.score_stock(
-        f, v, t, s, quote=_enrich_quote(q, f, k), market_status=m["status"], industry=ind
+        f,
+        v,
+        t,
+        s,
+        quote=_enrich_quote(q, f, k),
+        market_status=m["status"],
+        industry=ind,
     )
     # F3 接线（2026-08-17 审核：B4/B5 过滤器零调用者——书纪律恢复——Q6 候选态：报告级不硬拦）
     b4b5 = []

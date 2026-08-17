@@ -248,7 +248,9 @@ def build_brief() -> str:
 
         _unwired = [s["id"] for s in wiring_status() if s["wired"] == "False"]
         if _unwired:
-            lines.append(f"\n⚠️【信号接线】enabled 未接生产: {'/'.join(_unwired)}——见 signals.wiring_status")
+            lines.append(
+                f"\n⚠️【信号接线】enabled 未接生产: {'/'.join(_unwired)}——见 signals.wiring_status"
+            )
     except Exception:
         pass  # 自检失败不阻塞（容错红线）
     # A5 日报自检（2026-08-17 全面审核：定时任务死了没人报——自指环修复——
