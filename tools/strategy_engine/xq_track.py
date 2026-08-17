@@ -46,6 +46,10 @@ POST_TRACK: dict[str, int] = {
     "czy710": 6308001210,
     "山高林茂": 7895717506,
     "爱投资的小人书": 7103876041,
+    # 2026-08-17 第二批（甲方确认名字正确——观点型——直接发言跟踪）
+    "六亿": 9391624441,
+    "夏虫不可语冰": 1437248694,
+    "HIS1963": 1760673340,
 }
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
@@ -503,9 +507,13 @@ def fetch_posts(count: int = 20) -> dict:
                     "bigv": name,
                     "ts": ts,
                     # 清洗 HTML 标签（回复链接 <a>xxx</a> → xxx）
-                    "text": _clean_html((st.get("text") or ""))[:400].replace("\n", " "),
+                    "text": _clean_html((st.get("text") or ""))[:400].replace(
+                        "\n", " "
+                    ),
                     "retweeted": bool(rt),
-                    "retweet_text": (_clean_html(rt.get("text") or "")[:200] if rt else ""),
+                    "retweet_text": (
+                        _clean_html(rt.get("text") or "")[:200] if rt else ""
+                    ),
                     "fetched_at": time.strftime("%Y-%m-%d %H:%M"),
                 }
                 got += 1
