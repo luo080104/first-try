@@ -85,7 +85,17 @@ class Portfolio:
             print(f"[portfolio] 事件日志写入失败: {e}")
 
     # ---- 操作 ----
-    def buy(self, code, price, shares, track="base", reason="", name="", grid=None, force=False):
+    def buy(
+        self,
+        code,
+        price,
+        shares,
+        track="base",
+        reason="",
+        name="",
+        grid=None,
+        force=False,
+    ):
         """建仓/加仓——扣现金+记持仓+事件日志。track: base(底仓)/swing(波段)
 
         force=True：显式越过集中度约束（人工拍板——reason 需注明 OVERRIDE——2026-08-17 审核 F1）
@@ -237,6 +247,25 @@ class Portfolio:
         return list(self.data.get("equity_curve", []))
 
     # ---- 约束检查（P1/Q4/Q5——买入前检查）----
+    def over_limit(self) -> list[dict]:
+        """超限持仓查询（2026-08-17 B 方案：S 信号联动——超限股触发减仓信号时超额减仓）
+
+        返回 [{code, name, pct}]（P1 单只 >10% 的持仓——按当前市值占比）
+        """
+        try:
+            _, total = self.positions()
+            if not total:
+                return []
+            out = []
+            for c, h in self.data["holdings"].items():
+                mv = h.get("avg_cost", 0) * h.get("shares", 0)
+                pct = mv / total * 100 if total else 0
+                if pct > MAX_POSITION_PCT * 100:
+                    out.append({"code": c, "name": h.get("name", c), "pct": round(pct, 1)})
+            return out
+        except Exception:
+            return []
+
     def check_constraints(self, code, price, shares, total=None):
         """返回违规列表（空=合规）。P1 个股≤10% / Q4 3-5 只 / Q5 现金底线"""
         issues = []
@@ -276,8 +305,7 @@ class Portfolio:
                 sector_cost = sum(
                     h["avg_cost"] * h["shares"]
                     for c, h in self.data["holdings"].items()
-                    if c != code
-                    and (industry_of(c) or {}).get("category") == cat
+                    if c != code and (industry_of(c) or {}).get("category") == cat
                 )
                 sector_cost += held_cost + price * shares
                 sector_pct = sector_cost / total * 100 if total else 0

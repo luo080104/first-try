@@ -19,13 +19,19 @@ from typing import Any
 from tools.strategy_engine import filters as fl
 
 # Q12 定案：动态门槛（大盘状态 → 买入门槛）——v0 待校准
-THRESHOLD_MAP = {"低潮": 84, "正常": 96, "高潮": 106}  # 120 制 80% 换算（2026-08-17 全面审核 F2：80/120=67% 语义漂移修复）
+THRESHOLD_MAP = {
+    "低潮": 84,
+    "正常": 96,
+    "高潮": 106,
+}  # 120 制 80% 换算（2026-08-17 全面审核 F2：80/120=67% 语义漂移修复）
 
 
 @dataclass
 class ScoreResult:
     total: float
-    parts: list[tuple[str, float]] = field(default_factory=list)  # (名称:说明, 分数)——2026-08-17 标注对齐实现
+    parts: list[tuple[str, float]] = field(
+        default_factory=list
+    )  # (名称:说明, 分数)——2026-08-17 标注对齐实现
     vetoed: bool = False
     veto_reasons: list[str] = field(default_factory=list)
     threshold: float = 80.0

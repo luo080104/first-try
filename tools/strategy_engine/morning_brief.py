@@ -248,13 +248,14 @@ def build_brief() -> str:
         import os as _os
 
         _log = _os.path.join(
-            _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))),
-            "data", "brief.log",
+            _os.path.dirname(
+                _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+            ),
+            "data",
+            "brief.log",
         )
         if _os.path.exists(_log):
-            _age = (
-                datetime.datetime.now().timestamp() - _os.path.getmtime(_log)
-            )
+            _age = datetime.datetime.now().timestamp() - _os.path.getmtime(_log)
             if _age > 25 * 3600:
                 lines.append(
                     f"\n⚠️【日报自检】上次日报运行日志已 {_age / 3600:.0f} 小时未更新——"
@@ -329,6 +330,8 @@ def build_brief() -> str:
 
         _p2 = _pf2.Portfolio()
         _pos2, _ = _p2.positions()
+        # B 方案（2026-08-17 拍板）：超限持仓触发 S 信号时——超额减仓目标 ≤20%
+        _over = {o["code"]: o for o in _p2.over_limit()}
         s3_hits = []
         for _pos in _pos2[:5]:
             _vp = data.valuation_percentile(_pos["code"])
@@ -342,8 +345,14 @@ def build_brief() -> str:
                 _vp.get("pe_percentile"), _vp.get("pb_percentile"), _last, _ma24
             )
             if _sig["signal"]:
+                _extra = ""
+                if _pos["code"] in _over:
+                    _extra = (
+                        f" ⚠️超限持仓({_over[_pos['code']]['pct']}%>10%)——"
+                        "B方案：超额减仓目标≤20%"
+                    )
                 s3_hits.append(
-                    f"  ⚠️ {_pos['name']}({_pos['code']})：{_sig['reasons'][0]}"
+                    f"  ⚠️ {_pos['name']}({_pos['code']})：{_sig['reasons'][0]}{_extra}"
                 )
         if s3_hits:
             lines.append(

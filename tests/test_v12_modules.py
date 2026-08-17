@@ -60,8 +60,11 @@ def test_dashboard_alert_on_cash(monkeypatch, tmp_path):
     from tools.strategy_engine import portfolio as _pf
 
     fake = {
-        "init_cash": 80000, "cash": 60000, "holdings": {},
-        "track": {}, "equity_curve": [],
+        "init_cash": 80000,
+        "cash": 60000,
+        "holdings": {},
+        "track": {},
+        "equity_curve": [],
     }
     f = tmp_path / "t_port.json"
     f.write_text(json.dumps(fake), encoding="utf-8")

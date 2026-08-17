@@ -19,7 +19,9 @@ def test_init_cash():
 
 def test_buy_and_sell():
     p = pf.Portfolio(os.path.join(TMP, "t2.json"))
-    ok, _ = p.buy("600036", 38.46, 1300, track="base", name="招商银行", force=True)  # F1 硬约束上线——记账测试显式越过（约束另有专门用例）
+    ok, _ = p.buy(
+        "600036", 38.46, 1300, track="base", name="招商银行", force=True
+    )  # F1 硬约束上线——记账测试显式越过（约束另有专门用例）
     assert ok
     assert p.data["cash"] == round(80000 - 38.46 * 1300, 2)
     assert p.data["holdings"]["600036"]["shares"] == 1300
@@ -66,7 +68,9 @@ def test_constraints():
 
 def test_summary():
     p = pf.Portfolio(os.path.join(TMP, "t5.json"))
-    p.buy("600036", 38.46, 1300, track="base", name="招商银行", force=True)  # F1 硬约束——记账测试显式越过
+    p.buy(
+        "600036", 38.46, 1300, track="base", name="招商银行", force=True
+    )  # F1 硬约束——记账测试显式越过
     s = p.summary()  # 无行情——按成本价估值
     assert s["n_holdings"] == 1
     assert s["total"] == pf.INIT_CASH

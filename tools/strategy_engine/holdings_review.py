@@ -72,7 +72,9 @@ def _score_position(code, quote):
         ind = score_industry(code)
     except Exception:
         ind = None
-    result = ss.score_stock(f, v, t, s, quote=quote, market_status=m["status"], industry=ind)
+    result = ss.score_stock(
+        f, v, t, s, quote=quote, market_status=m["status"], industry=ind
+    )
     # F3 接线（2026-08-17 审核：B4/B5 过滤器零调用者——书纪律恢复——并入 parts 显示）
     try:
         from tools.strategy_engine import filters as fl
