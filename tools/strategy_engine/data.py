@@ -318,6 +318,25 @@ def _baidu_valuation_series(code: str, indicator: str) -> list[tuple[str, float]
     ]
 
 
+def _bs_cached_only(code: str) -> list[dict[str, Any]]:
+    """只读 baostock 估值缓存（C7 2026-08-17：交叉验证降频——不触发全量拉取）
+
+    缓存覆盖不足（<60 条）返回 []——跳过本次交叉（标注即可）
+    """
+    try:
+        conn = _bs_conn()
+        rows = conn.execute(
+            "SELECT date, pe, pb FROM valuation WHERE code=? AND source='baostock' ORDER BY date",
+            (code,),
+        ).fetchall()
+        conn.close()
+        if len(rows) < 60:
+            return []
+        return [{"date": d, "pe": pe, "pb": pb} for d, pe, pb in rows]
+    except sqlite3.Error:
+        return []
+
+
 def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
     """PE/PB 历史（tushare 主源 2005 起 + baostock fallback——2026-08-17 主源切换）
 
@@ -333,9 +352,10 @@ def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
         ts_rows = _ts_h(code, days)
         if len(ts_rows) >= 60:
             rows = [dict(r, source="tushare") for r in ts_rows]
-            # 交叉验证：baostock 重叠期对比（节流——不阻塞）
+            # C7 修复（2026-08-17 审核）：交叉验证降频——只读 baostock 已有缓存
+            # （冷缓存=10 年全量拉=主源切换想规避的挂起风险——不再每次触发）
             try:
-                bs_rows = bs_pe_pb_history(code)
+                bs_rows = _bs_cached_only(code)
                 if len(bs_rows) >= 60:
                     rows = _cross_check(rows, bs_rows)
             except Exception:

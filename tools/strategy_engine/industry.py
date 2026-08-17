@@ -94,8 +94,14 @@ DANJUAN_IDX: dict[str, str] = {
     "A": "SH000932",  # 农林牧渔→主要消费
     "B": "SZ399998",  # 采矿→中证煤炭（能源近似）
     "I": "SH000993",  # 信息→全指信息
-    "J": "SZ399986",  # 金融→中证银行
+    "J": "SZ399986",  # 金融→中证银行（默认——细分优先见 DANJUAN_IDX_SUB）
     "K": "SH000989",  # 房地产→全指可选
+}
+
+# F6 修复（2026-08-17 审核）：二级行业细分映射——证券/煤炭等有专属指数不用银行近似
+DANJUAN_IDX_SUB: dict[str, str] = {
+    "证券": "SZ399975",  # 资本市场服务（证券）→证券公司指数（蛋卷有）
+    "资本市场服务": "SZ399975",
 }
 
 _eva_cache: dict[str, dict[str, float]] | None = None
@@ -258,7 +264,15 @@ def score_industry(code: str) -> dict[str, Any]:
     s2 = 3.0  # 中性默认
     note = "位置未知（中性）"
     eva = _danjuan_eva()
-    dj_code = DANJUAN_IDX.get(cat)
+    # F6（2026-08-17 审核）：二级行业细分优先（证券→证券公司指数——不用银行近似）
+    dj_code = None
+    if ind.get("industry"):
+        for sub, idx_code in DANJUAN_IDX_SUB.items():
+            if sub in ind["industry"]:
+                dj_code = idx_code
+                break
+    if dj_code is None:
+        dj_code = DANJUAN_IDX.get(cat)
     if dj_code and dj_code in eva:
         pp = eva[dj_code]["pe_percentile"]
         if pp < 0.3:
