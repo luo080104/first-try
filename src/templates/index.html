@@ -1359,7 +1359,8 @@
               "&session_id=" +
               encodeURIComponent(localStorage.getItem("gobuy_sid") || "") +
               (localStorage.getItem("gobuy_pin")
-                ? "&pin=" + encodeURIComponent(localStorage.getItem("gobuy_pin"))
+                ? "&pin=" +
+                  encodeURIComponent(localStorage.getItem("gobuy_pin"))
                 : ""),
           )
             .then((resp) => {
@@ -1374,7 +1375,12 @@
                   buffer = lines.pop();
                   lines.forEach(function (evt) {
                     if (!evt.startsWith("data: ")) return;
-                    var data = JSON.parse(evt.slice(6));
+                    var data;
+                    try {
+                      data = JSON.parse(evt.slice(6));
+                    } catch (err) {
+                      return; // 半包/坏帧跳过（2026-08-18：防中断整个 SSE 流）
+                    }
                     if (data.type === "guide") {
                       renderGuide(data.options, kw, prog, box);
                     } else if (data.type === "need") {
