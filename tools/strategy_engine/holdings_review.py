@@ -56,8 +56,33 @@ def _score_position(code, quote):
     f = fd.get_fundamentals(
         code, quote.get("price") or 0, debt_exempt=code in cl._FINANCIAL_EXEMPT
     )
-    s = {"is_leader": True, "bigv_holding": False}
-    return ss.score_stock(f, v, t, s, quote=quote, market_status=m["status"])
+    # C4 修复（2026-08-17 审核）：is_leader 实查龙头池——不再白送 5 分
+    try:
+        from tools.strategy_engine.core_loop import load_leader_pool
+
+        _pool = load_leader_pool()
+        _c = code.split(".")[-1]
+        s = {"is_leader": _c in _pool, "bigv_holding": False}
+    except Exception:
+        s = {"is_leader": False, "bigv_holding": False}
+    # C3 修复（2026-08-17 审核）：行业面预计算传入——不再白送中性 10
+    try:
+        from tools.strategy_engine.industry import score_industry
+
+        ind = score_industry(code)
+    except Exception:
+        ind = None
+    result = ss.score_stock(f, v, t, s, quote=quote, market_status=m["status"], industry=ind)
+    # F3 接线（2026-08-17 审核：B4/B5 过滤器零调用者——书纪律恢复——并入 parts 显示）
+    try:
+        from tools.strategy_engine import filters as fl
+
+        fr = fl.filter_stock(f, v, quote, {})
+        for note in fr.blocked_by:
+            result.parts.append((f"B4/B5:{note}", 0.0))
+    except Exception:
+        pass
+    return result
 
 
 def review_positions() -> list[dict]:
@@ -161,11 +186,22 @@ def eval_buy(code: str) -> dict:
     except Exception:
         ind = None
     score = ss.score_stock(f, v, t, s, quote=q, market_status=m["status"], industry=ind)
+    # F3 接线（2026-08-17 审核：B4/B5 过滤器零调用者——书纪律恢复——Q6 候选态：报告级不硬拦）
+    b4b5 = []
+    try:
+        from tools.strategy_engine import filters as fl
+
+        fr = fl.filter_stock(f, v, q, {})
+        b4b5 = fr.blocked_by
+    except Exception:
+        pass
     # 技术明细（布林位置/RSI——可读——直接取 technical_signals 字段）
     tech_detail = {k: t[k] for k in ("boll", "rsi", "td", "vol_div") if k in t}
-    threshold = ss.THRESHOLD_MAP.get(m["status"], 80)
+    threshold = ss.THRESHOLD_MAP.get(m["status"], 96)
     if score.vetoed:
         conclusion = "⛔ 否决（不买清单/红线）"
+    elif b4b5:
+        conclusion = "⛔ B4/B5 未过（书纪律——Q6 候选态待回测）"
     elif score.total >= threshold:
         conclusion = "✅ 达标（可入候选池——仍需 B3 时机信号）"
     else:
@@ -178,6 +214,7 @@ def eval_buy(code: str) -> dict:
         "market": m["status"],
         "parts": score.parts,
         "veto": score.veto_reasons,
+        "b4b5": b4b5,
         "tech": tech_detail,
         "conclusion": conclusion,
     }

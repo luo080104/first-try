@@ -76,9 +76,11 @@ def check_valuation(v: dict[str, Any]) -> list[str]:
         return fails
     if not (pe < 15 or pb < 2):
         fails.append(f"B5 绝对估值不低（PE={pe} PB={pb}——需 PE<15 或 PB<2）")
-    if (v.get("pe_percentile") or 100) > 10.0:
+    # C6 修复（2026-08-17）：or 100 把合法 0% 当缺失——is None 判缺失
+    pp = v.get("pe_percentile")
+    if pp is not None and pp > 10.0:
         fails.append(
-            f"B5 相对估值未到历史低潮（百分位 {v.get('pe_percentile')}% > 10%）"
+            f"B5 相对估值未到历史低潮（百分位 {pp}% > 10%）"
         )
     if not v.get("extreme_pe_ok", True):
         fails.append("B5 极端情况 PE 无保障（底线思维）")

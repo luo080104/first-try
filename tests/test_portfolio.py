@@ -19,7 +19,7 @@ def test_init_cash():
 
 def test_buy_and_sell():
     p = pf.Portfolio(os.path.join(TMP, "t2.json"))
-    ok, _ = p.buy("600036", 38.46, 1300, track="base", name="招商银行")
+    ok, _ = p.buy("600036", 38.46, 1300, track="base", name="招商银行", force=True)  # F1 硬约束上线——记账测试显式越过（约束另有专门用例）
     assert ok
     assert p.data["cash"] == round(80000 - 38.46 * 1300, 2)
     assert p.data["holdings"]["600036"]["shares"] == 1300
@@ -38,11 +38,11 @@ def test_buy_and_sell():
 def test_track_accounting():
     p = pf.Portfolio(os.path.join(TMP, "t3.json"))
     p.buy(
-        "600036", 38.46, 500, track="base", name="招行"
-    )  # 500 股 19230——8 万初始下给茅台留位
+        "600036", 38.46, 500, track="base", name="招行", force=True
+    )  # 500 股 19230——F1 硬约束上线——记账测试显式越过
     p.buy(
-        "600519", 1341.99, 40, track="swing", name="茅台"
-    )  # 40 股 53679.6 < 剩余 60770
+        "600519", 1341.99, 40, track="swing", name="茅台", force=True
+    )  # 40 股 53679.6——F1 硬约束上线——记账测试显式越过
     assert p.data["track"]["base"] == 19230
     assert p.data["track"]["swing"] == 53679.6
 
@@ -66,8 +66,22 @@ def test_constraints():
 
 def test_summary():
     p = pf.Portfolio(os.path.join(TMP, "t5.json"))
-    p.buy("600036", 38.46, 1300, track="base", name="招商银行")
+    p.buy("600036", 38.46, 1300, track="base", name="招商银行", force=True)  # F1 硬约束——记账测试显式越过
     s = p.summary()  # 无行情——按成本价估值
     assert s["n_holdings"] == 1
     assert s["total"] == pf.INIT_CASH
     assert not s["cash_ok"]  # 现金 50%——超出 15% 上限
+
+
+def test_hard_constraint_f1():
+    """F1 硬约束（2026-08-17 审核）：超限拒绝——force 显式越过"""
+    p = pf.Portfolio(os.path.join(TMP, "t6.json"))
+    # 建仓 500 股招行（19230=24%——超 10% 上限）→ 拒绝
+    ok, msg = p.buy("600036", 38.46, 500, track="base", name="招行")
+    assert not ok and "约束未过" in msg and "P1" in msg
+    # force 显式越过 → 成功
+    ok2, _ = p.buy("600036", 38.46, 500, track="base", name="招行", force=True)
+    assert ok2
+    # 再买同股（24%+24%=48%——超限拒绝——即使 force=False 正常路径）
+    ok3, msg3 = p.buy("600036", 38.46, 100, track="base", name="招行")
+    assert not ok3 and "P1" in msg3

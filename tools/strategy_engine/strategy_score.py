@@ -19,13 +19,13 @@ from typing import Any
 from tools.strategy_engine import filters as fl
 
 # Q12 定案：动态门槛（大盘状态 → 买入门槛）——v0 待校准
-THRESHOLD_MAP = {"低潮": 70, "正常": 80, "高潮": 88}
+THRESHOLD_MAP = {"低潮": 84, "正常": 96, "高潮": 106}  # 120 制 80% 换算（2026-08-17 全面审核 F2：80/120=67% 语义漂移修复）
 
 
 @dataclass
 class ScoreResult:
     total: float
-    parts: list[tuple[str, float, str]] = field(default_factory=list)
+    parts: list[tuple[str, float]] = field(default_factory=list)  # (名称:说明, 分数)——2026-08-17 标注对齐实现
     vetoed: bool = False
     veto_reasons: list[str] = field(default_factory=list)
     threshold: float = 80.0
@@ -69,6 +69,10 @@ def _score_value(f: dict[str, Any]) -> list[tuple[float, str]]:
     elif 0 < pr < 40:
         s7 = round(pr / 40 * 5, 1)  # 偏低线性（20%→2.5 分）
         note = f"分红率{pr:.0f}%（偏低——<40）"
+    elif 75 < pr <= 100:
+        # 75-100 线性递减（2026-08-17 审核 F5：76%→0 分比 101%→1 分还差——语义颠倒修复）
+        s7 = round(5 - (pr - 75) / 25 * 4, 1)
+        note = f"分红率{pr:.0f}%（偏高——76-100 递减）"
     elif pr > 100:
         s7 = 1.0  # >100% 透支利润分红——危险信号
         note = f"分红率{pr:.0f}%（>100 透支——警示）"
@@ -101,7 +105,10 @@ def _score_valuation(v: dict[str, Any]) -> list[tuple[float, str]]:
         s1 = 0.0
     s1 = max(0.0, min(10.0, s1))
     parts.append((s1, f"PE={pe} PB={pb}"))
-    pct = v.get("pe_percentile") or 50
+    # C6 修复（2026-08-17）：or 50 把合法 0% 当缺失——is None 判缺失
+    pct = v.get("pe_percentile")
+    if pct is None:
+        pct = 50
     s2 = max(0.0, 10.0 - pct / 10)
     parts.append((s2, f"百分位{pct:.0f}%"))
     fair = v.get("fair_pe")

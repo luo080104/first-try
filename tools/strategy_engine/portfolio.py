@@ -82,8 +82,11 @@ class Portfolio:
             print(f"[portfolio] 事件日志写入失败: {e}")
 
     # ---- 操作 ----
-    def buy(self, code, price, shares, track="base", reason="", name="", grid=None):
-        """建仓/加仓——扣现金+记持仓+事件日志。track: base(底仓)/swing(波段)"""
+    def buy(self, code, price, shares, track="base", reason="", name="", grid=None, force=False):
+        """建仓/加仓——扣现金+记持仓+事件日志。track: base(底仓)/swing(波段)
+
+        force=True：显式越过集中度约束（人工拍板——reason 需注明 OVERRIDE——2026-08-17 审核 F1）
+        """
         if price <= 0 or shares <= 0 or not isinstance(shares, int):
             return (
                 False,
@@ -92,6 +95,11 @@ class Portfolio:
         cost = round(price * shares, 2)
         if cost > self.data["cash"]:
             return False, f"现金不足（需要 {cost}——现有 {self.data['cash']}）"
+        # F1 硬约束（2026-08-17 全面审核：集中度纪律被半自动架空——超限拒绝）
+        if not force:
+            issues = self.check_constraints(code, price, shares)
+            if issues:
+                return False, "约束未过：" + "; ".join(issues)
         h = self.data["holdings"].get(code)
         if h:
             total = h["shares"] + shares
@@ -252,6 +260,30 @@ class Portfolio:
             issues.append(
                 f"Q5 现金纪律：买入后现金 {new_cash / total * 100:.1f}%（底线 10%）"
             )
+        # Q6 行业聚合 ≤25%（2026-08-17 审核 F1：金融 52% 超 2 倍——补行业约束）
+        try:
+            from tools.strategy_engine.industry import industry_of
+
+            cat = None
+            ind = industry_of(code)
+            if ind:
+                cat = ind.get("category")
+            if cat:
+                # 买入后行业总市值占比（按持仓成本+本次买入估算）
+                sector_cost = sum(
+                    h["avg_cost"] * h["shares"]
+                    for c, h in self.data["holdings"].items()
+                    if c != code
+                    and (industry_of(c) or {}).get("category") == cat
+                )
+                sector_cost += held_cost + price * shares
+                sector_pct = sector_cost / total * 100 if total else 0
+                if sector_pct > 25:
+                    issues.append(
+                        f"行业聚合超限：{cat} 类将占 {sector_pct:.1f}%（上限 25%）"
+                    )
+        except Exception:
+            pass  # 行业分类失败不阻塞（行业约束为辅助——P1/Q5 仍是主约束）
         return issues
 
 

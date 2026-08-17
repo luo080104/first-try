@@ -195,8 +195,20 @@ def run_daily_loop() -> dict[str, Any]:
         f = fd.get_fundamentals(
             code, q.get("price") or 0, debt_exempt=code in _FINANCIAL_EXEMPT
         )
-        s = {"is_leader": True, "bigv_holding": False}
-        score = ss.score_stock(f, v, t, s, quote=q, market_status=status)
+        # C4 修复（2026-08-17 审核）：is_leader 实查 + C3 行业面预计算传入
+        try:
+            _pool = load_leader_pool()
+            _c = code.split(".")[-1]
+            s = {"is_leader": _c in _pool, "bigv_holding": False}
+        except Exception:
+            s = {"is_leader": False, "bigv_holding": False}
+        try:
+            from tools.strategy_engine.industry import score_industry
+
+            ind = score_industry(code)
+        except Exception:
+            ind = None
+        score = ss.score_stock(f, v, t, s, quote=q, market_status=status, industry=ind)
         candidates.append(
             {
                 "code": code,

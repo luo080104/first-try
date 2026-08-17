@@ -39,14 +39,14 @@ def test_full_score_high():
         market_status="正常",
     )
     assert not r.vetoed
-    assert r.total >= 80  # 高分通过正常门槛
+    assert r.total >= 80  # 高分通过正常门槛（120 制——阈值 96——高分组仍过）
 
 
 def test_threshold_dynamic():
-    """动态门槛：低潮 70 / 正常 80 / 高潮 88"""
-    assert ss.THRESHOLD_MAP == {"低潮": 70, "正常": 80, "高潮": 88}
+    """动态门槛：低潮 84 / 正常 96 / 高潮 106（120 制 80% 换算——2026-08-17 审核 F2）"""
+    assert ss.THRESHOLD_MAP == {"低潮": 84, "正常": 96, "高潮": 106}
     r = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="低潮")
-    assert r.threshold == 70
+    assert r.threshold == 84
 
 
 def test_veto_no_buy():
@@ -115,12 +115,24 @@ def test_industry_face():
     r2 = _score_industry({"error": "行业映射失败"})
     assert abs(r2[0][0] - 10.0) < 0.01
     # 真实行业分（公用——格局 8 满）
-    ind = {"total": 17.5, "parts": [(8.0, "格局公用"), (5.5, "行业PE 18"), (2.0, "3年波动率"), (2.0, "政策面")]}
+    ind = {
+        "total": 17.5,
+        "parts": [
+            (8.0, "格局公用"),
+            (5.5, "行业PE 18"),
+            (2.0, "3年波动率"),
+            (2.0, "政策面"),
+        ],
+    }
     r3 = _score_industry(ind)
     assert abs(sum(p for p, _ in r3) - 17.5) < 0.01
     # score_stock 总入口：industry 参数透传——传入真实行业分比中性多 7.5（17.5-10）
-    s0 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=None)
-    s1 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=ind)
+    s0 = ss.score_stock(
+        _good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=None
+    )
+    s1 = ss.score_stock(
+        _good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=ind
+    )
     assert abs(s1.total - s0.total - 7.5) < 0.01
 
 

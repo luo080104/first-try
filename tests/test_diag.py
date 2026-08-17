@@ -11,14 +11,20 @@ from tools.strategy_engine import diag
 TMP = os.path.join(os.path.dirname(__file__), "_tmp_diag.jsonl")
 
 
+def _rm(path: str) -> None:
+    try:
+        if os.path.exists(path):
+            os.remove(path)
+    except OSError:
+        pass
+
+
 @pytest.fixture(autouse=True)
 def _tmp(monkeypatch):
-    if os.path.exists(TMP):
-        os.remove(TMP)
+    _rm(TMP)
     monkeypatch.setattr(diag, "FILE", TMP)
     yield
-    if os.path.exists(TMP):
-        os.remove(TMP)
+    _rm(TMP)
 
 
 def test_log_and_load():
