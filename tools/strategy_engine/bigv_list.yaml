@@ -21,6 +21,7 @@ bigvs:
     note: 优秀企业长期低迷+分红再投理论（书引用）
   - name: 发财油菜君
     platform: ['雪球']
+    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: A股港股价值投资组合
   - name: 丹书铁券
     platform: ['雪球']
@@ -30,6 +31,7 @@ bigvs:
     note: 估值+技术大V（估值参考）
   - name: 小林聊股道
     platform: ['雪球']
+    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: 仓位水平参考（书）
   - name: 徐小明
     platform: ['微信']
@@ -64,9 +66,6 @@ bigvs:
   - name: qzy69
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 大壮壮是小怂货
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【惊艳一剑】
   - name: 黑色面包
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
@@ -85,16 +84,10 @@ bigvs:
   - name: 闲来一坐s话投资
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 会计误工人员
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
   - name: 郭荆璞
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
   - name: 炎荷居
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 为自由而投资的70后
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
   - name: 第一财经徐小明
@@ -112,9 +105,6 @@ bigvs:
   - name: 润清9
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 16发财油菜君
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【A股港股价值投资】
   - name: 郑qq
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【就这样了】
@@ -125,9 +115,6 @@ bigvs:
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
   - name: 山行
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 大黄蝎子hgx
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
   - name: 山高林茂
@@ -148,9 +135,6 @@ bigvs:
   - name: 爱投资的小人书
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证
-  - name: 上官清鸿
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【A股提款机】
   - name: 活在当下TN
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【高息股组合】
@@ -169,11 +153,9 @@ bigvs:
   - name: 学知利行
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【沪深长盈】
-  - name: 天地影侠
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【实盘】
   - name: 五招分众
     platform: ['雪球']
+    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【2025长红】
   - name: His1963
     platform: ['雪球']
@@ -199,9 +181,6 @@ bigvs:
   - name: 格多巴卡
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【格施风格—A】
-  - name: ljub理性投资
-    platform: ['雪球']
-    note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【理性投资中长线】
   - name: 单缥烟
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【搜索收益率】
@@ -217,3 +196,7 @@ bigvs:
   - name: 狗不叫
     platform: ['雪球']
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【狗不叫性乃遁】
+
+# ⚠️ 待办（2026-08-17）：发财油菜君 / 小林聊股道 / 五招分众——书确认存在（L5515 名单）
+#   但雪球 suggest 接口已移除 uid 字段（全站变更）——uid 待解析——
+#   重登录（login 扫码）后重试；不阻塞主线（大V 跟踪=数据层增强非决策必需）
