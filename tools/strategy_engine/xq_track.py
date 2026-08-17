@@ -36,6 +36,17 @@ CUBES_FILE = os.path.join(DATA_DIR, "xq_cubes.json")
 NAV_FILE = os.path.join(DATA_DIR, "xq_nav.json")
 TRADES_FILE = os.path.join(DATA_DIR, "bigv_trades.jsonl")
 DESC_FILE = os.path.join(DATA_DIR, "xq_cube_desc.json")
+POSTS_FILE = os.path.join(DATA_DIR, "xq_posts.jsonl")  # 观点型大V 发言（2026-08-17）
+
+# 观点型大V（无公开组合——跟踪发言不跟踪组合——甲方 8/17 拍板）
+POST_TRACK: dict[str, int] = {
+    "陈嘉禾": 1340904670,
+    "大道无形我有型": 1247347556,
+    "宁静的冬日M": 1556808774,
+    "czy710": 6308001210,
+    "山高林茂": 7895717506,
+    "爱投资的小人书": 7103876041,
+}
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 XQ = "https://xueqiu.com"
@@ -313,12 +324,18 @@ def track() -> dict[str, int]:
             time.sleep(0.8)  # 节流
     _write_json(CUBES_FILE, cubes)
     _write_json(NAV_FILE, navs)
+    # ③ 观点型大V 发言（2026-08-17——甲方：不要局限于组合——无组合大V 跟踪发言）
+    try:
+        posts = fetch_posts()
+    except Exception:
+        posts = {}  # 发言抓取失败不阻塞（红线③容错）
     n_active = sum(1 for v in cubes.values() if v.get("active"))
     return {
         "resolved": len(cubes),
         "active": n_active,
         "tracked": len(navs),
         "new_trades": new_trades,
+        "new_posts": posts.get("new", 0),
     }
 
 
@@ -411,6 +428,87 @@ def _latest_trade_ts(bigv: str) -> str | None:
         except OSError:
             pass
     return latest
+
+
+def _clean_html(s: str) -> str:
+    """清洗雪球发言 HTML（<a>xxx</a> → xxx——实体解码）"""
+    import re as _re
+
+    s = _re.sub(r"<[^>]+>", "", s or "")
+    for ent, rep in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&nbsp;", " ")]:
+        s = s.replace(ent, rep)
+    return s.strip()
+
+
+def _append_posts(rec: dict) -> bool:
+    """发言去重追加（按 status id——幂等）"""
+    seen = set()
+    if os.path.exists(POSTS_FILE):
+        try:
+            with open(POSTS_FILE, encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        seen.add(json.loads(line)["id"])
+                    except (ValueError, KeyError):
+                        continue
+        except OSError:
+            pass
+    if str(rec.get("id", "")) in seen:
+        return False
+    try:
+        with open(POSTS_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        return True
+    except OSError:
+        return False
+
+
+def fetch_posts(count: int = 20) -> dict:
+    """观点型大V 发言抓取（2026-08-17——甲方：不要局限于组合）
+
+    无公开组合的大V（陈嘉禾/段永平等）价值在发言——每日拉最新
+    存 xq_posts.jsonl（幂等按 id）——周报【大V 观点】段数据源
+    """
+    cookies = _load_cookies()
+    if not cookies:
+        return {"error": "无登录态"}
+    got = new = 0
+    for name, uid in POST_TRACK.items():
+        try:
+            r = requests.get(
+                f"{XQ}/statuses/user_timeline.json",
+                params={"user_id": uid, "page": 1, "count": count},
+                headers={"User-Agent": UA, "Referer": XQ},
+                cookies=cookies,
+                timeout=15,
+            )
+            if r.status_code != 200:
+                continue
+            for st in r.json().get("statuses", []):
+                rt = st.get("retweeted_status") or {}
+                try:
+                    ts = time.strftime(
+                        "%Y-%m-%d", time.localtime(int(st.get("created_at", 0)) / 1000)
+                    )
+                except (TypeError, ValueError, OSError):
+                    ts = ""
+                rec = {
+                    "id": str(st.get("id", "")),
+                    "bigv": name,
+                    "ts": ts,
+                    # 清洗 HTML 标签（回复链接 <a>xxx</a> → xxx）
+                    "text": _clean_html((st.get("text") or ""))[:400].replace("\n", " "),
+                    "retweeted": bool(rt),
+                    "retweet_text": (_clean_html(rt.get("text") or "")[:200] if rt else ""),
+                    "fetched_at": time.strftime("%Y-%m-%d %H:%M"),
+                }
+                got += 1
+                if _append_posts(rec):
+                    new += 1
+            time.sleep(2.0)  # WAF 节流（实测 2s 安全）
+        except (requests.RequestException, ValueError):
+            continue
+    return {"got": got, "new": new, "tracked": len(POST_TRACK)}
 
 
 def status() -> str:
