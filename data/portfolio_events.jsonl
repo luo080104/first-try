@@ -1,3 +1,5 @@
 {"ts": "2026-08-15T14:35:21", "action": "buy", "code": "601601", "name": "中国太保", "price": 29.92, "shares": 300, "track": "base", "reason": "信号确认（正常市门槛80——太保84.5/平安83.5/中信82.7）", "grid": null, "cash_after": 91024.0}
 {"ts": "2026-08-15T14:35:21", "action": "buy", "code": "601318", "name": "中国平安", "price": 51.75, "shares": 100, "track": "base", "reason": "信号确认（正常市门槛80——太保84.5/平安83.5/中信82.7）", "grid": null, "cash_after": 85849.0}
 {"ts": "2026-08-15T14:35:21", "action": "buy", "code": "600030", "name": "中信证券", "price": 27.31, "shares": 300, "track": "base", "reason": "信号确认（正常市门槛80——太保84.5/平安83.5/中信82.7）", "grid": null, "cash_after": 77656.0}
+{"ts": "2026-08-17T15:26:23", "action": "buy", "code": "600027", "name": "华电国际", "price": 4.55, "shares": 6500, "track": "base", "reason": "投完现金决策（2026-08-17——86.4达标+公用高分+B3时机在场——行业面v1上线后首达新仓）", "grid": null, "cash_after": 28081.0}
+{"ts": "2026-08-17T15:26:23", "action": "buy", "code": "600036", "name": "招商银行", "price": 38.2, "shares": 500, "track": "base", "reason": "投完现金决策（2026-08-17——86.8达标加仓——个股价值34.2最强——摊薄成本）", "grid": null, "cash_after": 8981.0}

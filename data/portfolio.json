@@ -1,6 +1,6 @@
 {
   "init_cash": 80000,
-  "cash": 57656.0,
+  "cash": 8981.0,
   "holdings": {
     "601601": {
       "code": "601601",
@@ -25,10 +25,26 @@
       "avg_cost": 27.31,
       "track": "base",
       "buy_date": "2026-08-15"
+    },
+    "600027": {
+      "code": "600027",
+      "name": "华电国际",
+      "shares": 6500,
+      "avg_cost": 4.55,
+      "track": "base",
+      "buy_date": "2026-08-17"
+    },
+    "600036": {
+      "code": "600036",
+      "name": "招商银行",
+      "shares": 500,
+      "avg_cost": 38.2,
+      "track": "base",
+      "buy_date": "2026-08-17"
     }
   },
   "track": {
-    "base": 22344.0,
+    "base": 71019.0,
     "swing": 0.0
   },
   "equity_curve": [
