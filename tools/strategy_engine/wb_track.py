@@ -50,7 +50,9 @@ TOKEN = _load_token()
 
 
 def _run_cli(args: list[str]) -> dict | None:
-    """调 weibo-cli——失败返回 None（不抛——红线③容错）"""
+    """调 weibo-cli——失败返回 None（不抛——红线③容错）——失败计数进熔断器（书 8.3）"""
+    from tools.strategy_engine.breaker import record_fail
+
     env = dict(os.environ)
     if TOKEN:
         env["WEIBO_CLI_TOKEN"] = TOKEN
@@ -72,9 +74,11 @@ def _run_cli(args: list[str]) -> dict | None:
                 print(
                     "⚠️ 微博体验包配额耗尽——今日额度已用完（免费档总配额有限——明日自动恢复或考虑正式档）"
                 )
+            record_fail("wb")
             return None
         return json.loads(r.stdout)
     except (subprocess.SubprocessError, ValueError, OSError):
+        record_fail("wb")
         return None
 
 
@@ -182,6 +186,12 @@ def digest() -> str:
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "digest"
     if cmd == "fetch":
+        # 熔断（书 8.3——2026-08-17：当日失败≥5 跳过——防烧 Credit）
+        from tools.strategy_engine.breaker import is_tripped
+
+        if is_tripped("wb"):
+            print("⛔ 微博当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）")
+            return
         fetch()
     else:
         print(digest())

@@ -86,6 +86,7 @@ def _api_get(path: str, params: dict | None = None) -> dict | None:
     """带 cookie 调雪球 API——失败返回 None（不抛——红线③容错）"""
     cookies = _load_cookies()
     if not cookies:
+        _xq_fail()
         return None
     try:
         r = requests.get(
@@ -96,10 +97,26 @@ def _api_get(path: str, params: dict | None = None) -> dict | None:
             timeout=15,
         )
         if r.status_code != 200:
+            _xq_fail()
             return None
         return r.json()
     except (requests.RequestException, ValueError):
+        _xq_fail()
         return None
+
+
+def _xq_ok() -> bool:
+    """雪球熔断检查（书 8.3——2026-08-17：当日失败≥5 跳过）"""
+    from tools.strategy_engine.breaker import is_tripped
+
+    return not is_tripped("xq")
+
+
+def _xq_fail() -> None:
+    """雪球失败计数——熔断阈值自动触发"""
+    from tools.strategy_engine.breaker import record_fail
+
+    record_fail("xq")
 
 
 def login() -> bool:
@@ -556,6 +573,12 @@ def main():
     elif cmd == "resolve":
         resolve_cubes()
     elif cmd == "track":
+        # 熔断（书 8.3——2026-08-17：当日失败≥5 跳过——防刷接口）
+        from tools.strategy_engine.breaker import is_tripped
+
+        if is_tripped("xq"):
+            print("⛔ 雪球当日失败已达熔断阈值——今日跳过（breaker.json 记录——明日自动重置）")
+            return
         r = track()
         print(f"✅ 抓取完成: {r}")
     else:
