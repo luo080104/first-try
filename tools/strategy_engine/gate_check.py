@@ -62,6 +62,76 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
     return [{"week": k, "total": v} for k, v in sorted(weekly.items())]
 
 
+def significance(weekly: list[dict[str, Any]], bench: dict[str, float], n_boot: int = 2000) -> dict[str, Any]:
+    """显著性检验（2026-08-17 甲方 Q4 应询——'硬币也能连续4周跑赢'）
+
+    主检验：二项符号检验（精确）——正超额周数 k vs H0：胜率=50%。
+    p = P(X>=k | X~Bin(n, 0.5))——胜率显著高于随机=连续跑赢非运气。
+    辅检验：Bootstrap 置换（保留符号分布——与二项互补）。
+    """
+    import math
+    import random
+
+    pairs = []
+    for i in range(1, len(weekly)):
+        prev_t, cur_t = weekly[i - 1]["total"], weekly[i]["total"]
+        if prev_t <= 0:
+            continue
+        port_ret = (cur_t - prev_t) / prev_t
+        cur_date = _week_last_day(weekly[i]["week"])
+        prev_date = _week_last_day(weekly[i - 1]["week"])
+        bc, bp = bench.get(cur_date), bench.get(prev_date)
+        if not bc or not bp or bp <= 0:
+            continue
+        bench_ret = (bc - bp) / bp
+        pairs.append(port_ret - bench_ret)  # 超额收益序列
+    n = len(pairs)
+    if n < 6:
+        return {"n_weeks": n, "p_value": None, "significant": None,
+                "note": "周样本<6——显著性不可判（等积累）"}
+
+    k = sum(1 for x in pairs if x > 0)  # 正超额周数
+    # 二项符号检验（单侧：胜率>50%）——精确尾概率
+    p_binom = 0.0
+    for j in range(k, n + 1):
+        p_binom += math.comb(n, j) * (0.5 ** n)
+    p_binom = min(p_binom, 1.0)
+
+    # Bootstrap 置换（辅助——连续跑赢长度）
+    obs_max_streak = _max_streak(pairs)
+    rng = random.Random(42)
+    ge_streak = 0
+    for _ in range(n_boot):
+        shuffled = pairs[:]
+        rng.shuffle(shuffled)
+        if _max_streak(shuffled) >= obs_max_streak:
+            ge_streak += 1
+    p_streak = ge_streak / n_boot
+
+    return {
+        "n_weeks": n,
+        "obs_win_weeks": k,
+        "win_rate": round(k / n * 100, 1),
+        "obs_max_streak": obs_max_streak,
+        "p_binom": round(p_binom, 4),  # 主检验：胜率显著性（精确二项）
+        "p_streak": round(p_streak, 4),  # 辅检验：连赢长度（置换）
+        "significant": p_binom < 0.05,
+        "note": "p_binom<0.05=胜率显著>50%（二项符号检验——硬币序列 p≈0.5 不显著）",
+    }
+
+
+def _max_streak(seq: list[float]) -> int:
+    """连续正收益最大长度（超额序列中 >0 视为'跑赢'）"""
+    best = cur = 0
+    for x in seq:
+        if x > 0:
+            cur += 1
+            best = max(best, cur)
+        else:
+            cur = 0
+    return best
+
+
 def check() -> dict[str, Any]:
     """通过判定——返回 {passed, reason, days, weeks_beat}
 
@@ -233,6 +303,26 @@ def check() -> dict[str, Any]:
                 "alpha_positive": False,
                 "attribution_note": att.get("attribution_note", ""),
             }
+        # 甲方 Q4（2026-08-17）：显著性检验——连续跑赢须异于随机（硬币检验）
+        sig = significance(weekly, bench)
+        if sig.get("significant") == False:  # p>=0.05——运气不能排除
+            return {
+                "passed": False,
+                "reason": (
+                    f"连续 {max_wins} 周跑赢 + 超额 {excess_sum * 100:.1f}%≥10%——但显著性检验 p="
+                    f"{sig['p_binom']}≥0.05（二项符号检验——胜率 {sig.get('win_rate')}%——可能只是运气——甲方 Q4）"
+                ),
+                "days": days,
+                "weeks_beat": max_wins,
+                "alpha_positive": att.get("alpha_positive"),
+                "attribution_note": att.get("attribution_note", ""),
+                "significance": sig,
+            }
+        sig_txt = (
+            f"——显著性 p={sig.get('p_binom')}<0.05（胜率 {sig.get('win_rate')}%——非运气）"
+            if sig.get("p_binom") is not None
+            else "——显著性待样本（周数不足）"
+        )
         alpha_txt = (
             "——Alpha 为正（策略贡献确认）"
             if alpha_ok
@@ -240,11 +330,12 @@ def check() -> dict[str, Any]:
         )
         return {
             "passed": True,
-            "reason": f"连续 {max_wins} 周跑赢沪深300 + 累计超额 {excess_sum * 100:.1f}%≥10%（F5b）{alpha_txt}",
+            "reason": f"连续 {max_wins} 周跑赢沪深300 + 累计超额 {excess_sum * 100:.1f}%≥10%（F5b）{alpha_txt}{sig_txt}",
             "days": days,
             "weeks_beat": max_wins,
             "alpha_positive": att.get("alpha_positive"),
             "attribution_note": att.get("attribution_note", ""),
+            "significance": sig,
         }
     return {
         "passed": False,
