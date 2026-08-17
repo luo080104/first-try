@@ -240,6 +240,60 @@ def industry_perf(idx_code: str) -> dict[str, float | None] | None:
         return None
 
 
+SNAPSHOT_FILE = os.path.join(DATA_DIR, "industry_pe_snapshots.jsonl")
+
+
+def snapshot_monthly() -> bool:
+    """行业 PE 逐月快照（2026-08-17：十年分位数据地基——每月首日记录）
+
+    巨潮行业 PE 按日可拉——逐月积累（幂等——同月只记一次）
+    一年后 12 点/五年 60 点——行业面'位置'纵向分位的数据来源
+    """
+    import json as _json
+
+    ym = time.strftime("%Y-%m")
+    try:
+        seen = set()
+        if os.path.exists(SNAPSHOT_FILE):
+            for line in open(SNAPSHOT_FILE, encoding="utf-8"):
+                try:
+                    seen.add(_json.loads(line)["ym"])
+                except (ValueError, KeyError):
+                    continue
+        if ym in seen:
+            return False  # 本月已记——幂等
+        import akshare as ak
+
+        for back in range(6):
+            d = time.strftime("%Y%m%d", time.localtime(time.time() - back * 86400))
+            try:
+                df = ak.stock_industry_pe_ratio_cninfo(symbol="证监会行业分类", date=d)
+            except Exception:
+                continue
+            if df is None or df.empty:
+                continue
+            rec: dict[str, Any] = {"ym": ym, "date": d}
+            for _, row in df[df["行业层级"] == 1.0].iterrows():
+                try:
+                    # pyright 对 pandas iterrows 的 Series 推断保守——hasattr 守卫（运行时无问题）
+                    cat = row["行业编码"]
+                    pev = row["静态市盈率-加权平均"]
+                    if hasattr(cat, "item"):
+                        cat = cat.item()
+                    if hasattr(pev, "item"):
+                        pev = pev.item()
+                    rec[str(cat)] = float(pev)  # type: ignore[arg-type]  # pyright 对 pandas iterrows 保守推断（运行时为标量）
+                except (TypeError, ValueError):
+                    continue
+            if len(rec) > 2:
+                with open(SNAPSHOT_FILE, "a", encoding="utf-8") as f:
+                    f.write(_json.dumps(rec, ensure_ascii=False) + "\n")
+                return True
+        return False
+    except Exception:
+        return False
+
+
 def score_industry(code: str) -> dict[str, Any]:
     """行业面 20 分——失败维度返回 None（调用方给中性分——不因数据失败惩罚）"""
     ind = industry_of(code)

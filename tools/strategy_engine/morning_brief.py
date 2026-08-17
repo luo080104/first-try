@@ -384,6 +384,13 @@ def build_brief() -> str:
             "晨报[build_alert_sect]失败——段跳过（容错红线）——查 diag.jsonl",
         )
         pass  # 失败票检查失败不阻塞晨报（红线③容错）
+    # 行业 PE 逐月快照（2026-08-17：十年分位数据地基——幂等——每月首日记一条）
+    try:
+        from tools.strategy_engine.industry import snapshot_monthly
+
+        snapshot_monthly()
+    except Exception:
+        pass  # 快照失败不阻塞晨报（容错红线——下月补记）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)
