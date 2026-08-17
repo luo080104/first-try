@@ -20,7 +20,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from tools.strategy_engine import portfolio as pf
 
 CONSECUTIVE_WEEKS = 4  # 连续跑赢周数（需求 v1.1——默认 4）
-MAX_DAYS = 90  # 满 3 个月（先到为准）
+MAX_DAYS = 90  # 观察期（F5b 2026-08-17：保底条款废除——满 90 天不自动通过）
+EXCESS_TARGET = 0.10  # 超额目标 ≥10%（2026-08-17 用户拍板：跑赢不够——要 10% 超额）
 
 
 def _portfolio_weeks() -> list[dict[str, Any]]:
@@ -115,11 +116,15 @@ def check() -> dict[str, Any]:
                 "alpha_positive": None,
                 "attribution_note": "归因数据获取失败（红线⑤——显式标注）",
             }
-    # 满 3 个月（先到为准）——满 90 天通过（长期实盘观察——归因仅参考）
+    # F5b 落地（2026-08-17 审核+用户拍板 A+10%）：90 天保底条款废除——
+    # 满 90 天=观察期（不自动通过——继续积累）——通过必须真实超额
     if days >= MAX_DAYS:
         return {
-            "passed": True,
-            "reason": f"满 {MAX_DAYS} 天（{days} 天）——先到为准通过（归因参考：{att.get('attribution_note', '')}）",
+            "passed": False,
+            "reason": (
+                f"观察期满 {MAX_DAYS} 天（{days} 天）——F5b：保底条款废除——"
+                "不自动通过——继续观察至真实超额（4 周跑赢+Alpha>0+超额≥10%）"
+            ),
             "days": days,
             "weeks_beat": 0,
             "alpha_positive": att.get("alpha_positive"),
@@ -162,9 +167,11 @@ def check() -> dict[str, Any]:
             style_max = max(style_max, style_beat)
     except Exception:
         style_max = -1  # 红利数据不可用——标注（不阻塞判定）
-    # 逐周对比：组合周收益 vs 基准周收益
+    # 逐周对比：组合周收益 vs 基准周收益（F5b 加累计超额——目标 ≥10%）
     wins = 0
     max_wins = 0
+    excess_sum = 0.0  # 建仓以来累计超额收益（组合累计 - 基准累计——F5b 2026-08-17）
+    n_excess = 0
     for i in range(1, len(weekly)):
         prev_t, cur_t = weekly[i - 1]["total"], weekly[i]["total"]
         if prev_t <= 0:
@@ -177,6 +184,9 @@ def check() -> dict[str, Any]:
         if not bc or not bp or bp <= 0:
             continue
         bench_ret = (bc - bp) / bp
+        # 累计超额（几何累计近似：逐周相加——口径标注 Q11 可校准）
+        excess_sum += port_ret - bench_ret
+        n_excess += 1
         wins = wins + 1 if port_ret > bench_ret else 0
         max_wins = max(max_wins, wins)
     style_txt = ""
@@ -187,6 +197,20 @@ def check() -> dict[str, Any]:
             else "（对红利亦有超额——风格 Beta 嫌疑低）"
         )
     if max_wins >= CONSECUTIVE_WEEKS:
+        # F5b（2026-08-17 用户拍板 A+10%）：4 周跑赢 **且** 累计超额 ≥10% 双条件
+        excess_ok = excess_sum >= EXCESS_TARGET
+        if not excess_ok:
+            return {
+                "passed": False,
+                "reason": (
+                    f"连续 {max_wins} 周跑赢沪深300——但累计超额 {excess_sum * 100:.1f}%"
+                    f" < 目标 {EXCESS_TARGET * 100:.0f}%（F5b 用户拍板）——继续观察"
+                ),
+                "days": days,
+                "weeks_beat": max_wins,
+                "alpha_positive": att.get("alpha_positive"),
+                "attribution_note": att.get("attribution_note", ""),
+            }
         # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）
         # 三态：alpha_positive 可为 True/False/None（数据不足）——避开 is/== 字面量比较
         alpha_ok = att.get("alpha_positive") is not None and att["alpha_positive"]
@@ -209,7 +233,7 @@ def check() -> dict[str, Any]:
         )
         return {
             "passed": True,
-            "reason": f"连续 {max_wins} 周跑赢沪深300（净值序列实证）{alpha_txt}",
+            "reason": f"连续 {max_wins} 周跑赢沪深300 + 累计超额 {excess_sum * 100:.1f}%≥10%（F5b）{alpha_txt}",
             "days": days,
             "weeks_beat": max_wins,
             "alpha_positive": att.get("alpha_positive"),
