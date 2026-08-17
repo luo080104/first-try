@@ -414,9 +414,13 @@ def main():
                 print("⚠️ 约束检查未过：")
                 for i in issues:
                     print(f"  - {i}")
-                print("（buy() 将拒绝——如需越过加 --force（人工拍板——reason 注明 OVERRIDE））")
+                print(
+                    "（buy() 将拒绝——如需越过加 --force（人工拍板——reason 注明 OVERRIDE））"
+                )
             force = "--force" in sys.argv
-            _, msg = pf.buy(code, price, shares, track=track, reason=reason, force=force)
+            _, msg = pf.buy(
+                code, price, shares, track=track, reason=reason, force=force
+            )
             print(msg)
         elif cmd == "sell" and len(sys.argv) >= 5:
             code, shares, price = sys.argv[2], int(sys.argv[3]), float(sys.argv[4])

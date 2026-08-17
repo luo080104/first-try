@@ -89,11 +89,7 @@ def _enrich_quote(
     if rev > 0 and mcap > 0:
         q["ps"] = round(mcap / rev, 2)
     if k:
-        lows = [
-            r["low"]
-            for r in k
-            if isinstance(r.get("low"), (int, float))
-        ]
+        lows = [r["low"] for r in k if isinstance(r.get("low"), (int, float))]
         price = q.get("price") or 0
         if lows and price > 0:
             _min = min(lows)

@@ -63,7 +63,9 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
     return [{"week": k, "total": v} for k, v in sorted(weekly.items())]
 
 
-def significance(weekly: list[dict[str, Any]], bench: dict[str, float], n_boot: int = 2000) -> dict[str, Any]:
+def significance(
+    weekly: list[dict[str, Any]], bench: dict[str, float], n_boot: int = 2000
+) -> dict[str, Any]:
     """显著性检验（2026-08-17 甲方 Q4 应询——'硬币也能连续4周跑赢'）
 
     主检验：二项符号检验（精确）——正超额周数 k vs H0：胜率=50%。
@@ -88,14 +90,18 @@ def significance(weekly: list[dict[str, Any]], bench: dict[str, float], n_boot: 
         pairs.append(port_ret - bench_ret)  # 超额收益序列
     n = len(pairs)
     if n < 6:
-        return {"n_weeks": n, "p_value": None, "significant": None,
-                "note": "周样本<6——显著性不可判（等积累）"}
+        return {
+            "n_weeks": n,
+            "p_value": None,
+            "significant": None,
+            "note": "周样本<6——显著性不可判（等积累）",
+        }
 
     k = sum(1 for x in pairs if x > 0)  # 正超额周数
     # 二项符号检验（单侧：胜率>50%）——精确尾概率
     p_binom = 0.0
     for j in range(k, n + 1):
-        p_binom += math.comb(n, j) * (0.5 ** n)
+        p_binom += math.comb(n, j) * (0.5**n)
     p_binom = min(p_binom, 1.0)
 
     # Bootstrap 置换（辅助——连续跑赢长度）

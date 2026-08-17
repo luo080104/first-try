@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Bootstrap 显著性检验测试（2026-08-17 甲方 Q4——硬币也能连续4周跑赢？）"""
+
 import random
 import sys
 
@@ -20,9 +21,7 @@ def _mk_bench(n):
     """基准平序列（总收益 0——对照）——键用 _week_last_day 的日期格式"""
     from tools.strategy_engine.gate_check import _week_last_day
 
-    return {
-        _week_last_day(f"2026-W{i + 1:02d}"): 100.0 for i in range(n)
-    }
+    return {_week_last_day(f"2026-W{i + 1:02d}"): 100.0 for i in range(n)}
 
 
 def test_max_streak():

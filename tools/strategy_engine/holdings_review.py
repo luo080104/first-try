@@ -175,7 +175,9 @@ def eval_buy(code: str) -> dict:
     rule_version = {
         "score_schema": "v2.1-120制",  # 打分体系版本（价值40+估值30+技术20+票源10+行业20）
         "threshold": ss.THRESHOLD_MAP.get(ms.market_status().get("status", "正常"), 96),
-        "signals": sorted(s["id"] for s in _sg_v.wiring_status() if s["wired"] == "True"),
+        "signals": sorted(
+            s["id"] for s in _sg_v.wiring_status() if s["wired"] == "True"
+        ),
         "date": time.strftime("%Y-%m-%d"),
     }
 
@@ -232,7 +234,9 @@ def eval_buy(code: str) -> dict:
         _pool = _json.load(
             open(
                 _os.path.join(
-                    _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))),
+                    _os.path.dirname(
+                        _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+                    ),
                     ".wbs_tmp",
                     "full_market.json",
                 ),
