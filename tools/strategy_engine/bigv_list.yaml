@@ -21,7 +21,6 @@ bigvs:
     note: 优秀企业长期低迷+分红再投理论（书引用）
   - name: 发财油菜君
     platform: ['雪球']
-    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: A股港股价值投资组合
   - name: 丹书铁券
     platform: ['雪球']
@@ -31,7 +30,6 @@ bigvs:
     note: 估值+技术大V（估值参考）
   - name: 小林聊股道
     platform: ['雪球']
-    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: 仓位水平参考（书）
   - name: 徐小明
     platform: ['微信']
@@ -155,7 +153,6 @@ bigvs:
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【沪深长盈】
   - name: 五招分众
     platform: ['雪球']
-    note: uid 待解析（雪球 suggest 接口 8/17 移除 uid 字段——重登录后重试）
     note: 书大V 清单 OCR 补充（2026-08-15 拍照识别）——待 vpush 数据验证——雪球组合【2025长红】
   - name: His1963
     platform: ['雪球']
