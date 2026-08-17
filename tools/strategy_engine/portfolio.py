@@ -261,7 +261,9 @@ class Portfolio:
                 mv = h.get("avg_cost", 0) * h.get("shares", 0)
                 pct = mv / total * 100 if total else 0
                 if pct > MAX_POSITION_PCT * 100:
-                    out.append({"code": c, "name": h.get("name", c), "pct": round(pct, 1)})
+                    out.append(
+                        {"code": c, "name": h.get("name", c), "pct": round(pct, 1)}
+                    )
             return out
         except Exception:
             return []

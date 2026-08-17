@@ -209,10 +209,11 @@ if __name__ == "__main__":
 
 
 def ts_pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
-    """个股 PE/PB 全历史（daily_basic——2005 起——2026-08-17 主源切换）
+    """个股 PE/PB/收盘价全历史（daily_basic——2005 起——2026-08-17 主源切换）
 
     替代 baostock 估值主源（baostock 长区间/指数查询多次挂起——SLA 脆弱）
-    返回 [{date, pe, pb}] 升序——失败返回 []（调用方 fallback baostock）
+    返回 [{date, pe, pb, close}] 升序——失败返回 []（调用方 fallback baostock）
+    close 2026-08-17 F4 补（扩池回测需要价格算 MA6）
     """
     ts_code = to_ts_code(code)
     pro = _pro()
@@ -220,7 +221,7 @@ def ts_pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
         return []
     try:
         df = pro.daily_basic(
-            ts_code=ts_code, fields="trade_date,pe_ttm,pb", limit=10000
+            ts_code=ts_code, fields="trade_date,close,pe_ttm,pb", limit=10000
         )
         if df is None or df.empty:
             return []
@@ -229,7 +230,8 @@ def ts_pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
             try:
                 pe_val: Any = r["pe_ttm"]
                 pb_val: Any = r["pb"]
-                pe, pb = float(pe_val), float(pb_val)
+                cl_val: Any = r["close"]
+                pe, pb, cl = float(pe_val), float(pb_val), float(cl_val)
             except (TypeError, ValueError):
                 continue
             if pe > 0 and pb > 0:
@@ -242,6 +244,7 @@ def ts_pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
                         + str(r["trade_date"])[6:8],
                         "pe": pe,
                         "pb": pb,
+                        "close": cl,
                     }
                 )
         out.sort(key=lambda x: x["date"])
