@@ -431,12 +431,18 @@ def _latest_trade_ts(bigv: str) -> str | None:
 
 
 def _clean_html(s: str) -> str:
-    """清洗雪球发言 HTML（<a>xxx</a> → xxx——实体解码）"""
+    """清洗雪球发言 HTML（<a>xxx</a> → xxx——实体单层解码）"""
     import re as _re
 
     s = _re.sub(r"<[^>]+>", "", s or "")
-    for ent, rep in [("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"), ("&nbsp;", " ")]:
-        s = s.replace(ent, rep)
+    # 单层解码（&amp;lt; → &lt; 而非 <——防双重解码连锁）
+    s = _re.sub(
+        r"&(amp|lt|gt|nbsp|quot);",
+        lambda m: {"amp": "&", "lt": "<", "gt": ">", "nbsp": " ", "quot": '"'}[
+            m.group(1)
+        ],
+        s,
+    )
     return s.strip()
 
 
