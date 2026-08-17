@@ -300,9 +300,12 @@ def build_report() -> str:
                             _p = _json.loads(_line)
                         except ValueError:
                             continue
-                        if _p.get("fetched_at", "")[:10] >= (
-                            datetime.date.today() - datetime.timedelta(days=7)
-                        ).isoformat():
+                        if (
+                            _p.get("fetched_at", "")[:10]
+                            >= (
+                                datetime.date.today() - datetime.timedelta(days=7)
+                            ).isoformat()
+                        ):
                             _week_posts.append(_p)
             if _week_posts:
                 # 按大V 分组——每名取最近 2 条有实质内容的（非转发/非空）
