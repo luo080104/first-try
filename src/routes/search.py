@@ -240,13 +240,21 @@ def search_pdd_api(keyword: str = ""):
     return {"items": items}
 
 
+def _f(v: str) -> float:
+    """空串/非法输入 -> 0（前端 URLSearchParams 会传空串）"""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0
+
+
 @router.get("/api/items")
 def api_items(
     keyword: str = "",
     category: str = "",
     platform: str = "",
-    min_price: float = 0,
-    max_price: float = 0,
+    min_price: str = "",
+    max_price: str = "",
     sort: str = "price_asc",
     page: int = 1,
     size: int = 30,
@@ -257,8 +265,8 @@ def api_items(
         keyword.strip(),
         category,
         platform,
-        min_price,
-        max_price,
+        _f(min_price),
+        _f(max_price),
         sort,
         max(1, page),
         min(max(1, size), 100),

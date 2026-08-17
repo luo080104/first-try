@@ -1,898 +1,1904 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Go购 - 全网比价助手</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link rel="manifest" href="/static/manifest.json">
-    <link rel="apple-touch-icon" href="/static/icon-192.png">
-    <meta name="theme-color" content="#ff6b35">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="/static/style.css" />
+    <link rel="manifest" href="/static/manifest.json" />
+    <link rel="apple-touch-icon" href="/static/icon-192.png" />
+    <meta name="theme-color" content="#ff6b35" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
     <style>
-        .search-box { background: #fff; border-radius: 16px; padding: 24px;
-                      box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        input[type=text] { width: 100%; font-size: 20px; padding: 14px 16px;
-                           border: 2px solid #dfe6e9; border-radius: 12px;
-                           outline: none; transition: border 0.2s; min-height: 52px; }
-        input[type=text]:focus { border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255,107,53,0.15); }
-        .cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
-        .cat { flex: 1; min-width: 84px; padding: 12px 0; text-align: center;
-               border: 2px solid #dfe6e9; border-radius: 24px; font-size: 15px;
-               cursor: pointer; background: #fff; color: #636e72; transition: all 0.2s; }
-        .cat:hover { border-color: #ff6b35; color: #ff6b35; }
-        .cat.active { background: #ff6b35; border-color: #ff6b35; color: #fff; }
-        .cat.empty { border-style: dashed; }
-        #search-btn { width: 100%; font-size: 20px; padding: 14px; margin-top: 8px; }
-        .mode-pick { display: flex; gap: 10px; margin: 14px 0 4px; }
-        .mode-pick label { flex: 1; padding: 10px 0; text-align: center; border: 2px solid #dfe6e9;
-                           border-radius: 12px; cursor: pointer; font-size: 15px; color: #636e72;
-                           background: #fff; transition: all 0.2s; }
-        .mode-pick input { display: none; }
-        .mode-pick label.sel { border-color: #ff6b35; background: #fff5f0; color: #ff6b35; font-weight: 600; }
-        .mode-tip { font-size: 12px; color: #b2bec3; text-align: center; margin: 4px 0 0; }
-        #progress { display: none; text-align: center; color: #ff6b35; font-size: 16px;
-                    margin-top: 18px; line-height: 1.8; }
-        /* v6 游戏化加载画面 */
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                           background: rgba(255,255,255,0.92); z-index: 999;
-                           justify-content: center; align-items: center; }
-        .loading-card { width: min(420px, 86vw); background: #fff; border-radius: 20px;
-                        padding: 36px 28px; box-shadow: 0 12px 48px rgba(0,0,0,0.12);
-                        text-align: center; }
-        .loading-logo { font-size: 52px; animation: bounce 1.6s ease-in-out infinite; }
-        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
-        .loading-title { font-size: 18px; font-weight: 700; color: #2d3436; margin: 14px 0 4px; }
-        .loading-bar { height: 10px; background: #eee; border-radius: 8px; overflow: hidden; margin: 18px 0 6px; }
-        .loading-fill { height: 100%; width: 8%; border-radius: 8px;
-                        background: linear-gradient(90deg, #ff6b35, #e17055);
-                        transition: width 0.5s ease; }
-        .loading-msg { font-size: 14px; color: #636e72; margin: 12px 0 18px; min-height: 20px; }
-        .loading-slogan { font-size: 13px; color: #b2bec3; font-style: italic; }
-        .quick { display: flex; gap: 12px; margin-top: 18px; justify-content: center; }
-        .quick a { text-decoration: none; font-size: 15px; padding: 10px 16px;
-                   border-radius: 24px; min-height: 44px; display: inline-flex; align-items: center; }
-        .quick .q1 { background: #e8f7ee; color: #27ae60; }
-        .quick .q2 { background: #eaf2fb; color: #0984e3; }
-            .sub-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
-        .sub-btns .btn { flex: 1; min-width: 140px; }
-        .loading-tip { display: none; text-align: center; font-size: 15px; margin-top: 10px; }
-        .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
-                       border-radius: 12px; padding: 12px 16px; margin-bottom: 14px;
-                       font-size: 14px; line-height: 1.9; box-shadow: 0 2px 10px rgba(255,107,53,0.3); }
-        /* ===== v2.0 游戏化：4 大地标卡片 ===== */
-        .landmarks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 18px 0; }
-        .landmark { border-radius: 18px; padding: 20px 12px; text-align: center; cursor: pointer;
-                    text-decoration: none; color: #fff; font-size: 15px; font-weight: 700;
-                    box-shadow: 0 4px 14px rgba(0,0,0,0.10); transition: transform .15s, box-shadow .15s; }
-        .landmark:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
-        .landmark .lm-icon { font-size: 36px; display: block; margin-bottom: 6px; }
-        .landmark .lm-sub { font-size: 12px; font-weight: 400; opacity: .88; display: block; margin-top: 3px; }
-        .lm-shop { background: linear-gradient(135deg,#ff6b35,#e74c3c); }
-        .lm-wander { background: linear-gradient(135deg,#00b894,#00a381); }
-        .lm-watch { background: linear-gradient(135deg,#0984e3,#0652DD); }
-        .lm-card { background: linear-gradient(135deg,#a55eea,#8854d0); }
-        .btn-guide { display: block; width: 100%; text-align: center; padding: 15px 0;
-                     background: linear-gradient(135deg,#2d3436,#636e72); color: #fff;
-                     border-radius: 16px; font-size: 16px; font-weight: 700;
-                     text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,0.12);
-                     transition: transform .15s; margin: 6px 0 14px; }
-        .btn-guide:hover { transform: translateY(-2px); }
-        .more-menu { margin: 4px 0 16px; text-align: center; font-size: 14px; }
-        .more-menu summary { cursor: pointer; color: #b2bec3; list-style: none; }
-        .more-menu summary::-webkit-details-marker { display: none; }
-        .more-menu .mm { display: inline-block; margin: 6px 8px; color: #636e72; text-decoration: none; }
-        .more-menu .mm:hover { color: #ff6b35; }
+      .search-box {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      }
+      input[type="text"] {
+        width: 100%;
+        font-size: 20px;
+        padding: 14px 16px;
+        border: 2px solid #dfe6e9;
+        border-radius: 12px;
+        outline: none;
+        transition: border 0.2s;
+        min-height: 52px;
+      }
+      input[type="text"]:focus {
+        border-color: #ff6b35;
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+      }
+      .cats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      .cat {
+        flex: 1;
+        min-width: 84px;
+        padding: 12px 0;
+        text-align: center;
+        border: 2px solid #dfe6e9;
+        border-radius: 24px;
+        font-size: 15px;
+        cursor: pointer;
+        background: #fff;
+        color: #636e72;
+        transition: all 0.2s;
+      }
+      .cat:hover {
+        border-color: #ff6b35;
+        color: #ff6b35;
+      }
+      .cat.active {
+        background: #ff6b35;
+        border-color: #ff6b35;
+        color: #fff;
+      }
+      .cat.empty {
+        border-style: dashed;
+      }
+      #search-btn {
+        width: 100%;
+        font-size: 20px;
+        padding: 14px;
+        margin-top: 8px;
+      }
+      .mode-pick {
+        display: flex;
+        gap: 10px;
+        margin: 14px 0 4px;
+      }
+      .mode-pick label {
+        flex: 1;
+        padding: 10px 0;
+        text-align: center;
+        border: 2px solid #dfe6e9;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 15px;
+        color: #636e72;
+        background: #fff;
+        transition: all 0.2s;
+      }
+      .mode-pick input {
+        display: none;
+      }
+      .mode-pick label.sel {
+        border-color: #ff6b35;
+        background: #fff5f0;
+        color: #ff6b35;
+        font-weight: 600;
+      }
+      .mode-tip {
+        font-size: 12px;
+        color: #b2bec3;
+        text-align: center;
+        margin: 4px 0 0;
+      }
+      #progress {
+        display: none;
+        text-align: center;
+        color: #ff6b35;
+        font-size: 16px;
+        margin-top: 18px;
+        line-height: 1.8;
+      }
+      /* v6 游戏化加载画面（2026-08-18 夜空遮罩 + 金色游戏面板） */
+      #loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(23, 32, 48, 0.9);
+        z-index: 999;
+        justify-content: center;
+        align-items: center;
+      }
+      .loading-card {
+        width: min(420px, 86vw);
+        border-radius: 20px;
+        padding: 36px 28px;
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+        text-align: center;
+        background: linear-gradient(160deg, #2a3a55, #1e2a3a);
+        border: 3px solid #2d3436;
+        box-shadow:
+          0 0 0 3px #f5b50a,
+          0 12px 48px rgba(0, 0, 0, 0.5);
+      }
+      .loading-logo {
+        font-size: 52px;
+        animation: bounce 1.6s ease-in-out infinite;
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-14px);
+        }
+      }
+      .loading-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #f0f4fa;
+        margin: 14px 0 4px;
+      }
+      .loading-bar {
+        height: 12px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 18px 0 6px;
+        border: 1.5px solid rgba(245, 181, 10, 0.4);
+      }
+      .loading-fill {
+        height: 100%;
+        width: 8%;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #f5b50a, #ff6b35, #e17055);
+        transition: width 0.5s ease;
+        box-shadow: 0 0 10px rgba(245, 181, 10, 0.7);
+      }
+      .loading-msg {
+        font-size: 14px;
+        color: #c8d4e8;
+        margin: 12px 0 18px;
+        min-height: 20px;
+      }
+      .loading-slogan {
+        font-size: 13px;
+        color: #8fa0b8;
+        font-style: italic;
+      }
+      .loading-steps {
+        color: #c8d4e8;
+      }
+      .quick {
+        display: flex;
+        gap: 12px;
+        margin-top: 18px;
+        justify-content: center;
+      }
+      .quick a {
+        text-decoration: none;
+        font-size: 15px;
+        padding: 10px 16px;
+        border-radius: 24px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      .quick .q1 {
+        background: #e8f7ee;
+        color: #27ae60;
+      }
+      .quick .q2 {
+        background: #eaf2fb;
+        color: #0984e3;
+      }
+      .sub-btns {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 16px 0;
+      }
+      .sub-btns .btn {
+        flex: 1;
+        min-width: 140px;
+      }
+      .loading-tip {
+        display: none;
+        text-align: center;
+        font-size: 15px;
+        margin-top: 10px;
+      }
+      .subsidy-bar {
+        background: linear-gradient(135deg, #ff6b35, #e74c3c);
+        color: #fff;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+        font-size: 14px;
+        line-height: 1.9;
+        box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3);
+      }
+      /* ===== v2.0 游戏化：4 大地标卡片 ===== */
+      .landmarks {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin: 18px 0;
+      }
+      .landmark {
+        border-radius: 18px;
+        padding: 20px 12px;
+        text-align: center;
+        cursor: pointer;
+        text-decoration: none;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 700;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+      }
+      .landmark:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      }
+      .landmark .lm-icon {
+        font-size: 36px;
+        display: block;
+        margin-bottom: 6px;
+      }
+      .landmark .lm-sub {
+        font-size: 12px;
+        font-weight: 400;
+        opacity: 0.88;
+        display: block;
+        margin-top: 3px;
+      }
+      .lm-shop {
+        background: linear-gradient(135deg, #ff6b35, #e74c3c);
+      }
+      .lm-wander {
+        background: linear-gradient(135deg, #00b894, #00a381);
+      }
+      .lm-watch {
+        background: linear-gradient(135deg, #0984e3, #0652dd);
+      }
+      .lm-card {
+        background: linear-gradient(135deg, #a55eea, #8854d0);
+      }
+      .btn-guide {
+        display: block;
+        width: 100%;
+        text-align: center;
+        padding: 15px 0;
+        background: linear-gradient(135deg, #f5b50a, #ff8c00);
+        color: #3d2c00;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 800;
+        text-decoration: none;
+        border-bottom: 4px solid #c88600;
+        box-shadow: 0 4px 14px rgba(245, 181, 10, 0.35);
+        transition: transform 0.15s;
+        margin: 6px 0 14px;
+      }
+      .btn-guide:hover {
+        transform: translateY(-2px);
+      }
+      .btn-guide:active {
+        transform: translateY(2px);
+        border-bottom-width: 1px;
+      }
+      .more-menu {
+        margin: 4px 0 16px;
+        text-align: center;
+        font-size: 14px;
+      }
+      .more-menu summary {
+        cursor: pointer;
+        color: #8fa0b8;
+        list-style: none;
+      }
+      .more-menu summary::-webkit-details-marker {
+        display: none;
+      }
+      .more-menu .mm {
+        display: inline-block;
+        margin: 6px 8px;
+        color: #c8d4e8;
+        text-decoration: none;
+      }
+      .more-menu .mm:hover {
+        color: #ff6b35;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>🛒 Go购 <span style="font-size:14px;cursor:pointer;color:#0984e3" onclick="toggleRoleMenu()" id="role-bar">👤 <span id="role-name">嘉铭</span> ▼</span></h1>
-        <div id="role-menu" style="display:none;background:#fff;border:1px solid #dfe6e9;border-radius:12px;padding:10px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08)"></div>
-        <div id="member-cats"></div>
-        <div id="recent-searches"></div>
-        <div class="subtitle" style="font-size:17px;color:#ff6b35;font-weight:600">购物就是一场旅行，让我们Go购 ✈️</div>
-        <div class="subtitle" style="margin-top:2px">淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网</div>
-        <div class="search-box" id="search-box" style="display:none">  <!-- 2026-08-11 主界面=卡片导航，搜索框由「搜全网」展开 -->
-            <div style="display:flex;gap:8px">
-                <input type="text" id="kw" placeholder="说人话也行：帮我看石头岛的外套" style="flex:1">
-                <button type="button" onclick="startVoice()" title="语音搜索" style="background:#fdf0e3;border:none;border-radius:10px;font-size:20px;cursor:pointer;padding:0 12px">🎤</button>
-                <button type="button" onclick="startPhoto()" title="拍照找同款" style="background:#eaf2fb;border:none;border-radius:10px;font-size:20px;cursor:pointer;padding:0 12px">📷</button>
-            </div>
-            <input type="hidden" id="cat" value="">
-            <div class="cats">
-                <div class="cat empty active" data-cat="">全部</div>
-                <div class="cat" data-cat="服饰">👗 服饰</div>
-                <div class="cat" data-cat="食品">🥛 食品</div>
-                <div class="cat" data-cat="日用百货">🧴 日用百货</div>
-                <div class="cat" data-cat="数码家电">💻 数码家电</div>
-            </div>
-            <div class="mode-pick" id="mode-pick">
-                <label class="sel" onclick="pickMode('history', this)"><input type="radio" name="mode" value="history" checked>📚 看以往数据<small>（读库秒出，零弹窗）</small></label>
-                <label onclick="pickMode('live', this)"><input type="radio" name="mode" value="live">⚡ 实时报告<small>（现场抓取最新，会启动后台浏览器）</small></label>
-            </div>
-            <div class="mode-tip" id="mode-tip">⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多</div>
-            <div id="hot-words" style="margin-top:10px;font-size:13px;color:#b2bec3;min-height:20px"></div>
-            <button type="button" id="search-btn" class="btn btn-tb" onclick="doSearch()">开始比价</button>
+      <h1>
+        🛒 Go购
+        <span
+          style="font-size: 14px; cursor: pointer; color: #0984e3"
+          onclick="toggleRoleMenu()"
+          id="role-bar"
+          >👤 <span id="role-name">嘉铭</span> ▼</span
+        >
+      </h1>
+      <div
+        id="role-menu"
+        style="
+          display: none;
+          background: #fff;
+          border: 1px solid #dfe6e9;
+          border-radius: 12px;
+          padding: 10px;
+          margin-bottom: 12px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        "
+      ></div>
+      <div id="member-cats"></div>
+      <div id="recent-searches"></div>
+      <div
+        class="subtitle"
+        style="font-size: 17px; color: #ff6b35; font-weight: 600"
+      >
+        购物就是一场旅行，让我们Go购 ✈️
+      </div>
+      <div class="subtitle" style="margin-top: 2px">
+        淘宝 + 京东 + 拼多多 + 唯品会，一个词查全网
+      </div>
+      <div class="search-box" id="search-box" style="display: none">
+        <!-- 2026-08-11 主界面=卡片导航，搜索框由「搜全网」展开 -->
+        <div style="display: flex; gap: 8px">
+          <input
+            type="text"
+            id="kw"
+            placeholder="说人话也行：帮我看石头岛的外套"
+            style="flex: 1"
+          />
+          <button
+            type="button"
+            onclick="startVoice()"
+            title="语音搜索"
+            style="
+              background: #fdf0e3;
+              border: none;
+              border-radius: 10px;
+              font-size: 20px;
+              cursor: pointer;
+              padding: 0 12px;
+            "
+          >
+            🎤
+          </button>
+          <button
+            type="button"
+            onclick="startPhoto()"
+            title="拍照找同款"
+            style="
+              background: #eaf2fb;
+              border: none;
+              border-radius: 10px;
+              font-size: 20px;
+              cursor: pointer;
+              padding: 0 12px;
+            "
+          >
+            📷
+          </button>
         </div>
-        <div id="progress" style="display:none;text-align:center;color:#0984e3;font-size:15px;margin-top:16px"></div>
-        <div id="sse-result"></div>
-        <!-- v6 游戏化加载画面 -->
-        <div id="loading-overlay">
-            <div class="loading-card">
-                <div class="loading-logo">🛒</div>
-                <div class="loading-title">正在为您绘制“旅游”路线…</div>
-                <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
-                <div class="loading-msg" id="loading-msg">准备行囊…</div>
-                <div class="loading-steps" id="loading-steps" style="text-align:left;margin:12px 8px;font-size:13px;line-height:2"></div>
-                <div class="loading-slogan">购物就是一场旅行，请放慢脚步，享受等待的美好。</div>
-            </div>
+        <input type="hidden" id="cat" value="" />
+        <div class="cats">
+          <div class="cat empty active" data-cat="">全部</div>
+          <div class="cat" data-cat="服饰">👗 服饰</div>
+          <div class="cat" data-cat="食品">🥛 食品</div>
+          <div class="cat" data-cat="日用百货">🧴 日用百货</div>
+          <div class="cat" data-cat="数码家电">💻 数码家电</div>
         </div>
-        <div class="quick">
-            <a class="q1" href="/guide">🤖 陪你出发</a>
+        <div class="mode-pick" id="mode-pick">
+          <label class="sel" onclick="pickMode('history', this)"
+            ><input type="radio" name="mode" value="history" checked />📚
+            看以往数据<small>（读库秒出，零弹窗）</small></label
+          >
+          <label onclick="pickMode('live', this)"
+            ><input type="radio" name="mode" value="live" />⚡ 实时报告<small
+              >（现场抓取最新，会启动后台浏览器）</small
+            ></label
+          >
         </div>
-        <!-- v2.0 游戏化：4 大地标卡片 -->
-        <div class="landmarks">
-            <a class="landmark lm-shop" href="javascript:showSearch()"><span class="lm-icon">🏪</span>搜全网<span class="lm-sub">淘宝京东拼多多一键比</span></a>
-            <a class="landmark lm-wander" href="/wander"><span class="lm-icon">🎡</span>逛一逛<span class="lm-sub">像刷小红书一样发现好物</span></a>
-            <a class="landmark lm-watch" href="/watches"><span class="lm-icon">📋</span>设个心理价<span class="lm-sub">跌到我就叫你</span></a>
-            <a class="landmark lm-card" href="/compare"><span class="lm-icon">🎁</span>出好价卡<span class="lm-sub">一键生成发给爸妈</span></a>
+        <div class="mode-tip" id="mode-tip">
+          ⚡ 实时模式：绕过缓存，现场抓淘宝+京东+拼多多
         </div>
-        <a class="btn-guide" href="/guide">🤖 陪你出发 — 拿不准买啥？跟我聊聊</a>
-        <div class="more-menu" style="margin:6px 0 16px;text-align:center;font-size:14px">
-            <a class="mm" href="/items">🛍️ 商品库</a><a class="mm" href="/crawl">📥 采集中心</a>
-            <a class="mm" href="javascript:openPrefs()">⚙️ 偏好</a><a class="mm" href="javascript:openPin()">🔒 密码</a><a class="mm" href="javascript:showUsage()">💰 AI费用</a>
-            <a class="mm" href="/submit">📝 录入好价</a><a class="mm" href="/hist">🕘 搜索历史</a>
+        <div
+          id="hot-words"
+          style="
+            margin-top: 10px;
+            font-size: 13px;
+            color: #b2bec3;
+            min-height: 20px;
+          "
+        ></div>
+        <button
+          type="button"
+          id="search-btn"
+          class="btn btn-tb"
+          onclick="doSearch()"
+        >
+          开始比价
+        </button>
+      </div>
+      <div
+        id="progress"
+        style="
+          display: none;
+          text-align: center;
+          color: #0984e3;
+          font-size: 15px;
+          margin-top: 16px;
+        "
+      ></div>
+      <div id="sse-result"></div>
+      <!-- v6 游戏化加载画面 -->
+      <div id="loading-overlay">
+        <div class="loading-card">
+          <div class="loading-logo">🛒</div>
+          <div class="loading-title">正在为您绘制“旅游”路线…</div>
+          <div class="loading-bar">
+            <div class="loading-fill" id="loading-fill"></div>
+          </div>
+          <div class="loading-msg" id="loading-msg">准备行囊…</div>
+          <div
+            class="loading-steps"
+            id="loading-steps"
+            style="
+              text-align: left;
+              margin: 12px 8px;
+              font-size: 13px;
+              line-height: 2;
+            "
+          ></div>
+          <div class="loading-slogan">
+            购物就是一场旅行，请放慢脚步，享受等待的美好。
+          </div>
         </div>
-        {% if error %}<div class="error">{{ error }}</div>{% endif %}
-        <div class="tips">提示：选品类比价更准（能按规格分组）<br><a href="/submit" style="color:#27ae60;font-size:14px;">📝 录入好价（补盲区）</a> ・ <a href="/watches" style="color:#0984e3;font-size:14px;">🎯 盯价清单</a></div>
+      </div>
+      <div class="quick">
+        <a class="q1" href="/guide">🤖 陪你出发</a>
+      </div>
+      <!-- v2.0 游戏化：4 大地标卡片 -->
+      <div class="landmarks">
+        <a class="landmark lm-shop" href="javascript:showSearch()"
+          ><span class="lm-icon">🏪</span>搜全网<span class="lm-sub"
+            >淘宝京东拼多多一键比</span
+          ></a
+        >
+        <a class="landmark lm-wander" href="/wander"
+          ><span class="lm-icon">🎡</span>逛一逛<span class="lm-sub"
+            >像刷小红书一样发现好物</span
+          ></a
+        >
+        <a class="landmark lm-watch" href="/watches"
+          ><span class="lm-icon">📋</span>设个心理价<span class="lm-sub"
+            >跌到我就叫你</span
+          ></a
+        >
+        <a class="landmark lm-card" href="/compare"
+          ><span class="lm-icon">🎁</span>出好价卡<span class="lm-sub"
+            >一键生成发给爸妈</span
+          ></a
+        >
+      </div>
+      <a class="btn-guide" href="/guide">🤖 陪你出发 — 拿不准买啥？跟我聊聊</a>
+      <div
+        class="more-menu"
+        style="margin: 6px 0 16px; text-align: center; font-size: 14px"
+      >
+        <a class="mm" href="/items">🛍️ 商品库</a
+        ><a class="mm" href="/crawl">📥 采集中心</a>
+        <a class="mm" href="javascript:openPrefs()">⚙️ 偏好</a
+        ><a class="mm" href="javascript:openPin()">🔒 密码</a
+        ><a class="mm" href="javascript:showUsage()">💰 AI费用</a>
+        <a class="mm" href="/submit">📝 录入好价</a
+        ><a class="mm" href="/hist">🕘 搜索历史</a>
+      </div>
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
+      <div class="tips">
+        提示：选品类比价更准（能按规格分组）<br /><a
+          href="/submit"
+          style="color: #27ae60; font-size: 14px"
+          >📝 录入好价（补盲区）</a
+        >
+        ・
+        <a href="/watches" style="color: #0984e3; font-size: 14px"
+          >🎯 盯价清单</a
+        >
+      </div>
     </div>
     <script>
-        // 支持 ?q= 预填搜索词（对比页「改用对话」跳转）
-        var urlParams = new URLSearchParams(window.location.search);
-        var urlQ = urlParams.get('q');
-        if (urlQ) { document.getElementById('kw').value = urlQ; doSearch(); }
-        document.querySelectorAll('.cat').forEach(el => {
-            el.addEventListener('click', () => {
-                document.querySelectorAll('.cat').forEach(e => e.classList.remove('active'));
-                el.classList.add('active');
-                document.getElementById('cat').value = el.dataset.cat;
-            });
+      // 支持 ?q= 预填搜索词（对比页「改用对话」跳转）
+      var urlParams = new URLSearchParams(window.location.search);
+      var urlQ = urlParams.get("q");
+      if (urlQ) {
+        document.getElementById("kw").value = urlQ;
+        doSearch();
+      }
+      document.querySelectorAll(".cat").forEach((el) => {
+        el.addEventListener("click", () => {
+          document
+            .querySelectorAll(".cat")
+            .forEach((e) => e.classList.remove("active"));
+          el.classList.add("active");
+          document.getElementById("cat").value = el.dataset.cat;
         });
+      });
 
-        function tbSearch() {
-            var btn = document.getElementById('tb-btn');
-            if (!btn) return;
-            btn.disabled = true;
-            document.getElementById('tb-loading').style.display = 'block';
-            fetch('/search_tb?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()))
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('tb-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>'; }
-                    else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
-                                '<div class="info"><div class="title">' + (it.is_p4p ? '【广告】' : '') + (it.is_tmall ? '【天猫】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + (it.shop_name || '') + ' ・ ' + (it.province || '') + ' ・ ' + (it.real_sales || '') + '</div></div>' +
-                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => { document.getElementById('tb-loading').style.display = 'none'; btn.disabled = false; });
-        }
-        function jdSearch() {
-            var btn = document.getElementById('jd-btn');
-            if (!btn) return;
-            btn.disabled = true;
-            document.getElementById('jd-loading').style.display = 'block';
-            fetch('/search_jd?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()), {timeout: 60000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('jd-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">京东没搜到或遇到验证码</div>'; }
-                    else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 京东结果（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
-                                '<div class="info"><div class="title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + (it.shop || '') + ' ・ ' + (it.sales || '') + '</div></div>' +
-                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => { document.getElementById('jd-loading').style.display = 'none'; btn.disabled = false; });
-        }
-        function biliSearch() {
-            var btn = document.getElementById('bili-btn');
-            if (!btn) return;
-            btn.disabled = true;
-            document.getElementById('bili-loading').style.display = 'block';
-            fetch('/search_bili?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()), {timeout: 180000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('bili-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">没搜到相关内容</div>'; }
-                    else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">📺 内容联动（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            var isBili = it.type === 'bili';
-                            var isXhs = it.type === 'xhs';
-                            var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
-                            var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                            var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                              : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
-                                                       : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
-                            if (it.score) {
-                                var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
-                                meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
-                                if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
-                                    meta += '<br>👎 负面 ' + it.sent.neg + ' 条' + (it.sent.ad ? ' ⚠️软广嫌疑 ' + it.sent.ad + ' 条' : '');
-                                    if (it.sent.neg > 3) meta += ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
-                                }
-                                if (it.flags && it.flags.length) meta += '<br><span style="color:#95a5a6">' + it.flags.join(' / ') + '</span>';
-                            }
-                            html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
-                                '<div class="info"><div class="title">' + it.title + '</div>' +
-                                '<div class="shop">' + meta + '</div></div>' +
-                                (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">' + (isBili ? '观看 ↗' : '帖子 ↗') + '</a>' : '') + '</div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => { document.getElementById('bili-loading').style.display = 'none'; btn.disabled = false; });
-        }
-
-
-        var guideRound = 0;
-        function renderGuide(options, kw, prog, box) {
-            guideRound += 1;
-            var html = '<div class="group" style="border:2px solid #ff6b35"><div class="group-head">' +
-                '<span class="sku">🤔 结果较多，你想要哪个？</span></div>';
-            options.forEach(function(opt) {
-                var isCustom = opt.search_kw === '__custom__';
-                html += '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
-                    'onclick="guideSelect(this)" data-kw="' + (isCustom ? '__custom__' : opt.search_kw) + '" data-label="' + opt.label + '">' +
-                    '<div class="info"><div class="title">' + (isCustom ? '✏️ ' : '') + opt.label + '</div>' +
-                    (opt.price_hint ? '<div class="shop">💰 ' + opt.price_hint + '</div>' : '') +
-                    (isCustom ? '<div class="shop">告诉我你想要什么样的，我来帮你找</div>' : '') +
-                    '</div><div style="color:#ff6b35;font-size:20px">›</div></div>';
-            });
-            html += '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
-            var div = document.createElement('div');
-            div.id = 'guide-box';
-            div.innerHTML = html;
-            box.parentNode.insertBefore(div, box);
-            document.getElementById('guide-round') ? null : (function(){
-                var inp = document.createElement('input');
-                inp.type = 'hidden'; inp.id = 'guide-round'; inp.value = '0';
-                document.body.appendChild(inp);
-            })();
-            document.getElementById('guide-round').value = guideRound;
-        }
-        function guideSelect(el) { var kw2 = el.getAttribute('data-kw'); var label = el.getAttribute('data-label');
-            if (kw2 === '__custom__') {
-                var desc = prompt('请描述你想要的商品（例如：14寸轻薄本，续航好）');
-                if (!desc) return;
-                document.getElementById('kw').value = desc;
+      function tbSearch() {
+        var btn = document.getElementById("tb-btn");
+        if (!btn) return;
+        btn.disabled = true;
+        document.getElementById("tb-loading").style.display = "block";
+        fetch(
+          "/search_tb?keyword=" +
+            encodeURIComponent(document.getElementById("kw").value.trim()),
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("tb-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>';
             } else {
-                document.getElementById('kw').value = kw2;
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                html +=
+                  '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
+                  '<div class="info"><div class="title">' +
+                  (it.is_p4p ? "【广告】" : "") +
+                  (it.is_tmall ? "【天猫】" : "") +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  (it.shop_name || "") +
+                  " ・ " +
+                  (it.province || "") +
+                  " ・ " +
+                  (it.real_sales || "") +
+                  "</div></div>" +
+                  '<div class="price"><div class="now">¥' +
+                  (it.price || "?") +
+                  "</div></div></div>";
+              });
+              box.innerHTML = html + "</div>";
             }
-            document.getElementById('guide-round').value = guideRound;
-            document.getElementById('sse-result').innerHTML = '';
-            var gb = document.getElementById('guide-box');
-            if (gb) gb.remove();
-            doSearch();
-        }
-
-        function renderNeed(q, options) {
-            var html = '<div class="group" style="border:2px solid #0984e3"><div class="group-head"><span class="sku">' + q + '</span></div>';
-            options.forEach(function(opt) {
-                html += '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
-                    'onclick="needSelect(this)" data-val="' + opt.value + '">' +
-                    '<div class="info"><div class="title">' + opt.label + '</div></div>' +
-                    '<div style="color:#0984e3;font-size:20px">›</div></div>';
-            });
-            html += '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
-            var div = document.createElement('div');
-            div.id = 'need-box';
-            div.innerHTML = html;
-            document.getElementById('sse-result').insertAdjacentElement('afterbegin', div);
-        }
-        function needSelect(el) {
-            var val = el.getAttribute('data-val');
-            if (val !== 'skip') { sessionStorage.setItem('gobuy_budget', val); }
-            else { sessionStorage.removeItem('gobuy_budget'); }
-            if (!document.getElementById('guide-round')) {
-                var inp = document.createElement('input');
-                inp.type = 'hidden'; inp.id = 'guide-round'; inp.value = '0';
-                document.body.appendChild(inp);
-            }
-            document.getElementById('guide-round').value = '1';
-            document.getElementById('sse-result').innerHTML = '';
-            var nb = document.getElementById('need-box');
-            if (nb) nb.remove();
-            doSearch();
-        }
-        function clearBudget() {
-            sessionStorage.removeItem('gobuy_budget');
-            var gb = document.getElementById('guide-box');
-            if (gb) gb.remove();
-            doSearch();
-        }
-        function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
-        function openPin() {
-            // 2026-08-13 family_pin（小布🔴2）：设置/修改/清除访问密码
-            var np = prompt('设置访问密码（家人共用时防误操作；留空=清除）：', '');
-            if (np === null) return;
-            var fd = new FormData();
-            fd.append('pin', np);
-            fd.append('old_pin', '');
-            fetch('/api/set_pin', {method: 'POST', body: fd}).then(r => r.json()).then(function(d) {
-                if (d.ok) { alert(d.msg); if (np) { localStorage.setItem('gobuy_pin', np); } else { localStorage.removeItem('gobuy_pin'); } return; }
-                var op = prompt('需要旧密码（首次设置可跳过）：', '');
-                if (op === null) return;
-                var fd2 = new FormData();
-                fd2.append('pin', np);
-                fd2.append('old_pin', op);
-                fetch('/api/set_pin', {method: 'POST', body: fd2}).then(r => r.json()).then(function(d2) {
-                    alert(d2.msg);
-                    if (d2.ok) { if (np) { localStorage.setItem('gobuy_pin', np); } else { localStorage.removeItem('gobuy_pin'); } }
-                });
-            });
-        }
-        function openPrefs() {
-            var p = prompt('排除平台（逗号分隔，如：拼多多,京东；留空清除）：', '');
-            if (p === null) return;
-            var fd = new FormData();
-            fd.append('prefs', p);
-            fetch(pinUrl('/api/prefs', {method: 'POST', body: fd}).then(r => r.json()).then(d => alert(d.msg));
-        }
-        function showUsage() {
-            fetch('/api/usage').then(r => r.json()).then(d => {
-                var lines = (d.by_scene || []).map(function(s) { return s.scene + '：' + s.n + ' 次 ¥' + s.cost.toFixed(3); }).join('\n');
-                var cacheLine = '⚡ 缓存命中率：' + (d.hit_rate || 0) + '%（省约 ¥' + (d.cache_saved || 0).toFixed(3) + '）';
-                alert('🤖 本月 AI 费用：¥' + d.month_cost.toFixed(3) + '（' + d.calls + ' 次调用）\n' + cacheLine + '\n\n' + (lines || '暂无记录'));
-            });
-        }
-        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-        // ===== v6 多用户：角色切换（localStorage，WorkBuddy 定案）=====
-        var FAMILY = [];  // 品类库（后端拉）
-        function getMembers() {
-            try { return JSON.parse(localStorage.getItem('gobuy_members') || '[]'); }
-            catch (e) { return []; }
-        }
-        function saveMembers(m) { localStorage.setItem('gobuy_members', JSON.stringify(m)); }
-        function getCurrent() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
-        function setCurrent(n) { localStorage.setItem('gobuy_current', n); }
-        function loadFamily() {
-            fetch(pinUrl('/api/family').then(r => r.json()).then(d => {
-                FAMILY = d.categories || [];
-                renderRole();
-            });
-        }
-        function renderRole() {
-            var members = getMembers();
-            var cur = getCurrent();
-            if (!members.some(m => m.name === cur)) {
-                members.unshift({name: cur, categories: []});
-                saveMembers(members);
-            }
-            document.getElementById('role-name').innerText = cur;
-            // 角色菜单
-            var menu = document.getElementById('role-menu');
-            menu.innerHTML = members.map(function(m) {
-                return '<div style="padding:8px 12px;cursor:pointer;border-radius:8px" ' +
-                    (m.name === cur ? 'style="padding:8px 12px;cursor:pointer;border-radius:8px;background:#eaf2fb;color:#0984e3"' : '') +
-                    ' onmouseover="this.style.background=&#39;#f8f9fa&#39;" onmouseout="this.style.background=&#39;&#39;" ' +
-                    'onclick="switchRole(\'' + esc(m.name) + '\')">👤 ' + esc(m.name) +
-                    (m.categories && m.categories.length ? ' <span style="color:#b2bec3;font-size:12px">' + m.categories.length + ' 个品类</span>' : '') + '</div>';
-            }).join('') +
-            '<div style="padding:8px 12px;cursor:pointer;color:#27ae60;border-top:1px solid #eee" onclick="openAddMember()">➕ 添加成员</div>' +
-            '<div style="padding:8px 12px;cursor:pointer;color:#0984e3;border-top:1px solid #eee" onclick="openInvite()">🔑 邀请码（给亲戚用）</div>';
-            // 品类卡片
-            var me = members.find(m => m.name === cur) || {name: cur, categories: []};
-            var cats = document.getElementById('member-cats');
-            if (me.categories && me.categories.length) {
-                cats.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
-                    me.categories.map(function(c) {
-                        return '<a href="/items?cat=' + encodeURIComponent(c) + '" style="background:#fff;border:2px solid #dfe6e9;border-radius:12px;padding:8px 16px;font-size:14px;color:#2d3436;text-decoration:none">' + esc(c) + ' →</a>';
-                    }).join('') + '</div>';
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("tb-loading").style.display = "none";
+            btn.disabled = false;
+          });
+      }
+      function jdSearch() {
+        var btn = document.getElementById("jd-btn");
+        if (!btn) return;
+        btn.disabled = true;
+        document.getElementById("jd-loading").style.display = "block";
+        fetch(
+          "/search_jd?keyword=" +
+            encodeURIComponent(document.getElementById("kw").value.trim()),
+          { timeout: 60000 },
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("jd-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">京东没搜到或遇到验证码</div>';
             } else {
-                cats.innerHTML = '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:10px">还没选品类，点「➕ 添加成员」或右上角 👤 设置你的品类（如：女士服装、护肤品）</div>';
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">🛒 京东结果（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                html +=
+                  '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
+                  '<div class="info"><div class="title">' +
+                  (it.is_ad ? "【广告】" : "") +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  (it.shop || "") +
+                  " ・ " +
+                  (it.sales || "") +
+                  "</div></div>" +
+                  '<div class="price"><div class="now">¥' +
+                  (it.price || "?") +
+                  "</div></div></div>";
+              });
+              box.innerHTML = html + "</div>";
             }
-            loadProfile(cur);  // v6 用户记忆：最近关注
-        }
-        function loadProfile(user) {
-            fetch('/api/profile?user=' + encodeURIComponent(user)).then(r => r.json()).then(d => {
-                var box = document.getElementById('recent-searches');
-                if (!box) return;
-                if (d.recent && d.recent.length) {
-                    box.innerHTML = '<div style="background:#f8f9fa;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#636e72">🕐 ' + esc(d.user) + ' 最近关注：' +
-                        d.recent.slice(0, 8).map(function(r) {
-                            return '<a href="javascript:quickSearch(\'' + esc(r.keyword).replace(/'/g, "\\'") + '\')" style="color:#0984e3;text-decoration:none;margin:0 6px">' + esc(r.keyword) + '</a>';
-                        }).join('・') + '</div>';
-                } else {
-                    box.innerHTML = '';
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("jd-loading").style.display = "none";
+            btn.disabled = false;
+          });
+      }
+      function biliSearch() {
+        var btn = document.getElementById("bili-btn");
+        if (!btn) return;
+        btn.disabled = true;
+        document.getElementById("bili-loading").style.display = "block";
+        fetch(
+          "/search_bili?keyword=" +
+            encodeURIComponent(document.getElementById("kw").value.trim()),
+          { timeout: 180000 },
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("bili-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">没搜到相关内容</div>';
+            } else {
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">📺 内容联动（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                var isBili = it.type === "bili";
+                var isXhs = it.type === "xhs";
+                var platStyle = isBili
+                  ? "background:#00a1d6"
+                  : isXhs
+                    ? "background:#ff2442"
+                    : "background:#4a90d9";
+                var platName = isBili ? "B站" : isXhs ? "小红书" : "贴吧";
+                var meta = isBili
+                  ? "UP主: " +
+                    esc(it.author) +
+                    " ・ 播放 " +
+                    it.play +
+                    " ・ 点赞 " +
+                    it.like
+                  : isXhs
+                    ? "作者: " + esc(it.author) + " ・ 赞 " + it.like
+                    : "作者: " + esc(it.author) + " ・ 吧: " + esc(it.desc);
+                if (it.score) {
+                  var star =
+                    "★".repeat(Math.max(1, Math.round(it.score / 20))) +
+                    "☆".repeat(5 - Math.max(1, Math.round(it.score / 20)));
+                  meta += "<br>⭐ 可信度 " + star + " " + it.score + "/100";
+                  if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
+                    meta +=
+                      "<br>👎 负面 " +
+                      it.sent.neg +
+                      " 条" +
+                      (it.sent.ad ? " ⚠️软广嫌疑 " + it.sent.ad + " 条" : "");
+                    if (it.sent.neg > 3)
+                      meta +=
+                        ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
+                  }
+                  if (it.flags && it.flags.length)
+                    meta +=
+                      '<br><span style="color:#95a5a6">' +
+                      it.flags.join(" / ") +
+                      "</span>";
                 }
+                html +=
+                  '<div class="item"><span class="plat" style="' +
+                  platStyle +
+                  ';color:#fff">' +
+                  platName +
+                  "</span>" +
+                  '<div class="info"><div class="title">' +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  meta +
+                  "</div></div>" +
+                  (it.url
+                    ? '<a class="link" href="' +
+                      it.url +
+                      '" target="_blank" rel="noopener">' +
+                      (isBili ? "观看 ↗" : "帖子 ↗") +
+                      "</a>"
+                    : "") +
+                  "</div>";
+              });
+              box.innerHTML = html + "</div>";
+            }
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("bili-loading").style.display = "none";
+            btn.disabled = false;
+          });
+      }
+
+      var guideRound = 0;
+      function renderGuide(options, kw, prog, box) {
+        guideRound += 1;
+        var html =
+          '<div class="group" style="border:2px solid #ff6b35"><div class="group-head">' +
+          '<span class="sku">🤔 结果较多，你想要哪个？</span></div>';
+        options.forEach(function (opt) {
+          var isCustom = opt.search_kw === "__custom__";
+          html +=
+            '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
+            'onclick="guideSelect(this)" data-kw="' +
+            (isCustom ? "__custom__" : opt.search_kw) +
+            '" data-label="' +
+            opt.label +
+            '">' +
+            '<div class="info"><div class="title">' +
+            (isCustom ? "✏️ " : "") +
+            opt.label +
+            "</div>" +
+            (opt.price_hint
+              ? '<div class="shop">💰 ' + opt.price_hint + "</div>"
+              : "") +
+            (isCustom
+              ? '<div class="shop">告诉我你想要什么样的，我来帮你找</div>'
+              : "") +
+            '</div><div style="color:#ff6b35;font-size:20px">›</div></div>';
+        });
+        html +=
+          '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
+        var div = document.createElement("div");
+        div.id = "guide-box";
+        div.innerHTML = html;
+        box.parentNode.insertBefore(div, box);
+        document.getElementById("guide-round")
+          ? null
+          : (function () {
+              var inp = document.createElement("input");
+              inp.type = "hidden";
+              inp.id = "guide-round";
+              inp.value = "0";
+              document.body.appendChild(inp);
+            })();
+        document.getElementById("guide-round").value = guideRound;
+      }
+      function guideSelect(el) {
+        var kw2 = el.getAttribute("data-kw");
+        var label = el.getAttribute("data-label");
+        if (kw2 === "__custom__") {
+          var desc = prompt("请描述你想要的商品（例如：14寸轻薄本，续航好）");
+          if (!desc) return;
+          document.getElementById("kw").value = desc;
+        } else {
+          document.getElementById("kw").value = kw2;
+        }
+        document.getElementById("guide-round").value = guideRound;
+        document.getElementById("sse-result").innerHTML = "";
+        var gb = document.getElementById("guide-box");
+        if (gb) gb.remove();
+        doSearch();
+      }
+
+      function renderNeed(q, options) {
+        var html =
+          '<div class="group" style="border:2px solid #0984e3"><div class="group-head"><span class="sku">' +
+          q +
+          "</span></div>";
+        options.forEach(function (opt) {
+          html +=
+            '<div class="item" style="cursor:pointer;border:1.5px solid #dfe6e9;margin-bottom:8px" ' +
+            'onclick="needSelect(this)" data-val="' +
+            opt.value +
+            '">' +
+            '<div class="info"><div class="title">' +
+            opt.label +
+            "</div></div>" +
+            '<div style="color:#0984e3;font-size:20px">›</div></div>';
+        });
+        html +=
+          '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-top:6px">或直接浏览下方全部结果 ↓</div></div>';
+        var div = document.createElement("div");
+        div.id = "need-box";
+        div.innerHTML = html;
+        document
+          .getElementById("sse-result")
+          .insertAdjacentElement("afterbegin", div);
+      }
+      function needSelect(el) {
+        var val = el.getAttribute("data-val");
+        if (val !== "skip") {
+          sessionStorage.setItem("gobuy_budget", val);
+        } else {
+          sessionStorage.removeItem("gobuy_budget");
+        }
+        if (!document.getElementById("guide-round")) {
+          var inp = document.createElement("input");
+          inp.type = "hidden";
+          inp.id = "guide-round";
+          inp.value = "0";
+          document.body.appendChild(inp);
+        }
+        document.getElementById("guide-round").value = "1";
+        document.getElementById("sse-result").innerHTML = "";
+        var nb = document.getElementById("need-box");
+        if (nb) nb.remove();
+        doSearch();
+      }
+      function clearBudget() {
+        sessionStorage.removeItem("gobuy_budget");
+        var gb = document.getElementById("guide-box");
+        if (gb) gb.remove();
+        doSearch();
+      }
+      function pinUrl(u) {
+        var p = localStorage.getItem("gobuy_pin");
+        return p
+          ? u +
+              (u.indexOf("?") > -1 ? "&" : "?") +
+              "pin=" +
+              encodeURIComponent(p)
+          : u;
+      }
+      function openPin() {
+        // 2026-08-13 family_pin（小布🔴2）：设置/修改/清除访问密码
+        var np = prompt("设置访问密码（家人共用时防误操作；留空=清除）：", "");
+        if (np === null) return;
+        var fd = new FormData();
+        fd.append("pin", np);
+        fd.append("old_pin", "");
+        fetch("/api/set_pin", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then(function (d) {
+            if (d.ok) {
+              alert(d.msg);
+              if (np) {
+                localStorage.setItem("gobuy_pin", np);
+              } else {
+                localStorage.removeItem("gobuy_pin");
+              }
+              return;
+            }
+            var op = prompt("需要旧密码（首次设置可跳过）：", "");
+            if (op === null) return;
+            var fd2 = new FormData();
+            fd2.append("pin", np);
+            fd2.append("old_pin", op);
+            fetch("/api/set_pin", { method: "POST", body: fd2 })
+              .then((r) => r.json())
+              .then(function (d2) {
+                alert(d2.msg);
+                if (d2.ok) {
+                  if (np) {
+                    localStorage.setItem("gobuy_pin", np);
+                  } else {
+                    localStorage.removeItem("gobuy_pin");
+                  }
+                }
+              });
+          });
+      }
+      function openPrefs() {
+        var p = prompt("排除平台（逗号分隔，如：拼多多,京东；留空清除）：", "");
+        if (p === null) return;
+        var fd = new FormData();
+        fd.append("prefs", p);
+        fetch(pinUrl("/api/prefs"), { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => alert(d.msg));
+      }
+      function showUsage() {
+        fetch("/api/usage")
+          .then((r) => r.json())
+          .then((d) => {
+            var lines = (d.by_scene || [])
+              .map(function (s) {
+                return s.scene + "：" + s.n + " 次 ¥" + s.cost.toFixed(3);
+              })
+              .join("\n");
+            var cacheLine =
+              "⚡ 缓存命中率：" +
+              (d.hit_rate || 0) +
+              "%（省约 ¥" +
+              (d.cache_saved || 0).toFixed(3) +
+              "）";
+            alert(
+              "🤖 本月 AI 费用：¥" +
+                d.month_cost.toFixed(3) +
+                "（" +
+                d.calls +
+                " 次调用）\n" +
+                cacheLine +
+                "\n\n" +
+                (lines || "暂无记录"),
+            );
+          });
+      }
+      function esc(s) {
+        return (s == null ? "" : String(s))
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      // ===== v6 多用户：角色切换（localStorage，WorkBuddy 定案）=====
+      var FAMILY = []; // 品类库（后端拉）
+      function getMembers() {
+        try {
+          return JSON.parse(localStorage.getItem("gobuy_members") || "[]");
+        } catch (e) {
+          return [];
+        }
+      }
+      function saveMembers(m) {
+        localStorage.setItem("gobuy_members", JSON.stringify(m));
+      }
+      function getCurrent() {
+        return localStorage.getItem("gobuy_current") || "嘉铭";
+      }
+      function setCurrent(n) {
+        localStorage.setItem("gobuy_current", n);
+      }
+      function loadFamily() {
+        fetch(pinUrl("/api/family"))
+          .then((r) => r.json())
+          .then((d) => {
+            FAMILY = d.categories || [];
+            renderRole();
+          });
+      }
+      function renderRole() {
+        var members = getMembers();
+        var cur = getCurrent();
+        if (!members.some((m) => m.name === cur)) {
+          members.unshift({ name: cur, categories: [] });
+          saveMembers(members);
+        }
+        document.getElementById("role-name").innerText = cur;
+        // 角色菜单
+        var menu = document.getElementById("role-menu");
+        menu.innerHTML =
+          members
+            .map(function (m) {
+              return (
+                '<div style="padding:8px 12px;cursor:pointer;border-radius:8px" ' +
+                (m.name === cur
+                  ? 'style="padding:8px 12px;cursor:pointer;border-radius:8px;background:#eaf2fb;color:#0984e3"'
+                  : "") +
+                ' onmouseover="this.style.background=&#39;#f8f9fa&#39;" onmouseout="this.style.background=&#39;&#39;" ' +
+                "onclick=\"switchRole('" +
+                esc(m.name) +
+                "')\">👤 " +
+                esc(m.name) +
+                (m.categories && m.categories.length
+                  ? ' <span style="color:#b2bec3;font-size:12px">' +
+                    m.categories.length +
+                    " 个品类</span>"
+                  : "") +
+                "</div>"
+              );
+            })
+            .join("") +
+          '<div style="padding:8px 12px;cursor:pointer;color:#27ae60;border-top:1px solid #eee" onclick="openAddMember()">➕ 添加成员</div>' +
+          '<div style="padding:8px 12px;cursor:pointer;color:#0984e3;border-top:1px solid #eee" onclick="openInvite()">🔑 邀请码（给亲戚用）</div>';
+        // 品类卡片
+        var me = members.find((m) => m.name === cur) || {
+          name: cur,
+          categories: [],
+        };
+        var cats = document.getElementById("member-cats");
+        if (me.categories && me.categories.length) {
+          cats.innerHTML =
+            '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+            me.categories
+              .map(function (c) {
+                return (
+                  '<a href="/items?cat=' +
+                  encodeURIComponent(c) +
+                  '" style="background:#fff;border:2px solid #dfe6e9;border-radius:12px;padding:8px 16px;font-size:14px;color:#2d3436;text-decoration:none">' +
+                  esc(c) +
+                  " →</a>"
+                );
+              })
+              .join("") +
+            "</div>";
+        } else {
+          cats.innerHTML =
+            '<div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:10px">还没选品类，点「➕ 添加成员」或右上角 👤 设置你的品类（如：女士服装、护肤品）</div>';
+        }
+        loadProfile(cur); // v6 用户记忆：最近关注
+      }
+      function loadProfile(user) {
+        fetch("/api/profile?user=" + encodeURIComponent(user))
+          .then((r) => r.json())
+          .then((d) => {
+            var box = document.getElementById("recent-searches");
+            if (!box) return;
+            if (d.recent && d.recent.length) {
+              box.innerHTML =
+                '<div style="background:#f8f9fa;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#636e72">🕐 ' +
+                esc(d.user) +
+                " 最近关注：" +
+                d.recent
+                  .slice(0, 8)
+                  .map(function (r) {
+                    return (
+                      "<a href=\"javascript:quickSearch('" +
+                      esc(r.keyword).replace(/'/g, "\\'") +
+                      '\')" style="color:#0984e3;text-decoration:none;margin:0 6px">' +
+                      esc(r.keyword) +
+                      "</a>"
+                    );
+                  })
+                  .join("・") +
+                "</div>";
+            } else {
+              box.innerHTML = "";
+            }
+          });
+      }
+      // ===== v8 邀请码（WorkBuddy 设计：管理端生成 / 亲戚端输入）=====
+      function openInvite() {
+        var action = prompt(
+          "邀请码做什么？\n1. 生成新码（给亲戚）\n2. 输入码加入（我是亲戚）",
+          "1",
+        );
+        if (action === null) return;
+        if (action === "1") {
+          var name = prompt("给谁用？（如：妈妈）");
+          if (!name) return;
+          var cats = prompt("她的品类（逗号分隔，如：女士服装,护肤品）：", "");
+          var picked = cats
+            ? cats
+                .replace(/，/g, ",")
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [];
+          var fd = new FormData();
+          fd.append("user_name", name);
+          fd.append("categories", JSON.stringify(picked));
+          fetch("/api/invite_gen", { method: "POST", body: fd })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.ok) {
+                alert(
+                  "✅ 邀请码生成：" +
+                    d.code +
+                    "\n把这个码发给" +
+                    name +
+                    "，让 TA 打开网页点「🔑 邀请码」输入即可\n（一个码只能用一次）",
+                );
+              } else {
+                alert(d.msg);
+              }
+            });
+        } else {
+          var code = prompt("请输入邀请码（格式 Go-xxxx）：");
+          if (!code) return;
+          var devId =
+            localStorage.getItem("gobuy_device") ||
+            "dev-" + Math.random().toString(36).slice(2, 10);
+          localStorage.setItem("gobuy_device", devId);
+          var fd = new FormData();
+          fd.append("code", code.trim());
+          fd.append("device_id", devId);
+          fetch("/api/invite_use", { method: "POST", body: fd })
+            .then((r) => r.json())
+            .then((d) => {
+              if (!d.ok) {
+                alert(d.msg);
+                return;
+              }
+              var cats = [];
+              try {
+                cats = JSON.parse(d.categories || "[]");
+              } catch (e) {}
+              var members = getMembers();
+              if (!members.some((m) => m.name === d.user_name)) {
+                members.push({ name: d.user_name, categories: cats });
+              } else {
+                members.find((m) => m.name === d.user_name).categories = cats;
+              }
+              saveMembers(members);
+              setCurrent(d.user_name);
+              renderRole();
+              alert(
+                "🎉 欢迎 " +
+                  d.user_name +
+                  "！你的角色已创建：" +
+                  (cats.length ? cats.join("、") : "全部品类") +
+                  "\n以后打开网页就是你的界面了",
+              );
             });
         }
-        // ===== v8 邀请码（WorkBuddy 设计：管理端生成 / 亲戚端输入）=====
-        function openInvite() {
-            var action = prompt('邀请码做什么？\n1. 生成新码（给亲戚）\n2. 输入码加入（我是亲戚）', '1');
-            if (action === null) return;
-            if (action === '1') {
-                var name = prompt('给谁用？（如：妈妈）');
-                if (!name) return;
-                var cats = prompt('她的品类（逗号分隔，如：女士服装,护肤品）：', '');
-                var picked = cats ? cats.replace(/，/g, ',').split(',').map(s => s.trim()).filter(Boolean) : [];
-                var fd = new FormData();
-                fd.append('user_name', name);
-                fd.append('categories', JSON.stringify(picked));
-                fetch('/api/invite_gen', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                    if (d.ok) {
-                        alert('✅ 邀请码生成：' + d.code + '\n把这个码发给' + name + '，让 TA 打开网页点「🔑 邀请码」输入即可\n（一个码只能用一次）');
-                    } else { alert(d.msg); }
-                });
-            } else {
-                var code = prompt('请输入邀请码（格式 Go-xxxx）：');
-                if (!code) return;
-                var devId = localStorage.getItem('gobuy_device') || ('dev-' + Math.random().toString(36).slice(2, 10));
-                localStorage.setItem('gobuy_device', devId);
-                var fd = new FormData();
-                fd.append('code', code.trim());
-                fd.append('device_id', devId);
-                fetch('/api/invite_use', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                    if (!d.ok) { alert(d.msg); return; }
-                    var cats = [];
-                    try { cats = JSON.parse(d.categories || '[]'); } catch (e) {}
-                    var members = getMembers();
-                    if (!members.some(m => m.name === d.user_name)) {
-                        members.push({name: d.user_name, categories: cats});
-                    } else {
-                        members.find(m => m.name === d.user_name).categories = cats;
-                    }
-                    saveMembers(members);
-                    setCurrent(d.user_name);
-                    renderRole();
-                    alert('🎉 欢迎 ' + d.user_name + '！你的角色已创建：' + (cats.length ? cats.join('、') : '全部品类') + '\n以后打开网页就是你的界面了');
-                });
-            }
+      }
+      function quickSearch(kw) {
+        document.getElementById("kw").value = kw;
+        doSearch();
+      }
+      function toggleRoleMenu() {
+        var m = document.getElementById("role-menu");
+        m.style.display = m.style.display === "none" ? "block" : "none";
+      }
+      function switchRole(name) {
+        setCurrent(name);
+        document.getElementById("role-menu").style.display = "none";
+        renderRole();
+      }
+      function openAddMember() {
+        var name = prompt("成员名字（如：妈妈）：");
+        if (!name) return;
+        var cats = FAMILY.map(function (c) {
+          return c.name;
+        });
+        var picks = prompt(
+          "选择品类（逗号分隔，可多选）：\n\n" + cats.join("、"),
+        );
+        if (picks === null) return;
+        var picked = picks
+          ? picks
+              .replace(/，/g, ",")
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => cats.includes(s))
+          : [];
+        var members = getMembers();
+        if (!members.some((m) => m.name === name)) {
+          members.push({ name: name, categories: picked });
+        } else {
+          members.find((m) => m.name === name).categories = picked;
         }
-        function quickSearch(kw) {
-            document.getElementById('kw').value = kw;
-            doSearch();
+        saveMembers(members);
+        setCurrent(name);
+        document.getElementById("role-menu").style.display = "none";
+        renderRole();
+        // 把该成员品类的采集词加入计划（后台准备数据）
+        if (picked.length) {
+          var fd = new FormData();
+          fd.append("categories", picked.join(","));
+          fetch(pinUrl("/api/family_tasks"), { method: "POST", body: fd }).then(
+            (r) => r.json(),
+          );
         }
-        function toggleRoleMenu() {
-            var m = document.getElementById('role-menu');
-            m.style.display = m.style.display === 'none' ? 'block' : 'none';
-        }
-        function switchRole(name) {
-            setCurrent(name);
-            document.getElementById('role-menu').style.display = 'none';
-            renderRole();
-        }
-        function openAddMember() {
-            var name = prompt('成员名字（如：妈妈）：');
-            if (!name) return;
-            var cats = FAMILY.map(function(c) { return c.name; });
-            var picks = prompt('选择品类（逗号分隔，可多选）：\n\n' + cats.join('、'));
-            if (picks === null) return;
-            var picked = picks ? picks.replace(/，/g, ',').split(',').map(s => s.trim()).filter(s => cats.includes(s)) : [];
-            var members = getMembers();
-            if (!members.some(m => m.name === name)) {
-                members.push({name: name, categories: picked});
-            } else {
-                members.find(m => m.name === name).categories = picked;
-            }
-            saveMembers(members);
-            setCurrent(name);
-            document.getElementById('role-menu').style.display = 'none';
-            renderRole();
-            // 把该成员品类的采集词加入计划（后台准备数据）
-            if (picked.length) {
-                var fd = new FormData();
-                fd.append('categories', picked.join(','));
-                fetch(pinUrl('/api/family_tasks', {method: 'POST', body: fd}).then(r => r.json());
-            }
-        }
-        function showLoading() {
-            var ov = document.getElementById('loading-overlay');
-            ov.style.display = 'flex';
-            document.getElementById('loading-fill').style.width = '8%';
-            document.getElementById('loading-msg').innerText = '准备行囊…';
-            document.getElementById('loading-steps').innerHTML = '';
-            window._steps = {};
-        }
-        function updateStep(name, status) {
-            // 步骤可视化（Agent Part 借鉴）
-            var box = document.getElementById('loading-steps');
-            if (!box) return;
-            if (!window._steps) window._steps = {};
-            window._steps[name] = status;
-            var icons = {running: '<span style="color:#0984e3">🔄</span>', done: '<span style="color:#27ae60">✅</span>', failed: '<span style="color:#d63031">❌</span>'};   
-            box.innerHTML = Object.keys(window._steps).map(function(n) {
-                var st = window._steps[n];
-                return '<div>' + (icons[st] || '⏳') + ' ' + esc(n) + '</div>';
-            }).join('');
-        }
-        function advanceLoading(msg) {
-            var fill = document.getElementById('loading-fill');
-            var cur = parseFloat(fill.style.width) || 8;
-            fill.style.width = Math.min(cur + 14, 92) + '%';
-            document.getElementById('loading-msg').innerText = msg || '继续前进…';
-        }
-        function finishLoading() {
-            document.getElementById('loading-fill').style.width = '100%';
-            setTimeout(function() {
-                document.getElementById('loading-overlay').style.display = 'none';
+      }
+      function showLoading() {
+        var ov = document.getElementById("loading-overlay");
+        ov.style.display = "flex";
+        document.getElementById("loading-fill").style.width = "8%";
+        document.getElementById("loading-msg").innerText = "准备行囊…";
+        document.getElementById("loading-steps").innerHTML = "";
+        window._steps = {};
+      }
+      function updateStep(name, status) {
+        // 步骤可视化（Agent Part 借鉴）
+        var box = document.getElementById("loading-steps");
+        if (!box) return;
+        if (!window._steps) window._steps = {};
+        window._steps[name] = status;
+        var icons = {
+          running: '<span style="color:#0984e3">🔄</span>',
+          done: '<span style="color:#27ae60">✅</span>',
+          failed: '<span style="color:#d63031">❌</span>',
+        };
+        box.innerHTML = Object.keys(window._steps)
+          .map(function (n) {
+            var st = window._steps[n];
+            return "<div>" + (icons[st] || "⏳") + " " + esc(n) + "</div>";
+          })
+          .join("");
+      }
+      function advanceLoading(msg) {
+        var fill = document.getElementById("loading-fill");
+        var cur = parseFloat(fill.style.width) || 8;
+        fill.style.width = Math.min(cur + 14, 92) + "%";
+        document.getElementById("loading-msg").innerText = msg || "继续前进…";
+      }
+      function finishLoading() {
+        document.getElementById("loading-fill").style.width = "100%";
+        setTimeout(function () {
+          document.getElementById("loading-overlay").style.display = "none";
+        }, 400);
+      }
+      function hideLoading() {
+        document.getElementById("loading-overlay").style.display = "none";
+      }
+      function showSearch() {
+        var box = document.getElementById("search-box");
+        if (box) {
+          box.style.display = "block";
+          box.scrollIntoView({ behavior: "smooth", block: "center" });
+          var kw = document.getElementById("kw");
+          if (kw)
+            setTimeout(function () {
+              kw.focus();
             }, 400);
         }
-        function hideLoading() {
-            document.getElementById('loading-overlay').style.display = 'none';
+      }
+      // 2026-08-11 语音搜索（Web Speech API，Chrome/手机Chrome支持）
+      function startVoice() {
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+          alert("你的浏览器不支持语音识别，推荐用 Chrome");
+          return;
         }
-        function showSearch() {
-            var box = document.getElementById('search-box');
-            if (box) {
-                box.style.display = 'block';
-                box.scrollIntoView({behavior: 'smooth', block: 'center'});
-                var kw = document.getElementById('kw');
-                if (kw) setTimeout(function(){ kw.focus(); }, 400);
-            }
+        var rec = new SR();
+        rec.lang = "zh-CN";
+        rec.interimResults = false;
+        var btn = document.getElementById("voice-btn");
+        rec.onstart = function () {
+          if (btn) btn.style.background = "#ff6b35";
+        };
+        rec.onend = function () {
+          if (btn) btn.style.background = "#fdf0e3";
+        };
+        rec.onerror = function (e) {
+          alert("语音识别失败：" + (e.error || "未知"));
+        };
+        rec.onresult = function (e) {
+          var kw = e.results[0][0].transcript;
+          document.getElementById("kw").value = kw;
+          showSearch();
+          setTimeout(doSearch, 300);
+        };
+        rec.start();
+      }
+      // 2026-08-11 拍照辅助搜索（拍照→描述→搜；无图搜API，AI看图描述）
+      function startPhoto() {
+        var inp = document.createElement("input");
+        inp.type = "file";
+        inp.accept = "image/*";
+        inp.capture = "environment"; // 手机直接调后置摄像头
+        inp.onchange = function () {
+          var f = inp.files[0];
+          if (!f) return;
+          var desc = prompt("拍到了！用一句话描述它（如：黑色运动鞋）：");
+          if (desc && desc.trim()) {
+            document.getElementById("kw").value = desc.trim();
+            showSearch();
+            setTimeout(doSearch, 300);
+          }
+        };
+        inp.click();
+      }
+      // 2026-08-11 从陪你出发「立刻出发」跳回 → 自动展开搜索框（带对话上下文）
+      if (location.search.indexOf("search=1") >= 0) {
+        window.addEventListener("load", function () {
+          setTimeout(showSearch, 300);
+        });
+      }
+      function pickMode(mode, el) {
+        document.querySelectorAll("#mode-pick label").forEach(function (l) {
+          l.classList.remove("sel");
+        });
+        el.classList.add("sel");
+        var tip = document.getElementById("mode-tip");
+        tip.innerText =
+          mode === "live"
+            ? "⚡ 实时模式：现场抓取最新价（后台浏览器，约 30-60 秒）"
+            : "📚 历史模式：只读商品库，秒出（不爬取，零弹窗）";
+      }
+      var _searchTimer = null;
+      function _startSearchTimer() {
+        _stopSearchTimer();
+        var t0 = Date.now();
+        _searchTimer = setInterval(function () {
+          var sec = Math.round((Date.now() - t0) / 1000);
+          var msg = document.getElementById("loading-msg");
+          if (msg && sec % 15 === 0) {
+            msg.textContent =
+              "⏳ 已搜索 " +
+              sec +
+              " 秒，实时抓取中（淘宝/京东/拼多多/唯品会）…";
+          }
+        }, 1000);
+      }
+      function _stopSearchTimer() {
+        if (_searchTimer) {
+          clearInterval(_searchTimer);
+          _searchTimer = null;
         }
-        // 2026-08-11 语音搜索（Web Speech API，Chrome/手机Chrome支持）
-        function startVoice() {
-            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SR) { alert('你的浏览器不支持语音识别，推荐用 Chrome'); return; }
-            var rec = new SR();
-            rec.lang = 'zh-CN';
-            rec.interimResults = false;
-            var btn = document.getElementById('voice-btn');
-            rec.onstart = function() { if (btn) btn.style.background = '#ff6b35'; };
-            rec.onend = function() { if (btn) btn.style.background = '#fdf0e3'; };
-            rec.onerror = function(e) { alert('语音识别失败：' + (e.error || '未知')); };
-            rec.onresult = function(e) {
-                var kw = e.results[0][0].transcript;
-                document.getElementById('kw').value = kw;
-                showSearch();
-                setTimeout(doSearch, 300);
-            };
-            rec.start();
+      }
+      function doSearch() {
+        var kw = document.getElementById("kw").value.trim();
+        if (!kw) {
+          alert("请输入商品名称");
+          return;
         }
-        // 2026-08-11 拍照辅助搜索（拍照→描述→搜；无图搜API，AI看图描述）
-        function startPhoto() {
-            var inp = document.createElement('input');
-            inp.type = 'file';
-            inp.accept = 'image/*';
-            inp.capture = 'environment';  // 手机直接调后置摄像头
-            inp.onchange = function() {
-                var f = inp.files[0];
-                if (!f) return;
-                var desc = prompt('拍到了！用一句话描述它（如：黑色运动鞋）：');
-                if (desc && desc.trim()) {
-                    document.getElementById('kw').value = desc.trim();
-                    showSearch();
-                    setTimeout(doSearch, 300);
-                }
-            };
-            inp.click();
-        }
-        // 2026-08-11 从陪你出发「立刻出发」跳回 → 自动展开搜索框（带对话上下文）
-        if (location.search.indexOf('search=1') >= 0) {
-            window.addEventListener('load', function(){ setTimeout(showSearch, 300); });
-        }
-        function pickMode(mode, el) {
-            document.querySelectorAll('#mode-pick label').forEach(function(l) { l.classList.remove('sel'); });
-            el.classList.add('sel');
-            var tip = document.getElementById('mode-tip');
-            tip.innerText = mode === 'live' ? '⚡ 实时模式：现场抓取最新价（后台浏览器，约 30-60 秒）' : '📚 历史模式：只读商品库，秒出（不爬取，零弹窗）';
-        }
-        var _searchTimer = null;
-        function _startSearchTimer() {
-            _stopSearchTimer();
-            var t0 = Date.now();
-            _searchTimer = setInterval(function(){
-                var sec = Math.round((Date.now() - t0) / 1000);
-                var msg = document.getElementById('loading-msg');
-                if (msg && sec % 15 === 0) {
-                    msg.textContent = '⏳ 已搜索 ' + sec + ' 秒，实时抓取中（淘宝/京东/拼多多/唯品会）…';
-                }
-            }, 1000);
-        }
-        function _stopSearchTimer() {
-            if (_searchTimer) { clearInterval(_searchTimer); _searchTimer = null; }
-        }
-        function doSearch() {
-            var kw = document.getElementById('kw').value.trim();
-            if (!kw) { alert('请输入商品名称'); return; }
-            var cat = document.getElementById('cat').value;
-            var mode = document.querySelector('input[name=mode]:checked').value;
-            var prog = document.getElementById('progress');
-            var box = document.getElementById('sse-result');
-            var btn = document.getElementById('search-btn');
-            btn.disabled = true;
-            showLoading();
-            _startSearchTimer();
-            box.innerHTML = '';
-            var round = document.getElementById('guide-round') ? document.getElementById('guide-round').value : 0;
-            var uname = encodeURIComponent(getCurrent());
-            var sseAttempt = 0;
-            // 2026-08-12 SSE 断线自动重连（3 次指数退避：2s/4s/8s）——网络抖动不用重搜
-            function searchStream() {
-              sseAttempt++;
-              fetch('/search_sse?keyword=' + encodeURIComponent(kw) + '&category=' + encodeURIComponent(cat) + '&guide_round=' + round + '&mode=' + mode + '&user_name=' + uname + '&session_id=' + encodeURIComponent(localStorage.getItem('gobuy_sid') || ''))
-                .then(resp => {
-                    var reader = resp.body.getReader();
-                    var decoder = new TextDecoder();
-                    var buffer = '';
-                    function read() {
-                        return reader.read().then(function(result) {
-                            if (result.done) return;
-                            buffer += decoder.decode(result.value, {stream: true});
-                                                        var lines = buffer.split("\n\n");
-                            buffer = lines.pop();
-                            lines.forEach(function(evt) {
-                                if (!evt.startsWith('data: ')) return;
-                                var data = JSON.parse(evt.slice(6));
-                                if (data.type === 'guide') { renderGuide(data.options, kw, prog, box); }
-                                else if (data.type === 'need') { renderNeed(data.q, data.options); }
-                                else if (data.type === 'step') { updateStep(data.step, data.status); }
-                                else if (data.type === 'progress') { advanceLoading(data.msg); }
-                                else if (data.type === 'error') { _stopSearchTimer(); hideLoading(); prog.style.display = 'none'; btn.disabled = false; box.innerHTML = '<div style="color:#d63031;text-align:center">' + data.msg + '</div>'; }
-                                else if (data.type === 'done') {
-                                    _stopSearchTimer();
-                                    btn.disabled = false;  // 2026-08-11 搜索完成恢复按钮（历史模式搜完可切实时）
-                                    finishLoading();
-                                    prog.style.display = 'none';
-                                    renderResult(data, box);
-                                }
-                            });
-                            return read();
-                        });
+        var cat = document.getElementById("cat").value;
+        var mode = document.querySelector("input[name=mode]:checked").value;
+        var prog = document.getElementById("progress");
+        var box = document.getElementById("sse-result");
+        var btn = document.getElementById("search-btn");
+        btn.disabled = true;
+        showLoading();
+        _startSearchTimer();
+        box.innerHTML = "";
+        var round = document.getElementById("guide-round")
+          ? document.getElementById("guide-round").value
+          : 0;
+        var uname = encodeURIComponent(getCurrent());
+        var sseAttempt = 0;
+        // 2026-08-12 SSE 断线自动重连（3 次指数退避：2s/4s/8s）——网络抖动不用重搜
+        function searchStream() {
+          sseAttempt++;
+          fetch(
+            "/search_sse?keyword=" +
+              encodeURIComponent(kw) +
+              "&category=" +
+              encodeURIComponent(cat) +
+              "&guide_round=" +
+              round +
+              "&mode=" +
+              mode +
+              "&user_name=" +
+              uname +
+              "&session_id=" +
+              encodeURIComponent(localStorage.getItem("gobuy_sid") || "") +
+              (localStorage.getItem("gobuy_pin")
+                ? "&pin=" + encodeURIComponent(localStorage.getItem("gobuy_pin"))
+                : ""),
+          )
+            .then((resp) => {
+              var reader = resp.body.getReader();
+              var decoder = new TextDecoder();
+              var buffer = "";
+              function read() {
+                return reader.read().then(function (result) {
+                  if (result.done) return;
+                  buffer += decoder.decode(result.value, { stream: true });
+                  var lines = buffer.split("\n\n");
+                  buffer = lines.pop();
+                  lines.forEach(function (evt) {
+                    if (!evt.startsWith("data: ")) return;
+                    var data = JSON.parse(evt.slice(6));
+                    if (data.type === "guide") {
+                      renderGuide(data.options, kw, prog, box);
+                    } else if (data.type === "need") {
+                      renderNeed(data.q, data.options);
+                    } else if (data.type === "step") {
+                      updateStep(data.step, data.status);
+                    } else if (data.type === "progress") {
+                      advanceLoading(data.msg);
+                    } else if (data.type === "error") {
+                      _stopSearchTimer();
+                      hideLoading();
+                      prog.style.display = "none";
+                      btn.disabled = false;
+                      box.innerHTML =
+                        '<div style="color:#d63031;text-align:center">' +
+                        data.msg +
+                        "</div>";
+                    } else if (data.type === "done") {
+                      _stopSearchTimer();
+                      btn.disabled = false; // 2026-08-11 搜索完成恢复按钮（历史模式搜完可切实时）
+                      finishLoading();
+                      prog.style.display = "none";
+                      renderResult(data, box);
                     }
-                    return read();
-                }).catch(() => {
-                    // 2026-08-12 SSE 自动重连：3 次指数退避（2s/4s/8s），超限才报失败
-                    if (sseAttempt < 3) {
-                        advanceLoading('⚠️ 网络抖动，正在自动重连（第 ' + sseAttempt + ' 次）…');
-                        setTimeout(searchStream, sseAttempt * 2000);
-                    } else {
-                        _stopSearchTimer(); hideLoading(); prog.style.display = 'none'; btn.disabled = false;
-                        box.innerHTML = '<div style="color:#d63031;text-align:center">搜索失败，请重试</div>';
-                    }
+                  });
+                  return read();
                 });
-            }
-            searchStream();
-        }
-        function pddSearch() {
-            var btn = document.getElementById('pdd-btn');
-            if (!btn) return;
-            btn.disabled = true;
-            document.getElementById('pdd-loading').style.display = 'block';
-            fetch('/search_pdd?keyword=' + encodeURIComponent(document.getElementById('kw').value.trim()), {timeout: 90000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('pdd-loading').style.display = 'none';
-                    var box = document.getElementById('pdd-results');
-                    if (!data.items || !data.items.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">拼多多没搜到（可能需要重新登录）</div>'; }
-                    else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">🛍️ 拼多多结果（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#e02e24;color:#fff">拼多多</span>' +
-                                '<div class="info"><div class="title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + (it.sales || '') + '</div></div>' +
-                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => { document.getElementById('pdd-loading').style.display = 'none'; btn.disabled = false; });
-        }
-        function loadHistory(el) {
-            var item = el.closest('.item');
-            var box = item.querySelector('.hist-box');
-            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
-            var platform = el.getAttribute('data-plat');
-            var gid = decodeURIComponent(el.getAttribute('data-gid'));
-            box.innerHTML = '加载中…';
-            box.style.display = 'block';
-            fetch('/history?platform=' + platform + '&item_id=' + encodeURIComponent(gid))
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.length) { box.innerHTML = '暂无历史记录（价格会随每次查询自动积累）'; return; }
-                    var summary = data[data.length - 1].summary;
-                    var diff = summary.current - summary.lowest;
-                    var advice = diff <= 0 ? '✅ 当前价 = 历史最低，可以买' :
-                        '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
-                    box.innerHTML = '<div class="hist-advice">历史最低 ¥' + summary.lowest.toFixed(2) +
-                        '（共记录 ' + summary.count + ' 次）</div>' +
-                        '<div class="hist-advice" style="color:' + (diff <= 0 ? '#27ae60' : '#e67e22') + '">' + advice + '</div>' +
-                        '<div class="hist-chart" id="hist-chart-' + platform + '-' + encodeURIComponent(gid) + '"></div>' +
-                        '<div class="hist-rows">' + data.slice(0, 8).map(function(d) {
-                            return d.queried_at.slice(0, 16) + ' → ¥' + d.price +
-                                (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '');
-                        }).join('<br>') + '</div>';
-                    drawChart(platform, gid, data);
-                })
-                .catch(() => box.innerHTML = '加载失败');
-        }
-        function drawChart(platform, gid, data) {
-            var cid = 'hist-chart-' + platform + '-' + encodeURIComponent(gid);
-            function paint() {
-                var el = document.getElementById(cid);
-                if (!el || !window.echarts) return;
-                var pts = data.slice(0, -1).reverse().map(function(d) {
-                    return [d.queried_at.slice(5, 16), d.price];
-                });
-                var chart = echarts.init(el);
-                chart.setOption({
-                    grid: { left: 44, right: 12, top: 14, bottom: 24 },
-                    tooltip: { trigger: 'axis' },
-                    xAxis: { type: 'category', data: pts.map(p => p[0]), axisLabel: { fontSize: 10 } },
-                    yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10 } },
-                    series: [{
-                        name: '价格', type: 'line', data: pts.map(p => p[1]),
-                        smooth: true, symbolSize: 6,
-                        lineStyle: { color: '#ff6b35', width: 2.5 },
-                        itemStyle: { color: '#ff6b35' },
-                        areaStyle: { color: 'rgba(255,107,53,0.12)' },
-                        markPoint: { data: [{ type: 'min', name: '最低' }] }
-                    }]
-                });
-            }
-            if (window.echarts) { paint(); return; }
-            var s = document.createElement('script');
-            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
-            s.onload = paint;
-            document.head.appendChild(s);
-        }
-        function renderResult(d, box) {
-            var html = '';
-            // v5.2 预算过滤（需求追问后按预算显示）
-            var budget = sessionStorage.getItem('gobuy_budget');
-            var budgetLabel = {3000:'≤3000', 8000:'3000-8000', 99999:'8000+'}[budget] || '';
-            if (budget) {
-                var before = d.groups.length;
-                d.groups = d.groups.filter(function(g) {
-                    return !(g.best && g.best.actualPrice && g.best.actualPrice > Number(budget));
-                });
-                if (d.groups.length !== before) {
-                    html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">💸 已按预算 <b>' + budgetLabel + '</b> 过滤，显示 ' + d.groups.length + '/' + before + ' 组 <a href="javascript:clearBudget()" style="color:#0984e3">取消过滤</a></div>';
-                }
-            }
-            if (d.mode === 'history') {
-                // 2026-08-11 小布方案2兜底：分词降级提示（整句搜不到 → 已自动匹配关键词）
-                if (d.degraded && d.degraded_kw) {
-                    html += '<div style="background:#fff3cd;color:#856404;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">🔍 没找到「' + esc(d.keyword) + '」，已自动匹配「<b>' + esc(d.degraded_kw) + '</b>」（共 ' + d.total + ' 件）</div>';
-                } else {
-                    html += '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' + d.total + ' 件），如需最新价格请切「⚡ 实时报告」</div>';
-                }
-            }
-            html += '<div class="stat">' + (d.mode === 'history' ? '📚 商品库查询结果' : '⚡ 实时抓取') + '：' +
-                (d.mode === 'history' ? '' : '淘宝 ' + d.tb_count + ' 条 + 拼多多 ' + d.pdd_count + ' 条' + (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
-                (d.manual_count ? ' + 人工录入 ' + d.manual_count + ' 条' : '') + ' = ') + d.total + ' 条候选</div>';
-            if (d.content_limited) {
-                html += '<div style="background:#fdf3e3;color:#e67e22;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">⚠️ 博主内容数据有限（<5 条），可切「⚡ 实时报告」触发抓取后重试</div>';
-            }
-            if (d.subsidies && d.subsidies.length) {
-                html += '<div class="subsidy-bar">';
-                d.subsidies.forEach(function(s) {
-                    html += '🎯 <b>[' + s.category + ']</b> ' + s.requirements +
-                        (s.region ? '（' + s.region + '）' : '') +
-                        (s.valid_to ? ' 至 ' + s.valid_to : '') +
-                        (s.source_url ? ' <a href="' + s.source_url + '" target="_blank" rel="noopener" style="color:#fff">来源↗</a>' : '') +
-                        '<br>';
-                });
-                html += '</div>';
-            }
-            if (!d.groups.length) {
-                html += '<div class="empty">没有搜到结果（该商品可能未设置推广佣金）</div>';
-                html += '<div class="sub-btns" style="margin-top:20px">' +
-                    '<button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">🛒 用淘宝补搜</button>' +
-                    '<button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">🔍 用京东补搜</button>' +
-                    '<button onclick="pddSearch()" id="pdd-btn" class="btn" style="background:#e02e24;color:#fff">🛍️ 用拼多多补搜</button>' +
-                    '<button onclick="biliSearch()" id="bili-btn" class="btn btn-bili">📺 内容联动</button></div>';
-                html += '<div id="tb-loading" class="loading-tip" style="color:#ff5000">正在淘宝搜索…</div>';
-                html += '<div id="jd-loading" class="loading-tip" style="color:#e4393c">正在京东搜索…</div>';
-                html += '<div id="pdd-loading" class="loading-tip" style="color:#e02e24">正在拼多多搜索…</div>';
-                html += '<div id="bili-loading" class="loading-tip" style="color:#00a1d6">正在搜索相关内容…</div>';
-                html += '<div id="jd-results"></div>';
-                html += '<div id="pdd-results"></div>';
-                html += '<div id="pdd-results"></div>';
-            }
-            d.groups.forEach(function(g) {
-                // 2026-08-11 类型标签（笔记本/整机/显卡/配件）
-                var typeIcon = {笔记本:'💻', 整机:'🖥', 显卡:'🎮', 配件:'🔧', 其他:'📦'};
-                var typeBadge = g.type ? '<span style="background:#fdf0e3;color:#e17055;border-radius:10px;padding:2px 8px;font-size:12px;margin-right:6px">' + (typeIcon[g.type] || '📦') + ' ' + g.type + '</span>' : '';
-                html += '<div class="group"><div class="group-head"><span class="sku">' + typeBadge + g.key + '</span><span class="count">' + g.count + ' 个候选</span>';
-                if (g.genuine) {
-                    html += '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' + ({tb:'淘宝',pdd:'拼多多',jd:'京东',vip:'唯品会'}[g.genuine.platform] || g.genuine.platform) + ' ¥' + g.genuine.price + '</span>';
-                }
-                html += '</div>';
-                if (g.low_price_warning) {
-                    html += '<div class="alert-bar">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只/翻新</div>';
-                }
-                var stMap = {自营:'background:#eaf2fb;color:#0984e3', 天猫:'background:#fdeeee;color:#d63031', 旗舰店:'background:#fdf3e3;color:#e67e22', 百亿补贴:'background:#e8f7ee;color:#27ae60'};
-                var rtColor = function(r) { return r >= 4.5 ? '#27ae60' : (r >= 4.0 ? '#e67e22' : '#d63031'); };
-                g.platforms.forEach(function(it) {
-                    var isBest = g.best && it === g.best;
-                    var gid = it.goodsId || it.item_id || '';
-                    var platName = {tb:'淘宝', pdd:'拼多多', jd:'京东', vip:'唯品会'}[it.platform] || it.platform;
-                    html += '<div class="item' + (isBest ? ' best' : '') + '">' +
-                        '<span class="plat">' + platName + '</span>' + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:8px;padding:1px 8px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') +
-                        '<div class="info"><div class="title">' + it.title + '</div>' +
-                        '<div class="shop">' + (it.shopName || '') + (isBest ? '<span class="badge">最低价</span>' : '') +
-                        (it.shop_rating ? '<span style="color:' + rtColor(it.shop_rating) + ';font-size:11px;margin-left:6px">🏪' + it.shop_rating + '分' + (it.shop_signals ? ' ' + esc(it.shop_signals.split('、')[0]) : '') + '</span>' : '') +
-                        (gid ? '<a class="link" href="javascript:void(0)" data-plat="' + it.platform + '" data-gid="' + encodeURIComponent(gid) + '" onclick="loadHistory(this)">📈 历史价</a>' : '') +
-                        '</div><div class="hist-box" style="display:none"></div></div>' +
-                        '<div class="price"><div class="now">¥' + it.actualPrice + '</div>' +
-                        (it.unit_price ? '<div class="coupon">≈¥' + it.unit_price + '/百毫升</div>' : '') +
-                        (it.coupon_amount > 0 ? '<div class="coupon">券后省 ¥' + it.coupon_amount + '</div>' : '') +
-                        (it.originalPrice > it.actualPrice ? '<div class="old">¥' + it.originalPrice + '</div>' : '') +
-                        '</div></div>';
-                });
-                html += '</div>';
+              }
+              return read();
+            })
+            .catch(() => {
+              // 2026-08-12 SSE 自动重连：3 次指数退避（2s/4s/8s），超限才报失败
+              if (sseAttempt < 3) {
+                advanceLoading(
+                  "⚠️ 网络抖动，正在自动重连（第 " + sseAttempt + " 次）…",
+                );
+                setTimeout(searchStream, sseAttempt * 2000);
+              } else {
+                _stopSearchTimer();
+                hideLoading();
+                prog.style.display = "none";
+                btn.disabled = false;
+                box.innerHTML =
+                  '<div style="color:#d63031;text-align:center">搜索失败，请重试</div>';
+              }
             });
-            if (d.content && d.content.items && d.content.items.length) {
-                html += '<div class="group"><div class="group-head"><span class="sku">📺 相关内容（' + d.content.items.length + ' 条）</span></div>';
-                if (d.content.trap) {
-                    html += '<div class="alert-bar">⚠️ 价格套路提醒：' + (d.content.trap.trap || '') + ' ' + (d.content.trap.fake || '') + '</div>';
-                }
-                d.content.items.forEach(function(it) {
-                    var isBili = it.type === 'bili';
-                    var isXhs = it.type === 'xhs';
-                    var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
-                    var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                    var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                      : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
-                                               : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
-                    if (it.score) {
-                        var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
-                        meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
-                        if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
-                            meta += '<br>👎 负面 ' + it.sent.neg + ' 条' + (it.sent.ad ? ' ⚠️软广嫌疑 ' + it.sent.ad + ' 条' : '');
-                            if (it.sent.neg > 3) meta += ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
-                        }
-                        if (it.flags && it.flags.length) meta += '<br><span style="color:#95a5a6">' + it.flags.join(' / ') + '</span>';
-                    }
-                    html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
-                        '<div class="info"><div class="title">' + it.title + '</div>' +
-                        '<div class="shop">' + meta + '</div></div>' +
-                        (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">' + (isBili ? '观看 ↗' : '帖子 ↗') + '</a>' : '') + '</div>';
-                });
-                html += '</div>';
+        }
+        searchStream();
+      }
+      function pddSearch() {
+        var btn = document.getElementById("pdd-btn");
+        if (!btn) return;
+        btn.disabled = true;
+        document.getElementById("pdd-loading").style.display = "block";
+        fetch(
+          "/search_pdd?keyword=" +
+            encodeURIComponent(document.getElementById("kw").value.trim()),
+          { timeout: 90000 },
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("pdd-loading").style.display = "none";
+            var box = document.getElementById("pdd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">拼多多没搜到（可能需要重新登录）</div>';
+            } else {
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">🛍️ 拼多多结果（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                html +=
+                  '<div class="item"><span class="plat" style="background:#e02e24;color:#fff">拼多多</span>' +
+                  '<div class="info"><div class="title">' +
+                  (it.is_ad ? "【广告】" : "") +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  (it.sales || "") +
+                  "</div></div>" +
+                  '<div class="price"><div class="now">¥' +
+                  (it.price || "?") +
+                  "</div></div></div>";
+              });
+              box.innerHTML = html + "</div>";
             }
-            html += '<div style="text-align:center;margin-top:16px"><a href="/" class="back-home">← 再查一个</a></div>';
-            box.innerHTML = html;
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("pdd-loading").style.display = "none";
+            btn.disabled = false;
+          });
+      }
+      function loadHistory(el) {
+        var item = el.closest(".item");
+        var box = item.querySelector(".hist-box");
+        if (box.style.display !== "none") {
+          box.style.display = "none";
+          return;
         }
-        loadFamily();  // v6 多用户：初始化角色/品类
-        // v8.5 热搜联想（大淘客热搜榜）
-        fetch('/api/hotwords').then(r => r.json()).then(d => {
-            var box = document.getElementById('hot-words');
-            if (!box || !d.words || !d.words.length) return;
-            box.innerHTML = '🔥 大家正在搜：' + d.words.map(function(w) {
-                return '<a href="javascript:hotSearch(\'' + esc(w) + '\')" style="color:#0984e3;text-decoration:none;margin:0 5px">' + esc(w) + '</a>';
-            }).join('');
-        }).catch(function(){});
-        function hotSearch(w) {
-            document.getElementById('kw').value = w;
-            doSearch();
+        var platform = el.getAttribute("data-plat");
+        var gid = decodeURIComponent(el.getAttribute("data-gid"));
+        box.innerHTML = "加载中…";
+        box.style.display = "block";
+        fetch(
+          "/history?platform=" +
+            platform +
+            "&item_id=" +
+            encodeURIComponent(gid),
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            if (!data.length) {
+              box.innerHTML = "暂无历史记录（价格会随每次查询自动积累）";
+              return;
+            }
+            var summary = data[data.length - 1].summary;
+            var diff = summary.current - summary.lowest;
+            var advice =
+              diff <= 0
+                ? "✅ 当前价 = 历史最低，可以买"
+                : "⚠️ 比历史最低贵 ¥" + diff.toFixed(2) + "，不急可再等等";
+            box.innerHTML =
+              '<div class="hist-advice">历史最低 ¥' +
+              summary.lowest.toFixed(2) +
+              "（共记录 " +
+              summary.count +
+              " 次）</div>" +
+              '<div class="hist-advice" style="color:' +
+              (diff <= 0 ? "#27ae60" : "#e67e22") +
+              '">' +
+              advice +
+              "</div>" +
+              '<div class="hist-chart" id="hist-chart-' +
+              platform +
+              "-" +
+              encodeURIComponent(gid) +
+              '"></div>' +
+              '<div class="hist-rows">' +
+              data
+                .slice(0, 8)
+                .map(function (d) {
+                  return (
+                    d.queried_at.slice(0, 16) +
+                    " → ¥" +
+                    d.price +
+                    (d.coupon_amount ? "（券¥" + d.coupon_amount + "）" : "")
+                  );
+                })
+                .join("<br>") +
+              "</div>";
+            drawChart(platform, gid, data);
+          })
+          .catch(() => (box.innerHTML = "加载失败"));
+      }
+      function drawChart(platform, gid, data) {
+        var cid = "hist-chart-" + platform + "-" + encodeURIComponent(gid);
+        function paint() {
+          var el = document.getElementById(cid);
+          if (!el || !window.echarts) return;
+          var pts = data
+            .slice(0, -1)
+            .reverse()
+            .map(function (d) {
+              return [d.queried_at.slice(5, 16), d.price];
+            });
+          var chart = echarts.init(el);
+          chart.setOption({
+            grid: { left: 44, right: 12, top: 14, bottom: 24 },
+            tooltip: { trigger: "axis" },
+            xAxis: {
+              type: "category",
+              data: pts.map((p) => p[0]),
+              axisLabel: { fontSize: 10 },
+            },
+            yAxis: { type: "value", scale: true, axisLabel: { fontSize: 10 } },
+            series: [
+              {
+                name: "价格",
+                type: "line",
+                data: pts.map((p) => p[1]),
+                smooth: true,
+                symbolSize: 6,
+                lineStyle: { color: "#ff6b35", width: 2.5 },
+                itemStyle: { color: "#ff6b35" },
+                areaStyle: { color: "rgba(255,107,53,0.12)" },
+                markPoint: { data: [{ type: "min", name: "最低" }] },
+              },
+            ],
+          });
         }
-        // v8 PWA：注册 Service Worker（手机可安装到桌面像 App）
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+        if (window.echarts) {
+          paint();
+          return;
         }
+        var s = document.createElement("script");
+        s.src = "https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js";
+        s.onload = paint;
+        document.head.appendChild(s);
+      }
+      function renderResult(d, box) {
+        var html = "";
+        // v5.2 预算过滤（需求追问后按预算显示）
+        var budget = sessionStorage.getItem("gobuy_budget");
+        var budgetLabel =
+          { 3000: "≤3000", 8000: "3000-8000", 99999: "8000+" }[budget] || "";
+        if (budget) {
+          var before = d.groups.length;
+          d.groups = d.groups.filter(function (g) {
+            return !(
+              g.best &&
+              g.best.actualPrice &&
+              g.best.actualPrice > Number(budget)
+            );
+          });
+          if (d.groups.length !== before) {
+            html +=
+              '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">💸 已按预算 <b>' +
+              budgetLabel +
+              "</b> 过滤，显示 " +
+              d.groups.length +
+              "/" +
+              before +
+              ' 组 <a href="javascript:clearBudget()" style="color:#0984e3">取消过滤</a></div>';
+          }
+        }
+        if (d.mode === "history") {
+          // 2026-08-11 小布方案2兜底：分词降级提示（整句搜不到 → 已自动匹配关键词）
+          if (d.degraded && d.degraded_kw) {
+            html +=
+              '<div style="background:#fff3cd;color:#856404;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">🔍 没找到「' +
+              esc(d.keyword) +
+              "」，已自动匹配「<b>" +
+              esc(d.degraded_kw) +
+              "</b>」（共 " +
+              d.total +
+              " 件）</div>";
+          } else {
+            html +=
+              '<div style="background:#eaf2fb;color:#0984e3;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">📚 历史模式：以下为商品库已有数据（共 ' +
+              d.total +
+              " 件），如需最新价格请切「⚡ 实时报告」</div>";
+          }
+        }
+        html +=
+          '<div class="stat">' +
+          (d.mode === "history" ? "📚 商品库查询结果" : "⚡ 实时抓取") +
+          "：" +
+          (d.mode === "history"
+            ? ""
+            : "淘宝 " +
+              d.tb_count +
+              " 条 + 拼多多 " +
+              d.pdd_count +
+              " 条" +
+              (d.vip_count ? " + 唯品会 " + d.vip_count + " 条" : "") +
+              (d.manual_count ? " + 人工录入 " + d.manual_count + " 条" : "") +
+              " = ") +
+          d.total +
+          " 条候选</div>";
+        if (d.content_limited) {
+          html +=
+            '<div style="background:#fdf3e3;color:#e67e22;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:14px">⚠️ 博主内容数据有限（<5 条），可切「⚡ 实时报告」触发抓取后重试</div>';
+        }
+        if (d.subsidies && d.subsidies.length) {
+          html += '<div class="subsidy-bar">';
+          d.subsidies.forEach(function (s) {
+            html +=
+              "🎯 <b>[" +
+              s.category +
+              "]</b> " +
+              s.requirements +
+              (s.region ? "（" + s.region + "）" : "") +
+              (s.valid_to ? " 至 " + s.valid_to : "") +
+              (s.source_url
+                ? ' <a href="' +
+                  s.source_url +
+                  '" target="_blank" rel="noopener" style="color:#fff">来源↗</a>'
+                : "") +
+              "<br>";
+          });
+          html += "</div>";
+        }
+        if (!d.groups.length) {
+          html +=
+            '<div class="empty">没有搜到结果（该商品可能未设置推广佣金）</div>';
+          html +=
+            '<div class="sub-btns" style="margin-top:20px">' +
+            '<button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">🛒 用淘宝补搜</button>' +
+            '<button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">🔍 用京东补搜</button>' +
+            '<button onclick="pddSearch()" id="pdd-btn" class="btn" style="background:#e02e24;color:#fff">🛍️ 用拼多多补搜</button>' +
+            '<button onclick="biliSearch()" id="bili-btn" class="btn btn-bili">📺 内容联动</button></div>';
+          html +=
+            '<div id="tb-loading" class="loading-tip" style="color:#ff5000">正在淘宝搜索…</div>';
+          html +=
+            '<div id="jd-loading" class="loading-tip" style="color:#e4393c">正在京东搜索…</div>';
+          html +=
+            '<div id="pdd-loading" class="loading-tip" style="color:#e02e24">正在拼多多搜索…</div>';
+          html +=
+            '<div id="bili-loading" class="loading-tip" style="color:#00a1d6">正在搜索相关内容…</div>';
+          html += '<div id="jd-results"></div>';
+          html += '<div id="pdd-results"></div>';
+          html += '<div id="pdd-results"></div>';
+        }
+        d.groups.forEach(function (g) {
+          // 2026-08-11 类型标签（笔记本/整机/显卡/配件）
+          var typeIcon = {
+            笔记本: "💻",
+            整机: "🖥",
+            显卡: "🎮",
+            配件: "🔧",
+            其他: "📦",
+          };
+          var typeBadge = g.type
+            ? '<span style="background:#fdf0e3;color:#e17055;border-radius:10px;padding:2px 8px;font-size:12px;margin-right:6px">' +
+              (typeIcon[g.type] || "📦") +
+              " " +
+              g.type +
+              "</span>"
+            : "";
+          html +=
+            '<div class="group"><div class="group-head"><span class="sku">' +
+            typeBadge +
+            g.key +
+            '</span><span class="count">' +
+            g.count +
+            " 个候选</span>";
+          if (g.genuine) {
+            html +=
+              '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' +
+              ({ tb: "淘宝", pdd: "拼多多", jd: "京东", vip: "唯品会" }[
+                g.genuine.platform
+              ] || g.genuine.platform) +
+              " ¥" +
+              g.genuine.price +
+              "</span>";
+          }
+          html += "</div>";
+          if (g.low_price_warning) {
+            html +=
+              '<div class="alert-bar">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只/翻新</div>';
+          }
+          var stMap = {
+            自营: "background:#eaf2fb;color:#0984e3",
+            天猫: "background:#fdeeee;color:#d63031",
+            旗舰店: "background:#fdf3e3;color:#e67e22",
+            百亿补贴: "background:#e8f7ee;color:#27ae60",
+          };
+          var rtColor = function (r) {
+            return r >= 4.5 ? "#27ae60" : r >= 4.0 ? "#e67e22" : "#d63031";
+          };
+          g.platforms.forEach(function (it) {
+            var isBest = g.best && it === g.best;
+            var gid = it.goodsId || it.item_id || "";
+            var platName =
+              { tb: "淘宝", pdd: "拼多多", jd: "京东", vip: "唯品会" }[
+                it.platform
+              ] || it.platform;
+            html +=
+              '<div class="item' +
+              (isBest ? " best" : "") +
+              '">' +
+              '<span class="plat">' +
+              platName +
+              "</span>" +
+              (it.shop_type
+                ? '<span style="' +
+                  (stMap[it.shop_type] || "background:#eee;color:#636e72") +
+                  ';border-radius:8px;padding:1px 8px;font-size:11px;margin-left:4px">' +
+                  it.shop_type +
+                  "</span>"
+                : "") +
+              '<div class="info"><div class="title">' +
+              it.title +
+              "</div>" +
+              '<div class="shop">' +
+              (it.shopName || "") +
+              (isBest ? '<span class="badge">最低价</span>' : "") +
+              (it.shop_rating
+                ? '<span style="color:' +
+                  rtColor(it.shop_rating) +
+                  ';font-size:11px;margin-left:6px">🏪' +
+                  it.shop_rating +
+                  "分" +
+                  (it.shop_signals
+                    ? " " + esc(it.shop_signals.split("、")[0])
+                    : "") +
+                  "</span>"
+                : "") +
+              (gid
+                ? '<a class="link" href="javascript:void(0)" data-plat="' +
+                  it.platform +
+                  '" data-gid="' +
+                  encodeURIComponent(gid) +
+                  '" onclick="loadHistory(this)">📈 历史价</a>'
+                : "") +
+              '</div><div class="hist-box" style="display:none"></div></div>' +
+              '<div class="price"><div class="now">¥' +
+              it.actualPrice +
+              "</div>" +
+              (it.unit_price
+                ? '<div class="coupon">≈¥' + it.unit_price + "/百毫升</div>"
+                : "") +
+              (it.coupon_amount > 0
+                ? '<div class="coupon">券后省 ¥' + it.coupon_amount + "</div>"
+                : "") +
+              (it.originalPrice > it.actualPrice
+                ? '<div class="old">¥' + it.originalPrice + "</div>"
+                : "") +
+              "</div></div>";
+          });
+          html += "</div>";
+        });
+        if (d.content && d.content.items && d.content.items.length) {
+          html +=
+            '<div class="group"><div class="group-head"><span class="sku">📺 相关内容（' +
+            d.content.items.length +
+            " 条）</span></div>";
+          if (d.content.trap) {
+            html +=
+              '<div class="alert-bar">⚠️ 价格套路提醒：' +
+              (d.content.trap.trap || "") +
+              " " +
+              (d.content.trap.fake || "") +
+              "</div>";
+          }
+          d.content.items.forEach(function (it) {
+            var isBili = it.type === "bili";
+            var isXhs = it.type === "xhs";
+            var platStyle = isBili
+              ? "background:#00a1d6"
+              : isXhs
+                ? "background:#ff2442"
+                : "background:#4a90d9";
+            var platName = isBili ? "B站" : isXhs ? "小红书" : "贴吧";
+            var meta = isBili
+              ? "UP主: " +
+                esc(it.author) +
+                " ・ 播放 " +
+                it.play +
+                " ・ 点赞 " +
+                it.like
+              : isXhs
+                ? "作者: " + esc(it.author) + " ・ 赞 " + it.like
+                : "作者: " + esc(it.author) + " ・ 吧: " + esc(it.desc);
+            if (it.score) {
+              var star =
+                "★".repeat(Math.max(1, Math.round(it.score / 20))) +
+                "☆".repeat(5 - Math.max(1, Math.round(it.score / 20)));
+              meta += "<br>⭐ 可信度 " + star + " " + it.score + "/100";
+              if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
+                meta +=
+                  "<br>👎 负面 " +
+                  it.sent.neg +
+                  " 条" +
+                  (it.sent.ad ? " ⚠️软广嫌疑 " + it.sent.ad + " 条" : "");
+                if (it.sent.neg > 3)
+                  meta +=
+                    ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
+              }
+              if (it.flags && it.flags.length)
+                meta +=
+                  '<br><span style="color:#95a5a6">' +
+                  it.flags.join(" / ") +
+                  "</span>";
+            }
+            html +=
+              '<div class="item"><span class="plat" style="' +
+              platStyle +
+              ';color:#fff">' +
+              platName +
+              "</span>" +
+              '<div class="info"><div class="title">' +
+              it.title +
+              "</div>" +
+              '<div class="shop">' +
+              meta +
+              "</div></div>" +
+              (it.url
+                ? '<a class="link" href="' +
+                  it.url +
+                  '" target="_blank" rel="noopener">' +
+                  (isBili ? "观看 ↗" : "帖子 ↗") +
+                  "</a>"
+                : "") +
+              "</div>";
+          });
+          html += "</div>";
+        }
+        html +=
+          '<div style="text-align:center;margin-top:16px"><a href="/" class="back-home">← 再查一个</a></div>';
+        box.innerHTML = html;
+      }
+      loadFamily(); // v6 多用户：初始化角色/品类
+      // v8.5 热搜联想（大淘客热搜榜）
+      fetch("/api/hotwords")
+        .then((r) => r.json())
+        .then((d) => {
+          var box = document.getElementById("hot-words");
+          if (!box || !d.words || !d.words.length) return;
+          box.innerHTML =
+            "🔥 大家正在搜：" +
+            d.words
+              .map(function (w) {
+                return (
+                  "<a href=\"javascript:hotSearch('" +
+                  esc(w) +
+                  '\')" style="color:#0984e3;text-decoration:none;margin:0 5px">' +
+                  esc(w) +
+                  "</a>"
+                );
+              })
+              .join("");
+        })
+        .catch(function () {});
+      function hotSearch(w) {
+        document.getElementById("kw").value = w;
+        doSearch();
+      }
+      // v8 PWA：注册 Service Worker（手机可安装到桌面像 App）
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/static/sw.js").catch(function () {});
+      }
     </script>
-</body>
+  </body>
 </html>

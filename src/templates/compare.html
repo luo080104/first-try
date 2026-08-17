@@ -1,556 +1,1347 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>帮我比 - Go购</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css" />
     <style>
-        .cmp-box { background: #fff; border-radius: 16px; padding: 20px;
-                   box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        input[type=text] { width: 100%; font-size: 18px; padding: 14px 16px;
-                           border: 2px solid #dfe6e9; border-radius: 12px;
-                           outline: none; min-height: 52px; }
-        input[type=text]:focus { border-color: #0984e3; box-shadow: 0 0 0 3px rgba(9,132,227,0.15); }
-        .cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
-        .cat { flex: 1; min-width: 78px; padding: 10px 0; text-align: center;
-               border: 2px solid #dfe6e9; border-radius: 24px; font-size: 14px;
-               cursor: pointer; background: #fff; color: #636e72; }
-        .cat.active { background: #0984e3; border-color: #0984e3; color: #fff; }
-        #cmp-btn { width: 100%; font-size: 18px; padding: 14px; }
-        .progress { display: none; text-align: center; color: #0984e3; font-size: 15px;
-                    margin-top: 16px; line-height: 1.8; }
-        /* v6 游戏化加载画面（对比页同款） */
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                           background: rgba(255,255,255,0.92); z-index: 999;
-                           justify-content: center; align-items: center; }
-        .loading-card { width: min(420px, 86vw); background: #fff; border-radius: 20px;
-                        padding: 36px 28px; box-shadow: 0 12px 48px rgba(0,0,0,0.12);
-                        text-align: center; }
-        .loading-logo { font-size: 52px; animation: bounce 1.6s ease-in-out infinite; }
-        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
-        .loading-title { font-size: 18px; font-weight: 700; color: #2d3436; margin: 14px 0 4px; }
-        .loading-bar { height: 10px; background: #eee; border-radius: 8px; overflow: hidden; margin: 18px 0 6px; }
-        .loading-fill { height: 100%; width: 8%; border-radius: 8px;
-                        background: linear-gradient(90deg, #ff6b35, #e17055);
-                        transition: width 0.5s ease; }
-        .loading-msg { font-size: 14px; color: #636e72; margin: 12px 0 18px; min-height: 20px; }
-        .loading-slogan { font-size: 13px; color: #b2bec3; font-style: italic; }
-        .cmp-card { background: #fff; border-radius: 14px; padding: 16px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 14px; }
-        .card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .card-title { font-size: 17px; font-weight: 700; color: #2d3436; }
-        .price-row { display: flex; gap: 8px; margin-bottom: 10px; }
-        .price-cell { flex: 1; border-radius: 12px; padding: 12px 10px; text-align: center;
-                      background: #f8f9fa; border: 1.5px solid #dfe6e9; }
-        .price-cell.best { background: #e8f7ee; border-color: #27ae60; }
-        .price-cell .pname { font-size: 13px; font-weight: 600; color: #636e72; }
-        .price-cell .pprice { font-size: 20px; font-weight: 700; color: #d63031; margin: 4px 0; }
-        .price-cell .pmeta { font-size: 11px; color: #b2bec3; line-height: 1.6; }
-        .price-cell.best .pprice { color: #27ae60; }
-        .best-tag { font-size: 10px; background: #ffc107; color: #856404; border-radius: 4px;
-                    padding: 1px 5px; margin-left: 4px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
-        .content-bar { background: #f0f7ff; border: 1px solid #b3d4f5; border-radius: 12px;
-                       padding: 12px 14px; margin-top: 10px; font-size: 13px; color: #2c6fbb; line-height: 1.7; }
-        .subsidy-bar { background: linear-gradient(135deg,#ff6b35,#e74c3c); color: #fff;
-                       border-radius: 12px; padding: 10px 14px; margin-top: 10px;
-                       font-size: 13px; line-height: 1.8; }
-        .advice-box { background: #fffbea; border: 1.5px solid #f0c040; border-radius: 14px;
-                      padding: 14px 16px; margin-top: 12px; font-size: 14px; line-height: 2;
-                      color: #5a4a1f; white-space: pre-line; }
-        .advice-loading { color: #b7791f; font-size: 13px; margin-top: 8px; }
-        .card-actions { display: flex; gap: 10px; margin-top: 12px; }
-        .card-actions a, .card-actions button { flex: 1; text-align: center; padding: 12px;
-                       font-size: 14px; border-radius: 10px; text-decoration: none; border: none; cursor: pointer; }
-        .act-watch { background: #27ae60; color: #fff; }
-        .act-chat { background: #0984e3; color: #fff; }
-        .act-link { background: #f8f9fa; color: #2d3436; border: 1.5px solid #dfe6e9 !important; }
-        .link-tip { font-size: 12px; color: #b2bec3; margin-top: 8px; text-align: center; }
+      .cmp-box {
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      }
+      input[type="text"] {
+        width: 100%;
+        font-size: 18px;
+        padding: 14px 16px;
+        border: 2px solid #dfe6e9;
+        border-radius: 12px;
+        outline: none;
+        min-height: 52px;
+      }
+      input[type="text"]:focus {
+        border-color: #0984e3;
+        box-shadow: 0 0 0 3px rgba(9, 132, 227, 0.15);
+      }
+      .cats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 14px 0;
+      }
+      .cat {
+        flex: 1;
+        min-width: 78px;
+        padding: 10px 0;
+        text-align: center;
+        border: 2px solid #dfe6e9;
+        border-radius: 24px;
+        font-size: 14px;
+        cursor: pointer;
+        background: #fff;
+        color: #636e72;
+      }
+      .cat.active {
+        background: #0984e3;
+        border-color: #0984e3;
+        color: #fff;
+      }
+      #cmp-btn {
+        width: 100%;
+        font-size: 18px;
+        padding: 14px;
+      }
+      .progress {
+        display: none;
+        text-align: center;
+        color: #0984e3;
+        font-size: 15px;
+        margin-top: 16px;
+        line-height: 1.8;
+      }
+      /* v6 游戏化加载画面（对比页同款） */
+      #loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.92);
+        z-index: 999;
+        justify-content: center;
+        align-items: center;
+      }
+      .loading-card {
+        width: min(420px, 86vw);
+        background: #fff;
+        border-radius: 20px;
+        padding: 36px 28px;
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+        text-align: center;
+      }
+      .loading-logo {
+        font-size: 52px;
+        animation: bounce 1.6s ease-in-out infinite;
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-14px);
+        }
+      }
+      .loading-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #2d3436;
+        margin: 14px 0 4px;
+      }
+      .loading-bar {
+        height: 10px;
+        background: #eee;
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 18px 0 6px;
+      }
+      .loading-fill {
+        height: 100%;
+        width: 8%;
+        border-radius: 8px;
+        background: linear-gradient(90deg, #ff6b35, #e17055);
+        transition: width 0.5s ease;
+      }
+      .loading-msg {
+        font-size: 14px;
+        color: #636e72;
+        margin: 12px 0 18px;
+        min-height: 20px;
+      }
+      .loading-slogan {
+        font-size: 13px;
+        color: #b2bec3;
+        font-style: italic;
+      }
+      .cmp-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-top: 14px;
+      }
+      .card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .card-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #2d3436;
+      }
+      .price-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .price-cell {
+        flex: 1;
+        border-radius: 12px;
+        padding: 12px 10px;
+        text-align: center;
+        background: #f8f9fa;
+        border: 1.5px solid #dfe6e9;
+      }
+      .price-cell.best {
+        background: #e8f7ee;
+        border-color: #27ae60;
+      }
+      .price-cell .pname {
+        font-size: 13px;
+        font-weight: 600;
+        color: #636e72;
+      }
+      .price-cell .pprice {
+        font-size: 20px;
+        font-weight: 700;
+        color: #d63031;
+        margin: 4px 0;
+      }
+      .price-cell .pmeta {
+        font-size: 11px;
+        color: #b2bec3;
+        line-height: 1.6;
+      }
+      .price-cell.best .pprice {
+        color: #27ae60;
+      }
+      .best-tag {
+        font-size: 10px;
+        background: #ffc107;
+        color: #856404;
+        border-radius: 4px;
+        padding: 1px 5px;
+        margin-left: 4px;
+        font-weight: 700;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+      .content-bar {
+        background: #f0f7ff;
+        border: 1px solid #b3d4f5;
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: #2c6fbb;
+        line-height: 1.7;
+      }
+      .subsidy-bar {
+        background: linear-gradient(135deg, #ff6b35, #e74c3c);
+        color: #fff;
+        border-radius: 12px;
+        padding: 10px 14px;
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.8;
+      }
+      .advice-box {
+        background: #fffbea;
+        border: 1.5px solid #f0c040;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-top: 12px;
+        font-size: 14px;
+        line-height: 2;
+        color: #5a4a1f;
+        white-space: pre-line;
+      }
+      .advice-loading {
+        color: #b7791f;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .card-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+      .card-actions a,
+      .card-actions button {
+        flex: 1;
+        text-align: center;
+        padding: 12px;
+        font-size: 14px;
+        border-radius: 10px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+      }
+      .act-watch {
+        background: #27ae60;
+        color: #fff;
+      }
+      .act-chat {
+        background: #0984e3;
+        color: #fff;
+      }
+      .act-link {
+        background: #f8f9fa;
+        color: #2d3436;
+        border: 1.5px solid #dfe6e9 !important;
+      }
+      .link-tip {
+        font-size: 12px;
+        color: #b2bec3;
+        margin-top: 8px;
+        text-align: center;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="top">
-            <a href="/" class="back">←</a>
-            <h1>⚖️ 帮我比</h1>
+      <div class="top">
+        <a href="/" class="back">←</a>
+        <h1>⚖️ 帮我比</h1>
+      </div>
+      <div class="cmp-box">
+        <input
+          type="text"
+          id="kw"
+          placeholder="商品关键词，或粘贴链接（淘宝/京东/拼多多）"
+        />
+        <div class="cats" id="cats">
+          {% for c in categories %}
+          <div class="cat {% if not c %}active{% endif %}" data-cat="{{ c }}">
+            {{ c or '全品类' }}
+          </div>
+          {% endfor %}
         </div>
-        <div class="cmp-box">
-            <input type="text" id="kw" placeholder="商品关键词，或粘贴链接（淘宝/京东/拼多多）">
-            <div class="cats" id="cats">
-                {% for c in categories %}<div class="cat {% if not c %}active{% endif %}" data-cat="{{ c }}">{{ c or '全品类' }}</div>{% endfor %}
-            </div>
-            <button id="cmp-btn" class="btn btn-primary" onclick="doCompare()">🔍 开始对比</button>
-            <div class="progress" id="progress">⏳ 正在搜索四平台…</div>
-            <div class="link-tip">💡 支持粘贴链接：淘宝 item.taobao.com ・ 京东 item.jd.com ・ 拼多多 yangkeduo.com</div>
+        <button id="cmp-btn" class="btn btn-primary" onclick="doCompare()">
+          🔍 开始对比
+        </button>
+        <div class="progress" id="progress">⏳ 正在搜索四平台…</div>
+        <div class="link-tip">
+          💡 支持粘贴链接：淘宝 item.taobao.com ・ 京东 item.jd.com ・ 拼多多
+          yangkeduo.com
         </div>
-        <!-- v6 游戏化加载画面 -->
-        <div id="loading-overlay">
-            <div class="loading-card">
-                <div class="loading-logo">🛒</div>
-                <div class="loading-title">正在为你比价寻宝…</div>
-                <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
-                <div class="loading-msg" id="loading-msg">正在出发…</div>
-                <div class="loading-slogan">购物就是一场旅行，请放慢脚步，享受等待的美好。</div>
-            </div>
+      </div>
+      <!-- v6 游戏化加载画面 -->
+      <div id="loading-overlay">
+        <div class="loading-card">
+          <div class="loading-logo">🛒</div>
+          <div class="loading-title">正在为你比价寻宝…</div>
+          <div class="loading-bar">
+            <div class="loading-fill" id="loading-fill"></div>
+          </div>
+          <div class="loading-msg" id="loading-msg">正在出发…</div>
+          <div class="loading-slogan">
+            购物就是一场旅行，请放慢脚步，享受等待的美好。
+          </div>
         </div>
-        <div id="results"></div>
-        <a href="/" class="back-home">← 回首页</a>
+      </div>
+      <div id="results"></div>
+      <a href="/" class="back-home">← 回首页</a>
     </div>
 
     <script>
-function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+      function pinUrl(u) {
+        var p = localStorage.getItem("gobuy_pin");
+        return p
+          ? u +
+              (u.indexOf("?") > -1 ? "&" : "?") +
+              "pin=" +
+              encodeURIComponent(p)
+          : u;
+      }
 
-        // 默认盯价 = 当前价 × 9 折（WorkBuddy P2-4：配置化）
-        const WATCH_DEFAULT_RATIO = 0.9;
-        var currentKw = '', currentCat = '';
-        document.querySelectorAll('.cat').forEach(el => {
-            el.addEventListener('click', () => {
-                document.querySelectorAll('.cat').forEach(e => e.classList.remove('active'));
-                el.classList.add('active');
-            });
+      // 默认盯价 = 当前价 × 9 折（WorkBuddy P2-4：配置化）
+      const WATCH_DEFAULT_RATIO = 0.9;
+      var currentKw = "",
+        currentCat = "";
+      document.querySelectorAll(".cat").forEach((el) => {
+        el.addEventListener("click", () => {
+          document
+            .querySelectorAll(".cat")
+            .forEach((e) => e.classList.remove("active"));
+          el.classList.add("active");
         });
-        document.getElementById('kw').addEventListener('keydown', e => { if (e.key === 'Enter') doCompare(); });
+      });
+      document.getElementById("kw").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") doCompare();
+      });
 
-        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-        function showLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-            document.getElementById('loading-fill').style.width = '8%';
-            document.getElementById('loading-msg').innerText = '正在出发…';
-            var steps = ['正在问路淘宝…', '正在拜访拼多多…', '正在赶往京东…', '正在探访唯品会…', '正在比价汇总…'];
-            var i = 0;
-            if (window._loadingTimer) clearInterval(window._loadingTimer);
-            window._loadingTimer = setInterval(function() {
-                var fill = document.getElementById('loading-fill');
-                var cur = parseFloat(fill.style.width) || 8;
-                fill.style.width = Math.min(cur + 3, 92) + '%';
-                if (steps[i]) { document.getElementById('loading-msg').innerText = steps[i]; i++; }
-            }, 2600);
-        }
-        function finishLoading() {
-            if (window._loadingTimer) clearInterval(window._loadingTimer);
-            document.getElementById('loading-fill').style.width = '100%';
-            setTimeout(function() { document.getElementById('loading-overlay').style.display = 'none'; }, 400);
-        }
-        function platName(p) { return {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会', dy:'抖音'}[p] || p; }
-        // 2026-08-11 平台偏见展示：平台名带品牌色（一眼识别来源）
-        function platBadge(p) {
-            var C = {tb:'#ff5000', jd:'#e1251b', pdd:'#e02e24', vip:'#f10180', dy:'#000'};
-            return '<span style="color:' + (C[p] || '#636e72') + ';font-weight:700">' + platName(p) + '</span>';
-        }
+      function esc(s) {
+        return (s == null ? "" : String(s))
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      function showLoading() {
+        document.getElementById("loading-overlay").style.display = "flex";
+        document.getElementById("loading-fill").style.width = "8%";
+        document.getElementById("loading-msg").innerText = "正在出发…";
+        var steps = [
+          "正在问路淘宝…",
+          "正在拜访拼多多…",
+          "正在赶往京东…",
+          "正在探访唯品会…",
+          "正在比价汇总…",
+        ];
+        var i = 0;
+        if (window._loadingTimer) clearInterval(window._loadingTimer);
+        window._loadingTimer = setInterval(function () {
+          var fill = document.getElementById("loading-fill");
+          var cur = parseFloat(fill.style.width) || 8;
+          fill.style.width = Math.min(cur + 3, 92) + "%";
+          if (steps[i]) {
+            document.getElementById("loading-msg").innerText = steps[i];
+            i++;
+          }
+        }, 2600);
+      }
+      function finishLoading() {
+        if (window._loadingTimer) clearInterval(window._loadingTimer);
+        document.getElementById("loading-fill").style.width = "100%";
+        setTimeout(function () {
+          document.getElementById("loading-overlay").style.display = "none";
+        }, 400);
+      }
+      function platName(p) {
+        return (
+          { tb: "淘宝", jd: "京东", pdd: "拼多多", vip: "唯品会", dy: "抖音" }[
+            p
+          ] || p
+        );
+      }
+      // 2026-08-11 平台偏见展示：平台名带品牌色（一眼识别来源）
+      function platBadge(p) {
+        var C = {
+          tb: "#ff5000",
+          jd: "#e1251b",
+          pdd: "#e02e24",
+          vip: "#f10180",
+          dy: "#000",
+        };
+        return (
+          '<span style="color:' +
+          (C[p] || "#636e72") +
+          ';font-weight:700">' +
+          platName(p) +
+          "</span>"
+        );
+      }
 
-        function doCompare() {
-            var kw = document.getElementById('kw').value.trim();
-            if (!kw) { alert('请输入商品关键词或链接'); return; }
-            var catEl = document.querySelector('.cat.active');
-            var cat = catEl ? catEl.dataset.cat : '';
-            currentKw = kw; currentCat = cat;
-            var prog = document.getElementById('progress');
-            var box = document.getElementById('results');
-            showLoading();
-            box.innerHTML = '';
-            var fd = new FormData();
-            fd.append('keyword', kw); fd.append('category', cat);
-            fetch('/api/compare', {method: 'POST', body: fd})
-                .then(r => r.json()).then(d => {
-                    finishLoading();
-                    if (!d.ok) { box.innerHTML = '<div style="text-align:center;color:#d63031;padding:30px">' + esc(d.msg) + '</div>'; return; }
-                    if (!d.groups.length) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:30px">没搜到结果（该商品可能未设置推广佣金，可去首页用补搜）</div>'; return; }
-                    renderGroups(d, box);
-                })
-                .catch(() => { finishLoading(); box.innerHTML = '<div style="text-align:center;color:#d63031;padding:30px">搜索失败</div>'; });
+      function doCompare() {
+        var kw = document.getElementById("kw").value.trim();
+        if (!kw) {
+          alert("请输入商品关键词或链接");
+          return;
         }
-
-        var LAST_RESULT = null;
-        function renderGroups(d, box) {
-            LAST_RESULT = d;
-            var html = '<div class="stat">淘宝 ' + d.tb_count + ' + 拼多多 ' + d.pdd_count + ' 条' +
-                (d.jd_count ? ' + 京东 ' + d.jd_count + ' 条' : '') +
-                (d.vip_count ? ' + 唯品会 ' + d.vip_count + ' 条' : '') +
-                ' 候选，' + d.groups.length + ' 个同款组</div>' +
-                '<div style="text-align:center;margin:10px 0"><button class="btn btn-primary" onclick="openCard()">📋 生成好价卡</button></div>';
-            if (d.subsidies && d.subsidies.length) {
-                html += '<div class="subsidy-bar">' + d.subsidies.map(function(s) {
-                    return '🎯 <b>[' + esc(s.category) + ']</b> ' + esc(s.requirements) +
-                        (s.max_price ? '（限价 ¥' + s.max_price + ' 内）' : '') + ' 至 ' + (s.valid_to || '长期');
-                }).join('<br>') + '</div>';
+        var catEl = document.querySelector(".cat.active");
+        var cat = catEl ? catEl.dataset.cat : "";
+        currentKw = kw;
+        currentCat = cat;
+        var prog = document.getElementById("progress");
+        var box = document.getElementById("results");
+        showLoading();
+        box.innerHTML = "";
+        var fd = new FormData();
+        fd.append("keyword", kw);
+        fd.append("category", cat);
+        fetch("/api/compare", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            finishLoading();
+            if (!d.ok) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#d63031;padding:30px">' +
+                esc(d.msg) +
+                "</div>";
+              return;
             }
-            d.groups.forEach(function(g) {
-                var best = g.platforms.slice().sort(function(a, b) { return a.price - b.price; })[0];
-                html += '<div class="cmp-card"><div class="card-head">' +
-                    '<span class="card-title">📦 ' + esc(g.key) + '</span>' +
-                    '<span style="font-size:12px;color:#b2bec3">' + g.platforms.length + ' 平台</span>';
-                // 2026-08-11 电商运营专家：同型号跨平台摘要（一眼看到各平台价）
-                if (g.platforms.length >= 2) {
-                    html += '<div style="font-size:12px;color:#636e72;margin-top:4px">' +
-                        g.platforms.slice().sort(function(a, b) { return a.price - b.price; }).map(function(p) {
-                            return platName(p.platform) + ' ¥' + p.price;
-                        }).join(' · ') + '</div>';
-                }
-                if (g.genuine) {
-                    html += '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' + platName(g.genuine.platform) + ' ¥' + g.genuine.price + '</span>';
-                }
-                html += '</div>';
-                html += '<div class="price-row">';
-                var stMap = {自营:'background:#eaf2fb;color:#0984e3', 天猫:'background:#fdeeee;color:#d63031', 旗舰店:'background:#fdf3e3;color:#e67e22', 百亿补贴:'background:#e8f7ee;color:#27ae60'};
-                var rtColor = function(r) { return r >= 4.5 ? '#27ae60' : (r >= 4.0 ? '#e67e22' : '#d63031'); };
-                g.platforms.forEach(function(it) {
-                    var isBest = it === best;
-                    html += '<div class="price-cell' + (isBest ? ' best' : '') + '">' +
-                        '<div class="pname">' + platBadge(it.platform) + (it.shop_type ? '<span style="' + (stMap[it.shop_type] || 'background:#eee;color:#636e72') + ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' + it.shop_type + '</span>' : '') + (isBest ? '<span class="best-tag">🏆 最低</span>' : '') + '</div>' +
-                        '<div class="pprice">¥' + it.price + '</div>' +
-                        (it.unit_price ? '<div class="pmeta" style="color:#27ae60">≈¥' + it.unit_price + '/百毫升</div>' : '') +
-                        '<div class="pmeta">' + esc(it.shop || '') +
-                        (it.shop_rating ? '<br><span style="color:' + rtColor(it.shop_rating) + '">🏪信誉 ' + it.shop_rating + '分' + (it.shop_signals ? ' ' + esc(it.shop_signals.split('、')[0]) : '') + '</span>' : '') +
-                        (it.coupon > 0 ? '<br>券¥' + it.coupon : '') +
-                        (it.original && it.original > it.price ? '<br>原价¥' + it.original : '') + '</div></div>';
-                });
-                html += '</div>';
-                html += '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, \'' + esc(g.key) + '\')">🔍 相似款</button>' +
-                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare(\'' + esc(g.key) + '\')">⚙️ 参数对比</button>' +
-                    '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openDetail(this, \'' + esc(g.key) + '\')">📄 详情</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
-                if (g.low_price_warning) {
-                    html += '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
-                }
-                if (d.content && d.content.count) {
-                    html += '<div class="content-bar">📺 博主评测：' + esc(d.content.platforms) +
-                        ' ・ 平均可信度 ⭐' + d.content.avg_score + '/100</div>';
-                }
-                html += '<div class="advice-loading" id="adv-' + g.key + '-loading">🤖 AI 顾问分析中…（约 15 秒）</div>';
-                html += '<div class="advice-box" id="adv-' + g.key + '" style="display:none"></div>';
-                html += '<div class="card-actions">' +
-                    '<button class="act-watch" onclick="watchBest(\'' + esc(g.key).replace(/'/g,'') + '\',' + (best ? best.price : 0) + ')">🔔 到价提醒</button>' +
-                    '<a class="act-chat" href="/?q=' + encodeURIComponent(currentKw) + '">💬 改用对话</a>' +
-                    (best && best.url ? '<a class="act-link" href="' + esc(best.url) + '" target="_blank" rel="noopener">去购买 ↗</a>' : '') +
-                    '</div></div>';
-                loadAdvice(g.key);
-            });
+            if (!d.groups.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:30px">没搜到结果（该商品可能未设置推广佣金，可去首页用补搜）</div>';
+              return;
+            }
+            renderGroups(d, box);
+          })
+          .catch(() => {
+            finishLoading();
+            box.innerHTML =
+              '<div style="text-align:center;color:#d63031;padding:30px">搜索失败</div>';
+          });
+      }
+
+      var LAST_RESULT = null;
+      function renderGroups(d, box) {
+        LAST_RESULT = d;
+        var html =
+          '<div class="stat">淘宝 ' +
+          d.tb_count +
+          " + 拼多多 " +
+          d.pdd_count +
+          " 条" +
+          (d.jd_count ? " + 京东 " + d.jd_count + " 条" : "") +
+          (d.vip_count ? " + 唯品会 " + d.vip_count + " 条" : "") +
+          " 候选，" +
+          d.groups.length +
+          " 个同款组</div>" +
+          '<div style="text-align:center;margin:10px 0"><button class="btn btn-primary" onclick="openCard()">📋 生成好价卡</button></div>';
+        if (d.subsidies && d.subsidies.length) {
+          html +=
+            '<div class="subsidy-bar">' +
+            d.subsidies
+              .map(function (s) {
+                return (
+                  "🎯 <b>[" +
+                  esc(s.category) +
+                  "]</b> " +
+                  esc(s.requirements) +
+                  (s.max_price ? "（限价 ¥" + s.max_price + " 内）" : "") +
+                  " 至 " +
+                  (s.valid_to || "长期")
+                );
+              })
+              .join("<br>") +
+            "</div>";
+        }
+        d.groups.forEach(function (g) {
+          var best = g.platforms.slice().sort(function (a, b) {
+            return a.price - b.price;
+          })[0];
+          html +=
+            '<div class="cmp-card"><div class="card-head">' +
+            '<span class="card-title">📦 ' +
+            esc(g.key) +
+            "</span>" +
+            '<span style="font-size:12px;color:#b2bec3">' +
+            g.platforms.length +
+            " 平台</span>";
+          // 2026-08-11 电商运营专家：同型号跨平台摘要（一眼看到各平台价）
+          if (g.platforms.length >= 2) {
+            html +=
+              '<div style="font-size:12px;color:#636e72;margin-top:4px">' +
+              g.platforms
+                .slice()
+                .sort(function (a, b) {
+                  return a.price - b.price;
+                })
+                .map(function (p) {
+                  return platName(p.platform) + " ¥" + p.price;
+                })
+                .join(" · ") +
+              "</div>";
+          }
+          if (g.genuine) {
+            html +=
+              '<span style="background:#e8f7ee;color:#27ae60;border-radius:10px;padding:2px 10px;font-size:12px;margin-left:8px">🏆 正品保障：' +
+              platName(g.genuine.platform) +
+              " ¥" +
+              g.genuine.price +
+              "</span>";
+          }
+          html += "</div>";
+          html += '<div class="price-row">';
+          var stMap = {
+            自营: "background:#eaf2fb;color:#0984e3",
+            天猫: "background:#fdeeee;color:#d63031",
+            旗舰店: "background:#fdf3e3;color:#e67e22",
+            百亿补贴: "background:#e8f7ee;color:#27ae60",
+          };
+          var rtColor = function (r) {
+            return r >= 4.5 ? "#27ae60" : r >= 4.0 ? "#e67e22" : "#d63031";
+          };
+          g.platforms.forEach(function (it) {
+            var isBest = it === best;
+            html +=
+              '<div class="price-cell' +
+              (isBest ? " best" : "") +
+              '">' +
+              '<div class="pname">' +
+              platBadge(it.platform) +
+              (it.shop_type
+                ? '<span style="' +
+                  (stMap[it.shop_type] || "background:#eee;color:#636e72") +
+                  ';border-radius:6px;padding:0 6px;font-size:11px;margin-left:4px">' +
+                  it.shop_type +
+                  "</span>"
+                : "") +
+              (isBest ? '<span class="best-tag">🏆 最低</span>' : "") +
+              "</div>" +
+              '<div class="pprice">¥' +
+              it.price +
+              "</div>" +
+              (it.unit_price
+                ? '<div class="pmeta" style="color:#27ae60">≈¥' +
+                  it.unit_price +
+                  "/百毫升</div>"
+                : "") +
+              '<div class="pmeta">' +
+              esc(it.shop || "") +
+              (it.shop_rating
+                ? '<br><span style="color:' +
+                  rtColor(it.shop_rating) +
+                  '">🏪信誉 ' +
+                  it.shop_rating +
+                  "分" +
+                  (it.shop_signals
+                    ? " " + esc(it.shop_signals.split("、")[0])
+                    : "") +
+                  "</span>"
+                : "") +
+              (it.coupon > 0 ? "<br>券¥" + it.coupon : "") +
+              (it.original && it.original > it.price
+                ? "<br>原价¥" + it.original
+                : "") +
+              "</div></div>";
+          });
+          html += "</div>";
+          html +=
+            '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px" onclick="loadSimilar(this, \'' +
+            esc(g.key) +
+            "')\">🔍 相似款</button>" +
+            '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openSpecCompare(\'' +
+            esc(g.key) +
+            "')\">⚙️ 参数对比</button>" +
+            '<button class="btn" style="margin-top:6px;font-size:12px;padding:4px 10px;margin-left:6px" onclick="openDetail(this, \'' +
+            esc(g.key) +
+            '\')">📄 详情</button><div class="sim-box" style="display:none;margin-top:6px"></div>';
+          if (g.low_price_warning) {
+            html +=
+              '<div style="background:#fdeeee;color:#d63031;border-radius:8px;padding:8px 12px;margin-top:8px;font-size:13px">⚠️ 最低价低于其他平台 30% 以上——注意可能是二手/仿品/单只</div>';
+          }
+          if (d.content && d.content.count) {
+            html +=
+              '<div class="content-bar">📺 博主评测：' +
+              esc(d.content.platforms) +
+              " ・ 平均可信度 ⭐" +
+              d.content.avg_score +
+              "/100</div>";
+          }
+          html +=
+            '<div class="advice-loading" id="adv-' +
+            g.key +
+            '-loading">🤖 AI 顾问分析中…（约 15 秒）</div>';
+          html +=
+            '<div class="advice-box" id="adv-' +
+            g.key +
+            '" style="display:none"></div>';
+          html +=
+            '<div class="card-actions">' +
+            '<button class="act-watch" onclick="watchBest(\'' +
+            esc(g.key).replace(/'/g, "") +
+            "'," +
+            (best ? best.price : 0) +
+            ')">🔔 到价提醒</button>' +
+            '<a class="act-chat" href="/?q=' +
+            encodeURIComponent(currentKw) +
+            '">💬 改用对话</a>' +
+            (best && best.url
+              ? '<a class="act-link" href="' +
+                esc(best.url) +
+                '" target="_blank" rel="noopener">去购买 ↗</a>'
+              : "") +
+            "</div></div>";
+          loadAdvice(g.key);
+        });
+        box.innerHTML = html;
+      }
+
+      function loadAdvice(groupKey) {
+        var fd = new FormData();
+        fd.append("keyword", currentKw);
+        fd.append("category", currentCat);
+        fd.append("group_key", groupKey);
+        fetch("/api/advice", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            var box = document.getElementById("adv-" + groupKey);
+            var loading = document.getElementById(
+              "adv-" + groupKey + "-loading",
+            );
+            if (loading) loading.style.display = "none";
+            if (box) {
+              box.style.display = "block";
+              box.innerText = d.ok ? d.advice : "⚠️ " + (d.msg || "分析失败");
+            }
+          })
+          .catch(() => {
+            var loading = document.getElementById(
+              "adv-" + groupKey + "-loading",
+            );
+            if (loading) loading.innerText = "⚠️ AI 分析失败（可稍后重试）";
+          });
+      }
+
+      function watchBest(title, price) {
+        if (!price) {
+          alert("暂无价格可盯");
+          return;
+        }
+        var target = prompt(
+          "当前最低 ¥" + price + "，目标价（低于此价提醒）：",
+          (price * WATCH_DEFAULT_RATIO).toFixed(0),
+        );
+        if (!target) return;
+        var fd = new FormData();
+        fd.append("title", title);
+        fd.append("current_price", price);
+        fd.append("target_price", parseFloat(target));
+        fetch(pinUrl("/watch"), { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then(() => alert("✅ 已加入盯价！目标 ¥" + target))
+          .catch(() => alert("盯价失败"));
+      }
+      // ===== v8 好价卡（六关拼图，WorkBuddy 设计）=====
+      function openCard() {
+        if (!LAST_RESULT || !LAST_RESULT.groups || !LAST_RESULT.groups.length) {
+          alert("先搜索再生成好价卡");
+          return;
+        }
+        var d = LAST_RESULT;
+        // 用第一个同款组做卡片（用户可后续选组）
+        var g = d.groups[0];
+        var best = g.platforms.slice().sort(function (a, b) {
+          return a.price - b.price;
+        })[0];
+        var card = document.getElementById("card-box");
+        var html =
+          '<div class="card-head" style="text-align:center;padding:10px;background:linear-gradient(135deg,#ff6b35,#e74c3c);color:#fff;border-radius:12px 12px 0 0">' +
+          '<div style="font-size:18px;font-weight:700">🛒 Go购 · 好价卡</div>' +
+          '<div style="font-size:12px;opacity:0.9">购物就是一场旅行</div></div>' +
+          '<div style="padding:14px">' +
+          '<div style="font-size:16px;font-weight:700;margin-bottom:10px">📦 ' +
+          esc(g.key) +
+          "</div>";
+
+        // ② 全网比价
+        html +=
+          '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">② 全网比价</div>';
+        g.platforms.forEach(function (it) {
+          var isBest = it === best;
+          var st = it.shop_type
+            ? ' <span style="font-size:11px;color:#0984e3">' +
+              esc(it.shop_type) +
+              "</span>"
+            : "";
+          // v1.0 阻断逻辑：店铺<3.0 → ❌ 不推荐（规则先行，不等 AI）
+          var blocked = it.shop_rating && it.shop_rating < 3.0;
+          html +=
+            '<div style="font-size:13px;margin:3px 0">' +
+            platName(it.platform) +
+            st +
+            " " +
+            (isBest ? "▼ " : "") +
+            "<b>¥" +
+            it.price +
+            "</b>" +
+            (blocked
+              ? ' <span style="color:#d63031;font-weight:700">❌ 不推荐</span>'
+              : "") +
+            (it.shop_rating
+              ? ' <span style="font-size:11px;color:' +
+                (it.shop_rating >= 4.5
+                  ? "#27ae60"
+                  : it.shop_rating >= 4
+                    ? "#e67e22"
+                    : "#d63031") +
+                '">' +
+                it.shop_rating +
+                "分</span>"
+              : "") +
+            "</div>";
+        });
+
+        // ③ 店铺信誉
+        var shopInfo = [];
+        g.platforms.slice(0, 2).forEach(function (it) {
+          if (it.shop)
+            shopInfo.push(
+              esc(it.shop) +
+                (it.shop_rating ? " " + it.shop_rating + "分" : "") +
+                (it.shop_signals
+                  ? " · " + esc(it.shop_signals.split("、")[0])
+                  : ""),
+            );
+        });
+        if (shopInfo.length) {
+          html +=
+            '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">③ 店铺信誉</div>' +
+            shopInfo
+              .map(function (s) {
+                return (
+                  '<div style="font-size:13px;margin:2px 0">🏪 ' + s + "</div>"
+                );
+              })
+              .join("");
+        }
+
+        // ④ 历史价（异步补）
+        html +=
+          '<div id="card-hist" style="font-size:14px;font-weight:700;margin:8px 0 4px">④ 历史价 <span style="font-size:11px;color:#b2bec3;font-weight:400">加载中…</span></div>';
+
+        // ⑤ 低价警示
+        if (g.low_price_warning) {
+          html +=
+            '<div style="font-size:13px;margin:4px 0;color:#d63031">⚠️ 最低价低于其他平台 30% 以上，警惕二手/仿品</div>';
+        }
+
+        // ⑥ 盯价纪律
+        html +=
+          '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">⑥ 盯价纪律</div>' +
+          '<div style="font-size:13px;color:#636e72">建议心理价位 = 历史最低 × 1.1，可设置降价提醒</div>';
+
+        // AI 建议（异步补）
+        html +=
+          '<div id="card-advice" style="font-size:13px;color:#636e72;margin-top:8px;background:#f8f9fa;border-radius:8px;padding:8px;min-height:24px">🤖 AI 建议加载中…</div>';
+        html +=
+          '<button class="btn" style="margin-top:8px;width:100%" onclick="loadDebate(this)">💬 听听大家怎么看</button>' +
+          '<div id="card-debate" style="margin-top:6px"></div>';
+
+        // v1.0 规则结论区：六关快速判定（不等 AI，AI Berkshire 阻断思想）
+        var ruleVerdict = [];
+        var allLow = g.platforms.every(function (it) {
+          return it.shop_rating && it.shop_rating < 3.0;
+        });
+        if (allLow) ruleVerdict.push("❌ 全平台店铺评分均低，建议放弃该商品");
+        else if (
+          g.platforms.some(function (it) {
+            return it.shop_rating && it.shop_rating < 3.0;
+          })
+        )
+          ruleVerdict.push("⚠️ 有低分店铺，购买前确认渠道");
+        if (g.low_price_warning)
+          ruleVerdict.push("❌ 低价警示触发：最低价低于其他平台 30% 以上");
+        var bestPrice = best.price;
+        if (bestPrice && bestPrice <= 20)
+          ruleVerdict.push("💡 小件商品（<¥20），按需购买即可");
+        if (ruleVerdict.length) {
+          html +=
+            '<div style="background:#fdf3e3;border:1px solid #ffd3c2;border-radius:8px;padding:8px;margin-top:10px;font-size:13px">' +
+            ruleVerdict
+              .map(function (v) {
+                return '<div style="margin:2px 0">' + v + "</div>";
+              })
+              .join("") +
+            "</div>";
+        }
+        html += "</div>";
+        document.getElementById("card-body").innerHTML = html;
+        document.getElementById("card-modal").style.display = "flex";
+        loadCardHistory(g);
+        loadCardAdvice(g);
+      }
+      function loadCardHistory(g) {
+        var first = null;
+        g.platforms.forEach(function (it) {
+          if (!first && it.goodsId) first = it;
+        });
+        if (!first) {
+          document.getElementById("card-hist").innerHTML =
+            '④ 历史价 <span style="font-size:11px;color:#b2bec3">暂无数据</span>';
+          return;
+        }
+        fetch(
+          "/history?platform=" +
+            first.platform +
+            "&item_id=" +
+            encodeURIComponent(first.goodsId),
+        )
+          .then((r) => r.json())
+          .then((d) => {
+            var el = document.getElementById("card-hist");
+            if (d.summary) {
+              el.innerHTML =
+                "④ 历史价：近 " +
+                d.summary.count +
+                " 次记录 · 最低 ¥" +
+                d.summary.lowest +
+                " · 当前 ¥" +
+                d.summary.current;
+              // 降价预测（纯规则，零LLM）
+              fetch(
+                "/api/price_prediction?platform=" +
+                  first.platform +
+                  "&item_id=" +
+                  encodeURIComponent(first.goodsId),
+              )
+                .then((r) => r.json())
+                .then((p) => {
+                  if (p.ok && p.verdict) {
+                    var pe = document.createElement("div");
+                    pe.style.cssText =
+                      "font-size:13px;color:#0984e3;margin:4px 0;font-weight:600";
+                    pe.innerText = p.verdict;
+                    el.appendChild(pe);
+                  }
+                })
+                .catch(function () {});
+            } else {
+              el.innerHTML =
+                '④ 历史价 <span style="font-size:11px;color:#b2bec3">数据积累中</span>';
+            }
+          })
+          .catch(() => {});
+      }
+      function loadCardAdvice(g) {
+        var fd = new FormData();
+        fd.append("keyword", currentKw);
+        fd.append("category", currentCat);
+        fd.append("group_key", g.key);
+        fetch("/api/advice", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            var el = document.getElementById("card-advice");
+            if (d.advice)
+              el.innerHTML = "🤖 " + d.advice.split("\n").map(esc).join("<br>");
+          })
+          .catch(() => {
+            document.getElementById("card-advice").innerHTML =
+              "🤖 AI 建议暂不可用";
+          });
+      }
+      function saveCard() {
+        // html2canvas 截图保存（CDN 加载）
+        if (!window.html2canvas) {
+          var s = document.createElement("script");
+          s.src =
+            "https://cdn.staticfile.org/html2canvas/1.4.1/html2canvas.min.js";
+          s.onload = function () {
+            doSave();
+          };
+          document.head.appendChild(s);
+        } else {
+          doSave();
+        }
+      }
+      function doSave() {
+        html2canvas(document.getElementById("card-body")).then(
+          function (canvas) {
+            var a = document.createElement("a");
+            a.download = "好价卡.png";
+            a.href = canvas.toDataURL("image/png");
+            a.click();
+          },
+        );
+      }
+      function copyCardText() {
+        var t = document.getElementById("card-body").innerText;
+        if (navigator.clipboard)
+          navigator.clipboard.writeText(t).then(function () {
+            alert("已复制，可以粘贴到微信");
+          });
+        else {
+          alert("复制失败，请手动选择复制");
+        }
+      }
+      function openDetail(btn, groupKey) {
+        var g = null;
+        (LAST_RESULT.groups || []).forEach(function (x) {
+          if (x.key === groupKey) g = x;
+        });
+        if (!g) return;
+        var it = null;
+        g.platforms.forEach(function (p) {
+          if (!it && p.goodsId) it = p;
+        });
+        if (!it) {
+          alert("该商品没有 ID");
+          return;
+        }
+        var box = document.getElementById("detail-modal-body");
+        box.innerHTML = "加载详情…";
+        document.getElementById("detail-modal").style.display = "flex";
+        fetch(
+          "/api/detail?platform=" +
+            it.platform +
+            "&id=" +
+            encodeURIComponent(it.goodsId),
+        )
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.ok) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:20px">' +
+                esc(d.msg) +
+                "</div>";
+              return;
+            }
+            var html =
+              '<div style="display:flex;gap:12px;margin-bottom:10px">' +
+              (d.img
+                ? '<img src="' +
+                  esc(d.img) +
+                  '" style="width:90px;height:90px;border-radius:10px;object-fit:cover" onerror="this.style.display=\'none\'">'
+                : "") +
+              '<div style="flex:1"><div style="font-size:15px;font-weight:700">' +
+              esc(d.title || "") +
+              "</div>" +
+              '<div style="font-size:12px;color:#636e72;margin-top:4px">🏪 ' +
+              esc(d.shop || "") +
+              (d.sales ? " ・ 销量 " + d.sales : "") +
+              "</div></div></div>";
+            if (d.dsr) {
+              html +=
+                '<div style="font-size:13px;margin:6px 0"><b>店铺评分</b><br>' +
+                "描述 " +
+                d.dsr +
+                " ・ 服务 " +
+                (d.service || "-") +
+                " ・ 物流 " +
+                (d.ship || "-") +
+                "</div>";
+            }
+            if (d.desc) {
+              html +=
+                '<div style="font-size:12px;color:#636e72;background:#f8f9fa;border-radius:8px;padding:8px;margin-top:6px">📝 ' +
+                esc(d.desc) +
+                "</div>";
+            }
+            // 2026-08-11 价格趋势图（price_compare_tool 借鉴）：近 30 天走势
+            html +=
+              '<div style="margin-top:10px;font-size:13px;font-weight:700">📈 价格走势（近 30 天）</div>' +
+              '<canvas id="trend-canvas" style="width:100%;height:120px;background:#f8f9fa;border-radius:8px;margin-top:6px"></canvas>' +
+              '<div id="trend-note" style="font-size:11px;color:#b2bec3;margin-top:4px"></div>';
             box.innerHTML = html;
+            // 拉取趋势数据画图
+            fetch(
+              "/api/price_trend?sku_id=" +
+                encodeURIComponent(it.goodsId) +
+                "&platform=" +
+                it.platform,
+            )
+              .then((r) => r.json())
+              .then((t) => {
+                if (!t.ok || !t.points || t.points.length < 2) {
+                  document.getElementById("trend-note").textContent =
+                    "暂无足够价格历史（多搜索几次自动积累）";
+                  return;
+                }
+                drawTrend(t.points);
+              })
+              .catch(function () {});
+          })
+          .catch(() => {
+            box.innerHTML =
+              '<div style="text-align:center;color:#b2bec3;padding:20px">详情加载失败</div>';
+          });
+      }
+      function closeDetail() {
+        document.getElementById("detail-modal").style.display = "none";
+      }
+      // 2026-08-11 价格趋势折线图（纯 Canvas 轻量实现）
+      function drawTrend(points) {
+        var c = document.getElementById("trend-canvas");
+        if (!c) return;
+        var w = c.clientWidth,
+          h = c.clientHeight;
+        c.width = w * 2;
+        c.height = h * 2; // 2x 高清
+        var ctx = c.getContext("2d");
+        ctx.scale(2, 2);
+        var prices = points.map(function (p) {
+          return p.price;
+        });
+        var min = Math.min.apply(null, prices),
+          max = Math.max.apply(null, prices);
+        var pad = 18,
+          span = max - min || 1;
+        var xs = function (i) {
+          return pad + (i * (w - pad * 2)) / (points.length - 1);
+        };
+        var ys = function (v) {
+          return h - pad - ((v - min) / span) * (h - pad * 2);
+        };
+        // 网格线
+        ctx.strokeStyle = "#eee";
+        ctx.lineWidth = 1;
+        for (var g = 0; g < 3; g++) {
+          var gy = pad + (g * (h - pad * 2)) / 2;
+          ctx.beginPath();
+          ctx.moveTo(pad, gy);
+          ctx.lineTo(w - pad, gy);
+          ctx.stroke();
         }
-
-        function loadAdvice(groupKey) {
-            var fd = new FormData();
-            fd.append('keyword', currentKw);
-            fd.append('category', currentCat);
-            fd.append('group_key', groupKey);
-            fetch('/api/advice', {method: 'POST', body: fd})
-                .then(r => r.json()).then(d => {
-                    var box = document.getElementById('adv-' + groupKey);
-                    var loading = document.getElementById('adv-' + groupKey + '-loading');
-                    if (loading) loading.style.display = 'none';
-                    if (box) { box.style.display = 'block'; box.innerText = d.ok ? d.advice : ('⚠️ ' + (d.msg || '分析失败')); }
+        // 折线（首尾同色，中间色阶）
+        var first = prices[0],
+          last = prices[prices.length - 1];
+        var color = last <= first ? "#27ae60" : "#d63031"; // 跌绿涨红
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        points.forEach(function (p, i) {
+          var x = xs(i),
+            y = ys(p.price);
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.stroke();
+        // 点 + 首末价标注
+        ctx.fillStyle = color;
+        [0, points.length - 1].forEach(function (i) {
+          ctx.beginPath();
+          ctx.arc(xs(i), ys(prices[i]), 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.font = "11px sans-serif";
+        ctx.fillStyle = "#636e72";
+        ctx.fillText(
+          "¥" + first + " (" + points[0].date.slice(5) + ")",
+          pad,
+          h - 4,
+        );
+        ctx.fillText(
+          "¥" + last + " (" + points[points.length - 1].date.slice(5) + ")",
+          w - pad - 110,
+          h - 4,
+        );
+        var note = document.getElementById("trend-note");
+        if (note)
+          note.textContent =
+            "从 " +
+            points[0].date +
+            " 到 " +
+            points[points.length - 1].date +
+            "：" +
+            (last <= first
+              ? "跌了 ¥" + (first - last).toFixed(1)
+              : "涨了 ¥" + (last - first).toFixed(1)) +
+            "，现在 ¥" +
+            last;
+      }
+      function openSpecCompare(groupKey) {
+        // 调后端解析同组商品参数 → 弹窗并排表
+        var fd = new FormData();
+        fd.append("keyword", currentKw);
+        fd.append("category", currentCat);
+        fd.append("group_key", groupKey);
+        fetch("/api/spec_compare", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.ok || !d.items || !d.items.length) {
+              alert("该组没有可对比的参数");
+              return;
+            }
+            var items = d.items;
+            var cols = ["平台", "价格"];
+            items.forEach(function (it) {
+              Object.keys(it.spec || {}).forEach(function (k) {
+                if (cols.indexOf(k) < 0) cols.push(k);
+              });
+            });
+            var html =
+              '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+              "<tr>" +
+              cols
+                .map(function (c) {
+                  return (
+                    '<th style="padding:6px;border:1px solid #eee;background:#f8f9fa">' +
+                    esc(c) +
+                    "</th>"
+                  );
                 })
-                .catch(() => {
-                    var loading = document.getElementById('adv-' + groupKey + '-loading');
-                    if (loading) loading.innerText = '⚠️ AI 分析失败（可稍后重试）';
-                });
-        }
-
-        function watchBest(title, price) {
-            if (!price) { alert('暂无价格可盯'); return; }
-            var target = prompt('当前最低 ¥' + price + '，目标价（低于此价提醒）：', (price * WATCH_DEFAULT_RATIO).toFixed(0));
-            if (!target) return;
-            var fd = new FormData();
-            fd.append('title', title); fd.append('current_price', price);
-            fd.append('target_price', parseFloat(target));
-            fetch(pinUrl('/watch', {method: 'POST', body: fd})
-                .then(r => r.json()).then(() => alert('✅ 已加入盯价！目标 ¥' + target))
-                .catch(() => alert('盯价失败'));
-        }
-        // ===== v8 好价卡（六关拼图，WorkBuddy 设计）=====
-        function openCard() {
-            if (!LAST_RESULT || !LAST_RESULT.groups || !LAST_RESULT.groups.length) { alert('先搜索再生成好价卡'); return; }
-            var d = LAST_RESULT;
-            // 用第一个同款组做卡片（用户可后续选组）
-            var g = d.groups[0];
-            var best = g.platforms.slice().sort(function(a, b) { return a.price - b.price; })[0];
-            var card = document.getElementById('card-box');
-            var html = '<div class="card-head" style="text-align:center;padding:10px;background:linear-gradient(135deg,#ff6b35,#e74c3c);color:#fff;border-radius:12px 12px 0 0">' +
-                '<div style="font-size:18px;font-weight:700">🛒 Go购 · 好价卡</div>' +
-                '<div style="font-size:12px;opacity:0.9">购物就是一场旅行</div></div>' +
-                '<div style="padding:14px">' +
-                '<div style="font-size:16px;font-weight:700;margin-bottom:10px">📦 ' + esc(g.key) + '</div>';
-
-            // ② 全网比价
-            html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">② 全网比价</div>';
-            g.platforms.forEach(function(it) {
-                var isBest = it === best;
-                var st = it.shop_type ? ' <span style="font-size:11px;color:#0984e3">' + esc(it.shop_type) + '</span>' : '';
-                // v1.0 阻断逻辑：店铺<3.0 → ❌ 不推荐（规则先行，不等 AI）
-                var blocked = it.shop_rating && it.shop_rating < 3.0;
-                html += '<div style="font-size:13px;margin:3px 0">' + platName(it.platform) + st + ' ' +
-                    (isBest ? '▼ ' : '') + '<b>¥' + it.price + '</b>' +
-                    (blocked ? ' <span style="color:#d63031;font-weight:700">❌ 不推荐</span>' : '') +
-                    (it.shop_rating ? ' <span style="font-size:11px;color:' + (it.shop_rating >= 4.5 ? '#27ae60' : (it.shop_rating >= 4 ? '#e67e22' : '#d63031')) + '">' + it.shop_rating + '分</span>' : '') + '</div>';
+                .join("") +
+              "</tr>";
+            items.forEach(function (it) {
+              html +=
+                '<tr><td style="padding:6px;border:1px solid #eee">' +
+                esc(it.platform) +
+                "</td>" +
+                '<td style="padding:6px;border:1px solid #eee;color:#ff6b35;font-weight:700">¥' +
+                it.price +
+                "</td>" +
+                cols
+                  .slice(2)
+                  .map(function (c) {
+                    return (
+                      '<td style="padding:6px;border:1px solid #eee">' +
+                      esc(it.spec[c] || "-") +
+                      "</td>"
+                    );
+                  })
+                  .join("") +
+                "</tr>";
             });
-
-            // ③ 店铺信誉
-            var shopInfo = [];
-            g.platforms.slice(0, 2).forEach(function(it) {
-                if (it.shop) shopInfo.push(esc(it.shop) + (it.shop_rating ? ' ' + it.shop_rating + '分' : '') + (it.shop_signals ? ' · ' + esc(it.shop_signals.split('、')[0]) : ''));
-            });
-            if (shopInfo.length) {
-                html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">③ 店铺信誉</div>' +
-                    shopInfo.map(function(s) { return '<div style="font-size:13px;margin:2px 0">🏪 ' + s + '</div>'; }).join('');
+            html += "</table>";
+            var box = document.getElementById("spec-modal-body");
+            box.innerHTML =
+              '<div style="font-size:14px;font-weight:700;margin-bottom:8px">⚙️ 参数对比：' +
+              esc(d.keyword) +
+              "</div>" +
+              html;
+            document.getElementById("spec-modal").style.display = "flex";
+          })
+          .catch(() => alert("参数对比失败"));
+      }
+      function closeSpec() {
+        document.getElementById("spec-modal").style.display = "none";
+      }
+      function loadSimilar(btn, groupKey) {
+        var g = null;
+        (LAST_RESULT.groups || []).forEach(function (x) {
+          if (x.key === groupKey) g = x;
+        });
+        if (!g) return;
+        var it = null;
+        g.platforms.forEach(function (p) {
+          if (!it && p.platform === "tb" && p.goodsId) it = p;
+        });
+        if (!it) {
+          alert("没有可用的商品 ID");
+          return;
+        }
+        var box = btn.nextElementSibling;
+        if (box.style.display !== "none") {
+          box.style.display = "none";
+          return;
+        }
+        box.innerHTML = "加载相似款…";
+        box.style.display = "block";
+        fetch("/api/similar?id=" + encodeURIComponent(it.goodsId))
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.items || !d.items.length) {
+              box.innerHTML =
+                '<div style="font-size:12px;color:#b2bec3">没找到相似款</div>';
+              return;
             }
-
-            // ④ 历史价（异步补）
-            html += '<div id="card-hist" style="font-size:14px;font-weight:700;margin:8px 0 4px">④ 历史价 <span style="font-size:11px;color:#b2bec3;font-weight:400">加载中…</span></div>';
-
-            // ⑤ 低价警示
-            if (g.low_price_warning) {
-                html += '<div style="font-size:13px;margin:4px 0;color:#d63031">⚠️ 最低价低于其他平台 30% 以上，警惕二手/仿品</div>';
+            box.innerHTML =
+              '<div style="font-size:12px;color:#636e72;margin-bottom:4px">🔍 相似款：</div>' +
+              d.items
+                .slice(0, 5)
+                .map(function (s) {
+                  return (
+                    '<div style="font-size:12px;margin:3px 0"><b>¥' +
+                    s.actualPrice +
+                    "</b> " +
+                    esc(s.title.slice(0, 40)) +
+                    "</div>"
+                  );
+                })
+                .join("");
+          })
+          .catch(() => {
+            box.innerHTML = "相似款加载失败";
+          });
+      }
+      function loadDebate(btn) {
+        btn.disabled = true;
+        btn.innerText = "💬 大家正在吵…";
+        var fd = new FormData();
+        fd.append("keyword", currentKw);
+        fd.append("category", currentCat);
+        fd.append("group_key", LAST_RESULT.groups[0].key);
+        fetch("/api/debate", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            var box = document.getElementById("card-debate");
+            if (!d.ok || !d.views) {
+              box.innerHTML = "辩论失败，稍后再试";
+              btn.style.display = "none";
+              return;
             }
-
-            // ⑥ 盯价纪律
-            html += '<div style="font-size:14px;font-weight:700;margin:8px 0 4px">⑥ 盯价纪律</div>' +
-                '<div style="font-size:13px;color:#636e72">建议心理价位 = 历史最低 × 1.1，可设置降价提醒</div>';
-
-            // AI 建议（异步补）
-            html += '<div id="card-advice" style="font-size:13px;color:#636e72;margin-top:8px;background:#f8f9fa;border-radius:8px;padding:8px;min-height:24px">🤖 AI 建议加载中…</div>';
-            html += '<button class="btn" style="margin-top:8px;width:100%" onclick="loadDebate(this)">💬 听听大家怎么看</button>' +
-                '<div id="card-debate" style="margin-top:6px"></div>';
-
-            // v1.0 规则结论区：六关快速判定（不等 AI，AI Berkshire 阻断思想）
-            var ruleVerdict = [];
-            var allLow = g.platforms.every(function(it) { return it.shop_rating && it.shop_rating < 3.0; });
-            if (allLow) ruleVerdict.push('❌ 全平台店铺评分均低，建议放弃该商品');
-            else if (g.platforms.some(function(it) { return it.shop_rating && it.shop_rating < 3.0; })) ruleVerdict.push('⚠️ 有低分店铺，购买前确认渠道');
-            if (g.low_price_warning) ruleVerdict.push('❌ 低价警示触发：最低价低于其他平台 30% 以上');
-            var bestPrice = best.price;
-            if (bestPrice && bestPrice <= 20) ruleVerdict.push('💡 小件商品（<¥20），按需购买即可');
-            if (ruleVerdict.length) {
-                html += '<div style="background:#fdf3e3;border:1px solid #ffd3c2;border-radius:8px;padding:8px;margin-top:10px;font-size:13px">' +
-                    ruleVerdict.map(function(v) { return '<div style="margin:2px 0">' + v + '</div>'; }).join('') + '</div>';
-            }
-            html += '</div>';
-            document.getElementById('card-body').innerHTML = html;
-            document.getElementById('card-modal').style.display = 'flex';
-            loadCardHistory(g);
-            loadCardAdvice(g);
-        }
-        function loadCardHistory(g) {
-            var first = null;
-            g.platforms.forEach(function(it) { if (!first && it.goodsId) first = it; });
-            if (!first) { document.getElementById('card-hist').innerHTML = '④ 历史价 <span style="font-size:11px;color:#b2bec3">暂无数据</span>'; return; }
-            fetch('/history?platform=' + first.platform + '&item_id=' + encodeURIComponent(first.goodsId))
-                .then(r => r.json()).then(d => {
-                    var el = document.getElementById('card-hist');
-                    if (d.summary) {
-                        el.innerHTML = '④ 历史价：近 ' + d.summary.count + ' 次记录 · 最低 ¥' + d.summary.lowest + ' · 当前 ¥' + d.summary.current;
-                        // 降价预测（纯规则，零LLM）
-                        fetch('/api/price_prediction?platform=' + first.platform + '&item_id=' + encodeURIComponent(first.goodsId))
-                            .then(r => r.json()).then(p => {
-                                if (p.ok && p.verdict) {
-                                    var pe = document.createElement('div');
-                                    pe.style.cssText = 'font-size:13px;color:#0984e3;margin:4px 0;font-weight:600';
-                                    pe.innerText = p.verdict;
-                                    el.appendChild(pe);
-                                }
-                            }).catch(function(){});
-                    } else {
-                        el.innerHTML = '④ 历史价 <span style="font-size:11px;color:#b2bec3">数据积累中</span>';
-                    }
-                }).catch(() => {});
-        }
-        function loadCardAdvice(g) {
-            var fd = new FormData();
-            fd.append('keyword', currentKw);
-            fd.append('category', currentCat);
-            fd.append('group_key', g.key);
-            fetch('/api/advice', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                var el = document.getElementById('card-advice');
-                if (d.advice) el.innerHTML = '🤖 ' + d.advice.split('\n').map(esc).join('<br>');
-            }).catch(() => { document.getElementById('card-advice').innerHTML = '🤖 AI 建议暂不可用'; });
-        }
-        function saveCard() {
-            // html2canvas 截图保存（CDN 加载）
-            if (!window.html2canvas) {
-                var s = document.createElement('script');
-                s.src = 'https://cdn.staticfile.org/html2canvas/1.4.1/html2canvas.min.js';
-                s.onload = function() { doSave(); };
-                document.head.appendChild(s);
-            } else { doSave(); }
-        }
-        function doSave() {
-            html2canvas(document.getElementById('card-body')).then(function(canvas) {
-                var a = document.createElement('a');
-                a.download = '好价卡.png';
-                a.href = canvas.toDataURL('image/png');
-                a.click();
-            });
-        }
-        function copyCardText() {
-            var t = document.getElementById('card-body').innerText;
-            if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ alert('已复制，可以粘贴到微信'); });
-            else { alert('复制失败，请手动选择复制'); }
-        }
-        function openDetail(btn, groupKey) {
-            var g = null;
-            (LAST_RESULT.groups || []).forEach(function(x) { if (x.key === groupKey) g = x; });
-            if (!g) return;
-            var it = null;
-            g.platforms.forEach(function(p) { if (!it && p.goodsId) it = p; });
-            if (!it) { alert('该商品没有 ID'); return; }
-            var box = document.getElementById('detail-modal-body');
-            box.innerHTML = '加载详情…';
-            document.getElementById('detail-modal').style.display = 'flex';
-            fetch('/api/detail?platform=' + it.platform + '&id=' + encodeURIComponent(it.goodsId)).then(r => r.json()).then(d => {
-                if (!d.ok) { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">' + esc(d.msg) + '</div>'; return; }
-                var html = '<div style="display:flex;gap:12px;margin-bottom:10px">' +
-                    (d.img ? '<img src="' + esc(d.img) + '" style="width:90px;height:90px;border-radius:10px;object-fit:cover" onerror="this.style.display=\'none\'">' : '') +
-                    '<div style="flex:1"><div style="font-size:15px;font-weight:700">' + esc(d.title || '') + '</div>' +
-                    '<div style="font-size:12px;color:#636e72;margin-top:4px">🏪 ' + esc(d.shop || '') +
-                    (d.sales ? ' ・ 销量 ' + d.sales : '') + '</div></div></div>';
-                if (d.dsr) {
-                    html += '<div style="font-size:13px;margin:6px 0"><b>店铺评分</b><br>' +
-                        '描述 ' + d.dsr + ' ・ 服务 ' + (d.service || '-') + ' ・ 物流 ' + (d.ship || '-') + '</div>';
-                }
-                if (d.desc) {
-                    html += '<div style="font-size:12px;color:#636e72;background:#f8f9fa;border-radius:8px;padding:8px;margin-top:6px">📝 ' + esc(d.desc) + '</div>';
-                }
-                // 2026-08-11 价格趋势图（price_compare_tool 借鉴）：近 30 天走势
-                html += '<div style="margin-top:10px;font-size:13px;font-weight:700">📈 价格走势（近 30 天）</div>' +
-                    '<canvas id="trend-canvas" style="width:100%;height:120px;background:#f8f9fa;border-radius:8px;margin-top:6px"></canvas>' +
-                    '<div id="trend-note" style="font-size:11px;color:#b2bec3;margin-top:4px"></div>';
-                box.innerHTML = html;
-                // 拉取趋势数据画图
-                fetch('/api/price_trend?sku_id=' + encodeURIComponent(it.goodsId) + '&platform=' + it.platform)
-                    .then(r => r.json()).then(t => {
-                        if (!t.ok || !t.points || t.points.length < 2) {
-                            document.getElementById('trend-note').textContent = '暂无足够价格历史（多搜索几次自动积累）';
-                            return;
-                        }
-                        drawTrend(t.points);
-                    }).catch(function(){});
-            }).catch(() => { box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:20px">详情加载失败</div>'; });
-        }
-        function closeDetail() { document.getElementById('detail-modal').style.display = 'none'; }
-        // 2026-08-11 价格趋势折线图（纯 Canvas 轻量实现）
-        function drawTrend(points) {
-            var c = document.getElementById('trend-canvas');
-            if (!c) return;
-            var w = c.clientWidth, h = c.clientHeight;
-            c.width = w * 2; c.height = h * 2;  // 2x 高清
-            var ctx = c.getContext('2d');
-            ctx.scale(2, 2);
-            var prices = points.map(function(p){ return p.price; });
-            var min = Math.min.apply(null, prices), max = Math.max.apply(null, prices);
-            var pad = 18, span = (max - min) || 1;
-            var xs = function(i) { return pad + i * (w - pad * 2) / (points.length - 1); };
-            var ys = function(v) { return h - pad - (v - min) / span * (h - pad * 2); };
-            // 网格线
-            ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
-            for (var g = 0; g < 3; g++) {
-                var gy = pad + g * (h - pad * 2) / 2;
-                ctx.beginPath(); ctx.moveTo(pad, gy); ctx.lineTo(w - pad, gy); ctx.stroke();
-            }
-            // 折线（首尾同色，中间色阶）
-            var first = prices[0], last = prices[prices.length - 1];
-            var color = last <= first ? '#27ae60' : '#d63031';  // 跌绿涨红
-            ctx.strokeStyle = color; ctx.lineWidth = 2;
-            ctx.beginPath();
-            points.forEach(function(p, i) { var x = xs(i), y = ys(p.price); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-            ctx.stroke();
-            // 点 + 首末价标注
-            ctx.fillStyle = color;
-            [0, points.length - 1].forEach(function(i) {
-                ctx.beginPath(); ctx.arc(xs(i), ys(prices[i]), 3, 0, Math.PI * 2); ctx.fill();
-            });
-            ctx.font = '11px sans-serif';
-            ctx.fillStyle = '#636e72';
-            ctx.fillText('¥' + first + ' (' + points[0].date.slice(5) + ')', pad, h - 4);
-            ctx.fillText('¥' + last + ' (' + points[points.length - 1].date.slice(5) + ')', w - pad - 110, h - 4);
-            var note = document.getElementById('trend-note');
-            if (note) note.textContent = '从 ' + points[0].date + ' 到 ' + points[points.length - 1].date +
-                '：' + (last <= first ? '跌了 ¥' + (first - last).toFixed(1) : '涨了 ¥' + (last - first).toFixed(1)) + '，现在 ¥' + last;
-        }
-        function openSpecCompare(groupKey) {
-            // 调后端解析同组商品参数 → 弹窗并排表
-            var fd = new FormData();
-            fd.append('keyword', currentKw);
-            fd.append('category', currentCat);
-            fd.append('group_key', groupKey);
-            fetch('/api/spec_compare', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                if (!d.ok || !d.items || !d.items.length) { alert('该组没有可对比的参数'); return; }
-                var items = d.items;
-                var cols = ['平台', '价格'];
-                items.forEach(function(it) { Object.keys(it.spec || {}).forEach(function(k) { if (cols.indexOf(k) < 0) cols.push(k); }); });
-                var html = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
-                    '<tr>' + cols.map(function(c) { return '<th style="padding:6px;border:1px solid #eee;background:#f8f9fa">' + esc(c) + '</th>'; }).join('') + '</tr>';
-                items.forEach(function(it) {
-                    html += '<tr><td style="padding:6px;border:1px solid #eee">' + esc(it.platform) + '</td>' +
-                        '<td style="padding:6px;border:1px solid #eee;color:#ff6b35;font-weight:700">¥' + it.price + '</td>' +
-                        cols.slice(2).map(function(c) { return '<td style="padding:6px;border:1px solid #eee">' + esc(it.spec[c] || '-') + '</td>'; }).join('') + '</tr>';
-                });
-                html += '</table>';
-                var box = document.getElementById('spec-modal-body');
-                box.innerHTML = '<div style="font-size:14px;font-weight:700;margin-bottom:8px">⚙️ 参数对比：' + esc(d.keyword) + '</div>' + html;
-                document.getElementById('spec-modal').style.display = 'flex';
-            }).catch(() => alert('参数对比失败'));
-        }
-        function closeSpec() { document.getElementById('spec-modal').style.display = 'none'; }
-        function loadSimilar(btn, groupKey) {
-            var g = null;
-            (LAST_RESULT.groups || []).forEach(function(x) { if (x.key === groupKey) g = x; });
-            if (!g) return;
-            var it = null;
-            g.platforms.forEach(function(p) { if (!it && p.platform === 'tb' && p.goodsId) it = p; });
-            if (!it) { alert('没有可用的商品 ID'); return; }
-            var box = btn.nextElementSibling;
-            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
-            box.innerHTML = '加载相似款…'; box.style.display = 'block';
-            fetch('/api/similar?id=' + encodeURIComponent(it.goodsId)).then(r => r.json()).then(d => {
-                if (!d.items || !d.items.length) { box.innerHTML = '<div style="font-size:12px;color:#b2bec3">没找到相似款</div>'; return; }
-                box.innerHTML = '<div style="font-size:12px;color:#636e72;margin-bottom:4px">🔍 相似款：</div>' + d.items.slice(0, 5).map(function(s) {
-                    return '<div style="font-size:12px;margin:3px 0"><b>¥' + s.actualPrice + '</b> ' + esc(s.title.slice(0, 40)) + '</div>';
-                }).join('');
-            }).catch(() => { box.innerHTML = '相似款加载失败'; });
-        }
-        function loadDebate(btn) {
-            btn.disabled = true; btn.innerText = '💬 大家正在吵…';
-            var fd = new FormData();
-            fd.append('keyword', currentKw);
-            fd.append('category', currentCat);
-            fd.append('group_key', LAST_RESULT.groups[0].key);
-            fetch('/api/debate', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                var box = document.getElementById('card-debate');
-                if (!d.ok || !d.views) { box.innerHTML = '辩论失败，稍后再试'; btn.style.display = 'none'; return; }
-                box.innerHTML = d.views.map(function(v) {
-                    var icon = {性价比派: '💰', 品质派: '🏪', 性能派: '⚡'}[v.role] || '💬';
-                    return '<div style="font-size:13px;margin:5px 0;padding:7px 9px;background:#f8f9fa;border-radius:8px"><b>' + icon + ' ' + esc(v.role) + '</b>：' + esc(v.view) + '</div>';
-                }).join('');
-                btn.style.display = 'none';
-            }).catch(() => { document.getElementById('card-debate').innerHTML = '辩论失败，稍后再试'; });
-        }
-        function closeCard() { document.getElementById('card-modal').style.display = 'none'; }
+            box.innerHTML = d.views
+              .map(function (v) {
+                var icon =
+                  { 性价比派: "💰", 品质派: "🏪", 性能派: "⚡" }[v.role] ||
+                  "💬";
+                return (
+                  '<div style="font-size:13px;margin:5px 0;padding:7px 9px;background:#f8f9fa;border-radius:8px"><b>' +
+                  icon +
+                  " " +
+                  esc(v.role) +
+                  "</b>：" +
+                  esc(v.view) +
+                  "</div>"
+                );
+              })
+              .join("");
+            btn.style.display = "none";
+          })
+          .catch(() => {
+            document.getElementById("card-debate").innerHTML =
+              "辩论失败，稍后再试";
+          });
+      }
+      function closeCard() {
+        document.getElementById("card-modal").style.display = "none";
+      }
     </script>
 
     <!-- v8 好价卡模态框 -->
-    <div id="card-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
-        <div style="width:min(420px, 94vw);background:#fff;border-radius:14px">
-            <div id="card-body" style="font-size:14px"></div>
-            <div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #eee">
-                <button class="btn btn-primary" style="flex:1" onclick="saveCard()">💾 保存图片</button>
-                <button class="btn" style="flex:1" onclick="copyCardText()">📋 复制文字</button>
-                <button class="btn" style="flex:0 0 auto" onclick="closeCard()">关闭</button>
-            </div>
+    <div
+      id="card-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 999;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-y: auto;
+        padding: 20px 10px;
+      "
+    >
+      <div
+        style="width: min(420px, 94vw); background: #fff; border-radius: 14px"
+      >
+        <div id="card-body" style="font-size: 14px"></div>
+        <div
+          style="
+            display: flex;
+            gap: 8px;
+            padding: 12px 14px;
+            border-top: 1px solid #eee;
+          "
+        >
+          <button class="btn btn-primary" style="flex: 1" onclick="saveCard()">
+            💾 保存图片
+          </button>
+          <button class="btn" style="flex: 1" onclick="copyCardText()">
+            📋 复制文字
+          </button>
+          <button class="btn" style="flex: 0 0 auto" onclick="closeCard()">
+            关闭
+          </button>
         </div>
+      </div>
     </div>
 
     <!-- v9 详情模态框 -->
-    <div id="detail-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
-        <div style="width:min(440px, 94vw);background:#fff;border-radius:14px;padding:16px">
-            <div id="detail-modal-body"></div>
-            <div style="text-align:center;margin-top:12px"><button class="btn" onclick="closeDetail()">关闭</button></div>
+    <div
+      id="detail-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 999;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-y: auto;
+        padding: 20px 10px;
+      "
+    >
+      <div
+        style="
+          width: min(440px, 94vw);
+          background: #fff;
+          border-radius: 14px;
+          padding: 16px;
+        "
+      >
+        <div id="detail-modal-body"></div>
+        <div style="text-align: center; margin-top: 12px">
+          <button class="btn" onclick="closeDetail()">关闭</button>
         </div>
+      </div>
     </div>
 
     <!-- v9 参数对比模态框 -->
-    <div id="spec-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:999;justify-content:center;align-items:flex-start;overflow-y:auto;padding:20px 10px">
-        <div style="width:min(520px, 94vw);background:#fff;border-radius:14px;padding:16px">
-            <div id="spec-modal-body"></div>
-            <div style="text-align:center;margin-top:12px"><button class="btn" onclick="closeSpec()">关闭</button></div>
+    <div
+      id="spec-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 999;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-y: auto;
+        padding: 20px 10px;
+      "
+    >
+      <div
+        style="
+          width: min(520px, 94vw);
+          background: #fff;
+          border-radius: 14px;
+          padding: 16px;
+        "
+      >
+        <div id="spec-modal-body"></div>
+        <div style="text-align: center; margin-top: 12px">
+          <button class="btn" onclick="closeSpec()">关闭</button>
         </div>
+      </div>
     </div>
-</body>
+  </body>
 </html>

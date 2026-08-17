@@ -1,298 +1,538 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>比价结果 - {{ keyword }}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css" />
     <style>
-        .sub-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 16px 0; }
-        .sub-btns .btn { flex: 1; min-width: 140px; }
-        .loading-tip { display: none; text-align: center; font-size: 15px; margin-top: 10px; }
+      .sub-btns {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 16px 0;
+      }
+      .sub-btns .btn {
+        flex: 1;
+        min-width: 140px;
+      }
+      .loading-tip {
+        display: none;
+        text-align: center;
+        font-size: 15px;
+        margin-top: 10px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="top">
-            <a href="/" class="back">←</a>
-            <h1>「{{ keyword }}」比价结果</h1>
+      <div class="top">
+        <a href="/" class="back">←</a>
+        <h1>「{{ keyword }}」比价结果</h1>
+      </div>
+      <div class="stat">
+        淘宝 {{ tb_count }} 条 + 拼多多 {{ pdd_count }} 条{% if manual_count %}
+        + 人工录入 {{ manual_count }} 条{% endif %} = {{ total + manual_count }}
+        条候选
+      </div>
+      <div class="history-tip">
+        📊 想看官方历史价格？淘宝 App 商品页 → 保障 →
+        价格保护（我们自己的价格曲线正在积累中）
+      </div>
+      {% if subsidies %}
+      <div class="subsidy-bar">
+        {% for s in subsidies %}🎯 <b>[{{ s.category }}]</b> {{ s.requirements
+        }}{% if s.region %}（{{ s.region }}）{% endif %}{% if s.valid_to %} 至
+        {{ s.valid_to }}{% endif %}{% if s.source_url %}
+        <a
+          href="{{ s.source_url }}"
+          target="_blank"
+          rel="noopener"
+          style="color: #fff"
+          >来源↗</a
+        >{% endif %}<br />{% endfor %}
+      </div>
+      {% endif %} {% if tb_count == 0 %}
+      <div class="fallback">
+        <div class="fb-title">⚠️ 淘宝没有找到「{{ keyword }}」的推广商品</div>
+        <div class="fb-desc">
+          可能原因：该品牌未开通推广佣金（大牌/潮牌常见）。淘宝其实有货，复制下方关键词去淘宝
+          App 搜索：
         </div>
-        <div class="stat">淘宝 {{ tb_count }} 条 + 拼多多 {{ pdd_count }} 条{% if manual_count %} + 人工录入 {{ manual_count }} 条{% endif %} = {{ total + manual_count }} 条候选</div>
-        <div class="history-tip">📊 想看官方历史价格？淘宝 App 商品页 → 保障 → 价格保护（我们自己的价格曲线正在积累中）</div>
-        {% if subsidies %}
-        <div class="subsidy-bar">
-            {% for s in subsidies %}🎯 <b>[{{ s.category }}]</b> {{ s.requirements }}{% if s.region %}（{{ s.region }}）{% endif %}{% if s.valid_to %} 至 {{ s.valid_to }}{% endif %}{% if s.source_url %} <a href="{{ s.source_url }}" target="_blank" rel="noopener" style="color:#fff">来源↗</a>{% endif %}<br>{% endfor %}
+        <div class="fb-copy">
+          <span id="tb-kw">{{ keyword }}</span>
+          <button onclick="copyText('tb-kw')">复制</button>
         </div>
-        {% endif %}
-
-        {% if tb_count == 0 %}
-        <div class="fallback">
-            <div class="fb-title">⚠️ 淘宝没有找到「{{ keyword }}」的推广商品</div>
-            <div class="fb-desc">可能原因：该品牌未开通推广佣金（大牌/潮牌常见）。淘宝其实有货，复制下方关键词去淘宝 App 搜索：</div>
-            <div class="fb-copy">
-                <span id="tb-kw">{{ keyword }}</span>
-                <button onclick="copyText('tb-kw')">复制</button>
+      </div>
+      {% endif %} {% if pdd_count == 0 %}
+      <div class="fallback">
+        <div class="fb-title">⚠️ 拼多多没有找到「{{ keyword }}」的推广商品</div>
+        <div class="fb-desc">复制下方关键词去拼多多 App 搜索：</div>
+        <div class="fb-copy">
+          <span id="pdd-kw">{{ keyword }}</span>
+          <button onclick="copyText('pdd-kw')">复制</button>
+        </div>
+      </div>
+      {% endif %} {% if groups %} {% for g in groups %}
+      <div class="group">
+        <div class="group-head">
+          <span class="sku">📦 {{ g.key }}</span>
+          <span class="count">{{ g.count }} 个候选</span>
+        </div>
+        {% for it in g.platforms %}
+        <div class="item {% if it == g.best %}best{% endif %}">
+          <span class="plat"
+            >{{ '淘宝' if it.platform == 'tb' else '拼多多' }}</span
+          >
+          <div class="info">
+            <div class="title">{{ it.title }}</div>
+            <div class="shop">
+              {{ it.shopName }} ・ {{ it.value_score }}分{% if it == g.best
+              %}<span class="badge">最低价</span>{% endif %} {% if it.url %}<a
+                class="link"
+                href="{{ it.url }}"
+                target="_blank"
+                rel="noopener"
+                >去购买 ↗</a
+              >{% endif %}
+              <a
+                class="link"
+                href="javascript:void(0)"
+                onclick="loadHistory('{{ it.platform }}','{{ it.goodsId }}',this)"
+                >📈 历史价</a
+              >
             </div>
-        </div>
-        {% endif %}
-        {% if pdd_count == 0 %}
-        <div class="fallback">
-            <div class="fb-title">⚠️ 拼多多没有找到「{{ keyword }}」的推广商品</div>
-            <div class="fb-desc">复制下方关键词去拼多多 App 搜索：</div>
-            <div class="fb-copy">
-                <span id="pdd-kw">{{ keyword }}</span>
-                <button onclick="copyText('pdd-kw')">复制</button>
+            <div class="hist-box" style="display: none"></div>
+          </div>
+          <div class="price">
+            <div class="now">¥{{ it.actualPrice }}</div>
+            {% if it.coupon_amount and it.coupon_amount > 0 %}
+            <div class="coupon">
+              券后省 ¥{{ it.coupon_amount }}{% if it.coupon_end %}<br /><span
+                style="font-size: 10px"
+                >券到 {{ it.coupon_end[:10] }}</span
+              >{% endif %}
             </div>
+            {% endif %} {% if it.originalPrice and it.originalPrice >
+            it.actualPrice %}
+            <div class="old">¥{{ it.originalPrice }}</div>
+            {% endif %}
+          </div>
         </div>
-        {% endif %}
+        {% endfor %}
+      </div>
+      {% endfor %} {% else %}
+      <div class="empty">
+        没有搜到结果<br />（该商品可能未设置推广佣金）<br /><br />试试：<br />①
+        用上面的「淘宝/京东补搜」<br />② 换个关键词（如品牌英文名）
+      </div>
+      {% endif %}
 
-        {% if groups %}
-            {% for g in groups %}
-            <div class="group">
-                <div class="group-head">
-                    <span class="sku">📦 {{ g.key }}</span>
-                    <span class="count">{{ g.count }} 个候选</span>
-                </div>
-                {% for it in g.platforms %}
-                <div class="item {% if it == g.best %}best{% endif %}">
-                    <span class="plat">{{ '淘宝' if it.platform == 'tb' else '拼多多' }}</span>
-                    <div class="info">
-                        <div class="title">{{ it.title }}</div>
-                        <div class="shop">{{ it.shopName }} ・ {{ it.value_score }}分{% if it == g.best %}<span class="badge">最低价</span>{% endif %}
-                            {% if it.url %}<a class="link" href="{{ it.url }}" target="_blank" rel="noopener">去购买 ↗</a>{% endif %}
-                            <a class="link" href="javascript:void(0)" onclick="loadHistory('{{ it.platform }}','{{ it.goodsId }}',this)">📈 历史价</a>
-                        </div>
-                        <div class="hist-box" style="display:none"></div>
-                    </div>
-                    <div class="price">
-                        <div class="now">¥{{ it.actualPrice }}</div>
-                        {% if it.coupon_amount and it.coupon_amount > 0 %}
-                        <div class="coupon">券后省 ¥{{ it.coupon_amount }}{% if it.coupon_end %}<br><span style="font-size:10px">券到 {{ it.coupon_end[:10] }}</span>{% endif %}</div>
-                        {% endif %}
-                        {% if it.originalPrice and it.originalPrice > it.actualPrice %}
-                        <div class="old">¥{{ it.originalPrice }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="empty">没有搜到结果<br>（该商品可能未设置推广佣金）<br><br>试试：<br>① 用上面的「淘宝/京东补搜」<br>② 换个关键词（如品牌英文名）</div>
-        {% endif %}
-
-        <div class="sub-btns">
-            <button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">🛒 用淘宝补搜</button>
-            <button onclick="biliSearch()" id="bili-btn" style="padding:12px 24px;font-size:16px;background:#00a1d6;color:#fff;border:none;border-radius:10px;cursor:pointer">📺 B站/贴吧（约1分钟）</button>
-            <button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">🔍 用京东补搜</button>
-            <div id="jd-loading" class="loading-tip" style="color:#e4393c">正在京东搜索「{{ keyword }}」…</div>
-            <div id="tb-loading" class="loading-tip" style="color:#ff5000">正在淘宝搜索「{{ keyword }}」…</div>
-            <div id="bili-loading" class="loading-tip" style="color:#00a1d6">正在搜索「{{ keyword }}」相关内容…</div>
+      <div class="sub-btns">
+        <button onclick="tbSearch()" id="tb-btn" class="btn btn-tb">
+          🛒 用淘宝补搜
+        </button>
+        <button
+          onclick="biliSearch()"
+          id="bili-btn"
+          style="
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #00a1d6;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+          "
+        >
+          📺 B站/贴吧（约1分钟）
+        </button>
+        <button onclick="jdSearch()" id="jd-btn" class="btn btn-jd">
+          🔍 用京东补搜
+        </button>
+        <div id="jd-loading" class="loading-tip" style="color: #e4393c">
+          正在京东搜索「{{ keyword }}」…
         </div>
-        <div id="jd-results"></div>
-        <a href="/" class="back-home">← 再查一个</a>
+        <div id="tb-loading" class="loading-tip" style="color: #ff5000">
+          正在淘宝搜索「{{ keyword }}」…
+        </div>
+        <div id="bili-loading" class="loading-tip" style="color: #00a1d6">
+          正在搜索「{{ keyword }}」相关内容…
+        </div>
+      </div>
+      <div id="jd-results"></div>
+      <a href="/" class="back-home">← 再查一个</a>
     </div>
     <script>
-function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+      function pinUrl(u) {
+        var p = localStorage.getItem("gobuy_pin");
+        return p
+          ? u +
+              (u.indexOf("?") > -1 ? "&" : "?") +
+              "pin=" +
+              encodeURIComponent(p)
+          : u;
+      }
 
-        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-        function watchIt(title, platform, itemId, price) {
-            var target = prompt('当前价 ¥' + price + '，目标价（低于此价提醒）：', price * 0.9);
-            if (!target) return;
-            var fd = new FormData();
-            fd.append('title', title); fd.append('platform', platform);
-            fd.append('item_id', itemId); fd.append('current_price', price);
-            fd.append('target_price', parseFloat(target));
-            fetch(pinUrl('/watch', {method: 'POST', body: fd})
-                .then(r => r.json())
-                .then(() => showToast('✅ 已加入盯价！目标 ¥' + target))
-                .catch(() => showToast('盯价失败，请重试'));
+      function esc(s) {
+        return (s == null ? "" : String(s))
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      function watchIt(title, platform, itemId, price) {
+        var target = prompt(
+          "当前价 ¥" + price + "，目标价（低于此价提醒）：",
+          price * 0.9,
+        );
+        if (!target) return;
+        var fd = new FormData();
+        fd.append("title", title);
+        fd.append("platform", platform);
+        fd.append("item_id", itemId);
+        fd.append("current_price", price);
+        fd.append("target_price", parseFloat(target));
+        fetch(pinUrl("/watch"), { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then(() => showToast("✅ 已加入盯价！目标 ¥" + target))
+          .catch(() => showToast("盯价失败，请重试"));
+      }
+      function loadHistory(platform, itemId, el) {
+        var box = el.closest(".item").querySelector(".hist-box");
+        if (box.style.display !== "none") {
+          box.style.display = "none";
+          return;
         }
-        function loadHistory(platform, itemId, el) {
-            var box = el.closest('.item').querySelector('.hist-box');
-            if (box.style.display !== 'none') { box.style.display = 'none'; return; }
-            box.innerHTML = '加载中…';
-            box.style.display = 'block';
-            fetch('/history?platform=' + platform + '&item_id=' + encodeURIComponent(itemId))
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.length) { box.innerHTML = '暂无历史记录（价格会随每次查询自动积累）'; return; }
-                    var summary = data[data.length - 1].summary;
-                    var diff = summary.current - summary.lowest;
-                    var advice = diff <= 0 ? '✅ 当前价 = 历史最低，可以买' :
-                        '⚠️ 比历史最低贵 ¥' + diff.toFixed(2) + '，不急可再等等';
-                    var cid = 'hist-chart-' + platform + '-' + encodeURIComponent(itemId);
-                    box.innerHTML = '<div style="color:#d63031;font-weight:600;margin-bottom:4px">' +
-                        '历史最低 ¥' + summary.lowest.toFixed(2) + '（共记录 ' + summary.count + ' 次）</div>' +
-                        '<div style="font-weight:600;margin-bottom:4px;color:' + (diff <= 0 ? '#27ae60' : '#e67e22') + '">' + advice + '</div>' +
-                        '<div id="' + cid + '" class="hist-chart"></div>' +
-                        '<div class="hist-rows">' + data.slice(0, 8).map(function(d) {
-                            return d.queried_at.slice(0, 16) + ' → ¥' + d.price +
-                                (d.coupon_amount ? '（券¥' + d.coupon_amount + '）' : '');
-                        }).join('<br>') + '</div>';
-                    drawChart(cid, data);
-                })
-                .catch(() => box.innerHTML = '加载失败');
-        }
-        function drawChart(cid, data) {
-            function paint() {
-                var el = document.getElementById(cid);
-                if (!el || !window.echarts) return;
-                var pts = data.slice(0, -1).reverse().map(function(d) {
-                    return [d.queried_at.slice(5, 16), d.price];
-                });
-                var chart = echarts.init(el);
-                chart.setOption({
-                    grid: { left: 44, right: 12, top: 14, bottom: 24 },
-                    tooltip: { trigger: 'axis' },
-                    xAxis: { type: 'category', data: pts.map(p => p[0]), axisLabel: { fontSize: 10 } },
-                    yAxis: { type: 'value', scale: true, axisLabel: { fontSize: 10 } },
-                    series: [{
-                        name: '价格', type: 'line', data: pts.map(p => p[1]),
-                        smooth: true, symbolSize: 6,
-                        lineStyle: { color: '#ff6b35', width: 2.5 },
-                        itemStyle: { color: '#ff6b35' },
-                        areaStyle: { color: 'rgba(255,107,53,0.12)' },
-                        markPoint: { data: [{ type: 'min', name: '最低' }] }
-                    }]
-                });
+        box.innerHTML = "加载中…";
+        box.style.display = "block";
+        fetch(
+          "/history?platform=" +
+            platform +
+            "&item_id=" +
+            encodeURIComponent(itemId),
+        )
+          .then((r) => r.json())
+          .then((data) => {
+            if (!data.length) {
+              box.innerHTML = "暂无历史记录（价格会随每次查询自动积累）";
+              return;
             }
-            if (window.echarts) { paint(); return; }
-            var s = document.createElement('script');
-            s.src = 'https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js';
-            s.onload = paint;
-            document.head.appendChild(s);
-        }
-        function biliSearch() {
-            var btn = document.getElementById('bili-btn');
-            btn.disabled = true;
-            document.getElementById('bili-loading').style.display = 'block';
-            fetch('/search_bili?keyword=' + encodeURIComponent('{{ keyword }}'), {timeout: 180000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('bili-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) {
-                        box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">B站没搜到相关内容</div>';
-                    } else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">📺 内容联动（' + data.items.length + ' 条）</span></div>';
-                        if (data.trap) {
-                            html += '<div class="fallback" style="background:#fff3e6;border-color:#e67e22">' +
-                                '<div class="fb-title">⚠️ 价格套路提醒</div>' +
-                                '<div class="fb-desc">' + (data.trap.trap || '') + ' ' + (data.trap.fake || '') + '</div></div>';
-                        }
-                        data.items.forEach(function(it) {
-                            var isBili = it.type === 'bili';
-                            var isXhs = it.type === 'xhs';
-                            var platStyle = isBili ? 'background:#00a1d6' : (isXhs ? 'background:#ff2442' : 'background:#4a90d9');
-                            var platName = isBili ? 'B站' : (isXhs ? '小红书' : '贴吧');
-                            var meta = isBili ? ('UP主: ' + esc(it.author) + ' ・ 播放 ' + it.play + ' ・ 点赞 ' + it.like)
-                                              : (isXhs ? ('作者: ' + esc(it.author) + ' ・ 赞 ' + it.like)
-                                                       : ('作者: ' + esc(it.author) + ' ・ 吧: ' + esc(it.desc)));
-                            if (it.score) {
-                                var star = '★'.repeat(Math.max(1, Math.round(it.score / 20))) + '☆'.repeat(5 - Math.max(1, Math.round(it.score / 20)));
-                                meta += '<br>⭐ 可信度 ' + star + ' ' + it.score + '/100';
-                                if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
-                                    meta += '<br>👎 负面 ' + it.sent.neg + ' 条' + (it.sent.ad ? ' ⚠️软广嫌疑 ' + it.sent.ad + ' 条' : '');
-                                    if (it.sent.neg > 3) meta += ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
-                                }
-                                if (it.flags && it.flags.length) meta += '<br><span style="color:#95a5a6">' + it.flags.join(' / ') + '</span>';
-                            }
-                            html += '<div class="item"><span class="plat" style="' + platStyle + ';color:#fff">' + platName + '</span>' +
-                                '<div class="info"><div class="title">' + it.title + '</div>' +
-                                '<div class="shop">' + meta + '</div></div>' +
-                                (it.url ? '<a class="link" href="' + it.url + '" target="_blank" rel="noopener">' + (isBili ? '观看 ↗' : '帖子 ↗') + '</a>' : '') + '</div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
+            var summary = data[data.length - 1].summary;
+            var diff = summary.current - summary.lowest;
+            var advice =
+              diff <= 0
+                ? "✅ 当前价 = 历史最低，可以买"
+                : "⚠️ 比历史最低贵 ¥" + diff.toFixed(2) + "，不急可再等等";
+            var cid =
+              "hist-chart-" + platform + "-" + encodeURIComponent(itemId);
+            box.innerHTML =
+              '<div style="color:#d63031;font-weight:600;margin-bottom:4px">' +
+              "历史最低 ¥" +
+              summary.lowest.toFixed(2) +
+              "（共记录 " +
+              summary.count +
+              " 次）</div>" +
+              '<div style="font-weight:600;margin-bottom:4px;color:' +
+              (diff <= 0 ? "#27ae60" : "#e67e22") +
+              '">' +
+              advice +
+              "</div>" +
+              '<div id="' +
+              cid +
+              '" class="hist-chart"></div>' +
+              '<div class="hist-rows">' +
+              data
+                .slice(0, 8)
+                .map(function (d) {
+                  return (
+                    d.queried_at.slice(0, 16) +
+                    " → ¥" +
+                    d.price +
+                    (d.coupon_amount ? "（券¥" + d.coupon_amount + "）" : "")
+                  );
                 })
-                .catch(() => {
-                    document.getElementById('bili-loading').style.display = 'none';
-                    document.getElementById('jd-results').innerHTML = '<div style="text-align:center;color:#d63031;padding:16px">B站搜索失败</div>';
-                    btn.disabled = false;
-                });
-        }
-        function tbSearch() {
-            var btn = document.getElementById('tb-btn');
-            btn.disabled = true;
-            document.getElementById('tb-loading').style.display = 'block';
-            fetch('/search_tb?keyword=' + encodeURIComponent('{{ keyword }}'), {timeout: 60000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('tb-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) {
-                        box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>';
-                    } else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
-                                '<div class="info"><div class="title">' + (it.is_p4p ? '【广告】' : '') + (it.is_tmall ? '【天猫】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + esc(it.shop_name || '') + ' ・ ' + esc(it.province || '') + ' ・ ' + esc(it.real_sales || '') + '</div></div>' +
-                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div></div></div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => {
-                    document.getElementById('tb-loading').style.display = 'none';
-                    document.getElementById('jd-results').innerHTML = '<div style="text-align:center;color:#d63031;padding:16px">淘宝搜索失败（可能超时）</div>';
-                    btn.disabled = false;
-                });
-        }
-        function jdSearch() {
-            var btn = document.getElementById('jd-btn');
-            btn.disabled = true;
-            document.getElementById('jd-loading').style.display = 'block';
-            fetch('/search_jd?keyword=' + encodeURIComponent('{{ keyword }}'), {timeout: 60000})
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('jd-loading').style.display = 'none';
-                    var box = document.getElementById('jd-results');
-                    if (!data.items || !data.items.length) {
-                        box.innerHTML = '<div style="text-align:center;color:#b2bec3;padding:16px">京东没搜到或遇到验证码</div>';
-                    } else {
-                        var html = '<div class="group"><div class="group-head"><span class="sku">🛒 京东结果（' + data.items.length + ' 条）</span></div>';
-                        data.items.forEach(function(it) {
-                            html += '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
-                                '<div class="info"><div class="title">' + (it.is_ad ? '【广告】' : '') + it.title + '</div>' +
-                                '<div class="shop">' + esc(it.shop || '') + ' ・ ' + esc(it.sales || '') + '</div></div>' +
-                                '<div class="price"><div class="now">¥' + (it.price || '?') + '</div>' +
-                                (it.original_price ? '<div class="old">¥' + it.original_price + '</div>' : '') + '</div></div>';
-                        });
-                        box.innerHTML = html + '</div>';
-                    }
-                    btn.disabled = false;
-                })
-                .catch(() => {
-                    document.getElementById('jd-loading').style.display = 'none';
-                    document.getElementById('jd-results').innerHTML = '<div style="text-align:center;color:#d63031;padding:16px">京东搜索失败（可能超时）</div>';
-                    btn.disabled = false;
-                });
-        }
-        function copyText(id) {
-            var el = document.getElementById(id);
-            navigator.clipboard.writeText(el.innerText).then(() => {
-                var btn = el.nextElementSibling;
-                btn.innerText = '已复制 ✓';
-                setTimeout(() => btn.innerText = '复制', 1500);
+                .join("<br>") +
+              "</div>";
+            drawChart(cid, data);
+          })
+          .catch(() => (box.innerHTML = "加载失败"));
+      }
+      function drawChart(cid, data) {
+        function paint() {
+          var el = document.getElementById(cid);
+          if (!el || !window.echarts) return;
+          var pts = data
+            .slice(0, -1)
+            .reverse()
+            .map(function (d) {
+              return [d.queried_at.slice(5, 16), d.price];
             });
+          var chart = echarts.init(el);
+          chart.setOption({
+            grid: { left: 44, right: 12, top: 14, bottom: 24 },
+            tooltip: { trigger: "axis" },
+            xAxis: {
+              type: "category",
+              data: pts.map((p) => p[0]),
+              axisLabel: { fontSize: 10 },
+            },
+            yAxis: { type: "value", scale: true, axisLabel: { fontSize: 10 } },
+            series: [
+              {
+                name: "价格",
+                type: "line",
+                data: pts.map((p) => p[1]),
+                smooth: true,
+                symbolSize: 6,
+                lineStyle: { color: "#ff6b35", width: 2.5 },
+                itemStyle: { color: "#ff6b35" },
+                areaStyle: { color: "rgba(255,107,53,0.12)" },
+                markPoint: { data: [{ type: "min", name: "最低" }] },
+              },
+            ],
+          });
         }
+        if (window.echarts) {
+          paint();
+          return;
+        }
+        var s = document.createElement("script");
+        s.src = "https://cdn.staticfile.org/echarts/5.5.0/echarts.min.js";
+        s.onload = paint;
+        document.head.appendChild(s);
+      }
+      function biliSearch() {
+        var btn = document.getElementById("bili-btn");
+        btn.disabled = true;
+        document.getElementById("bili-loading").style.display = "block";
+        fetch("/search_bili?keyword=" + encodeURIComponent("{{ keyword }}"), {
+          timeout: 180000,
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("bili-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">B站没搜到相关内容</div>';
+            } else {
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">📺 内容联动（' +
+                data.items.length +
+                " 条）</span></div>";
+              if (data.trap) {
+                html +=
+                  '<div class="fallback" style="background:#fff3e6;border-color:#e67e22">' +
+                  '<div class="fb-title">⚠️ 价格套路提醒</div>' +
+                  '<div class="fb-desc">' +
+                  (data.trap.trap || "") +
+                  " " +
+                  (data.trap.fake || "") +
+                  "</div></div>";
+              }
+              data.items.forEach(function (it) {
+                var isBili = it.type === "bili";
+                var isXhs = it.type === "xhs";
+                var platStyle = isBili
+                  ? "background:#00a1d6"
+                  : isXhs
+                    ? "background:#ff2442"
+                    : "background:#4a90d9";
+                var platName = isBili ? "B站" : isXhs ? "小红书" : "贴吧";
+                var meta = isBili
+                  ? "UP主: " +
+                    esc(it.author) +
+                    " ・ 播放 " +
+                    it.play +
+                    " ・ 点赞 " +
+                    it.like
+                  : isXhs
+                    ? "作者: " + esc(it.author) + " ・ 赞 " + it.like
+                    : "作者: " + esc(it.author) + " ・ 吧: " + esc(it.desc);
+                if (it.score) {
+                  var star =
+                    "★".repeat(Math.max(1, Math.round(it.score / 20))) +
+                    "☆".repeat(5 - Math.max(1, Math.round(it.score / 20)));
+                  meta += "<br>⭐ 可信度 " + star + " " + it.score + "/100";
+                  if (it.sent && (it.sent.neg > 0 || it.sent.ad > 0)) {
+                    meta +=
+                      "<br>👎 负面 " +
+                      it.sent.neg +
+                      " 条" +
+                      (it.sent.ad ? " ⚠️软广嫌疑 " + it.sent.ad + " 条" : "");
+                    if (it.sent.neg > 3)
+                      meta +=
+                        ' <span style="color:#e67e22">【有争议，建议自己思考】</span>';
+                  }
+                  if (it.flags && it.flags.length)
+                    meta +=
+                      '<br><span style="color:#95a5a6">' +
+                      it.flags.join(" / ") +
+                      "</span>";
+                }
+                html +=
+                  '<div class="item"><span class="plat" style="' +
+                  platStyle +
+                  ';color:#fff">' +
+                  platName +
+                  "</span>" +
+                  '<div class="info"><div class="title">' +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  meta +
+                  "</div></div>" +
+                  (it.url
+                    ? '<a class="link" href="' +
+                      it.url +
+                      '" target="_blank" rel="noopener">' +
+                      (isBili ? "观看 ↗" : "帖子 ↗") +
+                      "</a>"
+                    : "") +
+                  "</div>";
+              });
+              box.innerHTML = html + "</div>";
+            }
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("bili-loading").style.display = "none";
+            document.getElementById("jd-results").innerHTML =
+              '<div style="text-align:center;color:#d63031;padding:16px">B站搜索失败</div>';
+            btn.disabled = false;
+          });
+      }
+      function tbSearch() {
+        var btn = document.getElementById("tb-btn");
+        btn.disabled = true;
+        document.getElementById("tb-loading").style.display = "block";
+        fetch("/search_tb?keyword=" + encodeURIComponent("{{ keyword }}"), {
+          timeout: 60000,
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("tb-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">淘宝没搜到或遇到验证码</div>';
+            } else {
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">🛒 淘宝全量结果（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                html +=
+                  '<div class="item"><span class="plat" style="background:#ff5000;color:#fff">淘宝</span>' +
+                  '<div class="info"><div class="title">' +
+                  (it.is_p4p ? "【广告】" : "") +
+                  (it.is_tmall ? "【天猫】" : "") +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  esc(it.shop_name || "") +
+                  " ・ " +
+                  esc(it.province || "") +
+                  " ・ " +
+                  esc(it.real_sales || "") +
+                  "</div></div>" +
+                  '<div class="price"><div class="now">¥' +
+                  (it.price || "?") +
+                  "</div></div></div>";
+              });
+              box.innerHTML = html + "</div>";
+            }
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("tb-loading").style.display = "none";
+            document.getElementById("jd-results").innerHTML =
+              '<div style="text-align:center;color:#d63031;padding:16px">淘宝搜索失败（可能超时）</div>';
+            btn.disabled = false;
+          });
+      }
+      function jdSearch() {
+        var btn = document.getElementById("jd-btn");
+        btn.disabled = true;
+        document.getElementById("jd-loading").style.display = "block";
+        fetch("/search_jd?keyword=" + encodeURIComponent("{{ keyword }}"), {
+          timeout: 60000,
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            document.getElementById("jd-loading").style.display = "none";
+            var box = document.getElementById("jd-results");
+            if (!data.items || !data.items.length) {
+              box.innerHTML =
+                '<div style="text-align:center;color:#b2bec3;padding:16px">京东没搜到或遇到验证码</div>';
+            } else {
+              var html =
+                '<div class="group"><div class="group-head"><span class="sku">🛒 京东结果（' +
+                data.items.length +
+                " 条）</span></div>";
+              data.items.forEach(function (it) {
+                html +=
+                  '<div class="item"><span class="plat" style="background:#e4393c;color:#fff">京东</span>' +
+                  '<div class="info"><div class="title">' +
+                  (it.is_ad ? "【广告】" : "") +
+                  it.title +
+                  "</div>" +
+                  '<div class="shop">' +
+                  esc(it.shop || "") +
+                  " ・ " +
+                  esc(it.sales || "") +
+                  "</div></div>" +
+                  '<div class="price"><div class="now">¥' +
+                  (it.price || "?") +
+                  "</div>" +
+                  (it.original_price
+                    ? '<div class="old">¥' + it.original_price + "</div>"
+                    : "") +
+                  "</div></div>";
+              });
+              box.innerHTML = html + "</div>";
+            }
+            btn.disabled = false;
+          })
+          .catch(() => {
+            document.getElementById("jd-loading").style.display = "none";
+            document.getElementById("jd-results").innerHTML =
+              '<div style="text-align:center;color:#d63031;padding:16px">京东搜索失败（可能超时）</div>';
+            btn.disabled = false;
+          });
+      }
+      function copyText(id) {
+        var el = document.getElementById(id);
+        navigator.clipboard.writeText(el.innerText).then(() => {
+          var btn = el.nextElementSibling;
+          btn.innerText = "已复制 ✓";
+          setTimeout(() => (btn.innerText = "复制"), 1500);
+        });
+      }
     </script>
     <div id="toast"></div>
-    <button id="to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+    <button
+      id="to-top"
+      onclick="window.scrollTo({ top: 0, behavior: 'smooth' })"
+    >
+      ↑
+    </button>
     <script>
-        function showToast(msg) {
-            var t = document.getElementById('toast');
-            t.innerText = msg;
-            t.style.display = 'block';
-            setTimeout(function(){ t.style.display = 'none'; }, 2000);
-        }
-        window.addEventListener('scroll', function() {
-            document.getElementById('to-top').style.display = window.scrollY > 600 ? 'block' : 'none';
-        });
+      function showToast(msg) {
+        var t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.display = "block";
+        setTimeout(function () {
+          t.style.display = "none";
+        }, 2000);
+      }
+      window.addEventListener("scroll", function () {
+        document.getElementById("to-top").style.display =
+          window.scrollY > 600 ? "block" : "none";
+      });
     </script>
-</body>
+  </body>
 </html>

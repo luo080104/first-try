@@ -1,205 +1,431 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Go购 - 采集中心</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css" />
     <style>
-        .card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-        .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
-        .stat-box { flex: 1; min-width: 100px; text-align: center; padding: 14px 0;
-                    border-radius: 12px; background: #f8f9fa; }
-        .stat-box b { display: block; font-size: 26px; color: #ff6b35; }
-        .stat-box span { font-size: 13px; color: #636e72; }
-        #progress { display: none; background: #fff5f0; border: 1px solid #ffd3c2; border-radius: 12px;
-                    padding: 14px 16px; margin: 12px 0; font-size: 15px; line-height: 1.9; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { padding: 8px 10px; border-bottom: 1px solid #eee; text-align: left; }
-        th { color: #636e72; font-weight: 600; background: #f8f9fa; }
-        .st { padding: 2px 10px; border-radius: 10px; font-size: 12px; }
-        .st-pending { background: #fdf3e3; color: #e67e22; }
-        .st-doing { background: #eaf2fb; color: #0984e3; }
-        .st-done { background: #e8f7ee; color: #27ae60; }
-        .st-failed { background: #fdeeee; color: #d63031; }
-        .st-paused { background: #f1f2f6; color: #636e72; }
-        .add-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
-        .add-row input, .add-row select { padding: 10px 12px; border: 2px solid #dfe6e9;
-                                          border-radius: 10px; font-size: 15px; }
-        .add-row input[type=text] { flex: 1; min-width: 180px; }
-        .err { color: #d63031; font-size: 14px; }
+      .card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      }
+      .stat-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 12px 0;
+      }
+      .stat-box {
+        flex: 1;
+        min-width: 100px;
+        text-align: center;
+        padding: 14px 0;
+        border-radius: 12px;
+        background: #f8f9fa;
+      }
+      .stat-box b {
+        display: block;
+        font-size: 26px;
+        color: #ff6b35;
+      }
+      .stat-box span {
+        font-size: 13px;
+        color: #636e72;
+      }
+      #progress {
+        display: none;
+        background: #fff5f0;
+        border: 1px solid #ffd3c2;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin: 12px 0;
+        font-size: 15px;
+        line-height: 1.9;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #eee;
+        text-align: left;
+      }
+      th {
+        color: #636e72;
+        font-weight: 600;
+        background: #f8f9fa;
+      }
+      .st {
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+      }
+      .st-pending {
+        background: #fdf3e3;
+        color: #e67e22;
+      }
+      .st-doing {
+        background: #eaf2fb;
+        color: #0984e3;
+      }
+      .st-done {
+        background: #e8f7ee;
+        color: #27ae60;
+      }
+      .st-failed {
+        background: #fdeeee;
+        color: #d63031;
+      }
+      .st-paused {
+        background: #f1f2f6;
+        color: #636e72;
+      }
+      .add-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        flex-wrap: wrap;
+      }
+      .add-row input,
+      .add-row select {
+        padding: 10px 12px;
+        border: 2px solid #dfe6e9;
+        border-radius: 10px;
+        font-size: 15px;
+      }
+      .add-row input[type="text"] {
+        flex: 1;
+        min-width: 180px;
+      }
+      .err {
+        color: #d63031;
+        font-size: 14px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>📥 采集中心</h1>
-        <div class="subtitle">自动进货机：按计划把商品爬进商品库，断点续跑、失败重试</div>
+      <h1>📥 采集中心</h1>
+      <div class="subtitle">
+        自动进货机：按计划把商品爬进商品库，断点续跑、失败重试
+      </div>
 
-        <div class="card">
-            <h3>📊 统计</h3>
-            <div class="stat-row" id="stats">加载中...</div>
-            <div class="add-row">
-                <button class="btn btn-tb" onclick="startCrawl()">▶️ 开始一轮采集</button>
-                <button class="btn" onclick="resumePaused()">↩️ 恢复暂停任务</button>
-                <select id="pages" style="padding:10px">
-                    <option value="1">每词翻 1 页（快）</option>
-                    <option value="2" selected>每词翻 2 页（推荐，WorkBuddy）</option>
-                    <option value="3">每词翻 3 页（全）</option>
-                </select>
-                <select id="max-minutes" style="padding:10px" title="最长运行时长（到点自动停）">
-                    <option value="240">最长 4 小时</option>
-                    <option value="480" selected>最长 8 小时</option>
-                    <option value="720">最长 12 小时</option>
-                </select>
-                <input type="time" id="schedule-time" style="padding:10px" title="定时开始时间">
-                <button class="btn" onclick="scheduleCrawl()">⏰ 定时开始</button>
-            </div>
-            <div id="progress"></div>
+      <div class="card">
+        <h3>📊 统计</h3>
+        <div class="stat-row" id="stats">加载中...</div>
+        <div class="add-row">
+          <button class="btn btn-tb" onclick="startCrawl()">
+            ▶️ 开始一轮采集
+          </button>
+          <button class="btn" onclick="resumePaused()">↩️ 恢复暂停任务</button>
+          <select id="pages" style="padding: 10px">
+            <option value="1">每词翻 1 页（快）</option>
+            <option value="2" selected>每词翻 2 页（推荐，WorkBuddy）</option>
+            <option value="3">每词翻 3 页（全）</option>
+          </select>
+          <select
+            id="max-minutes"
+            style="padding: 10px"
+            title="最长运行时长（到点自动停）"
+          >
+            <option value="240">最长 4 小时</option>
+            <option value="480" selected>最长 8 小时</option>
+            <option value="720">最长 12 小时</option>
+          </select>
+          <input
+            type="time"
+            id="schedule-time"
+            style="padding: 10px"
+            title="定时开始时间"
+          />
+          <button class="btn" onclick="scheduleCrawl()">⏰ 定时开始</button>
         </div>
+        <div id="progress"></div>
+      </div>
 
-        <div class="card">
-            <h3>➕ 加采集词</h3>
-            <div class="add-row">
-                <input type="text" id="new-kw" placeholder="想采什么词？如：扫地机器人">
-                <select id="new-cat">
-                    <option value="">未分类</option>
-                    <option value="数码家电">数码家电</option>
-                    <option value="食品">食品</option>
-                    <option value="服饰">服饰</option>
-                    <option value="日用百货">日用百货</option>
-                </select>
-                <button class="btn" onclick="addWord()">加入计划</button>
-            </div>
-            <div class="mode-tip" id="add-msg" style="margin-top:8px"></div>
+      <div class="card">
+        <h3>➕ 加采集词</h3>
+        <div class="add-row">
+          <input
+            type="text"
+            id="new-kw"
+            placeholder="想采什么词？如：扫地机器人"
+          />
+          <select id="new-cat">
+            <option value="">未分类</option>
+            <option value="数码家电">数码家电</option>
+            <option value="食品">食品</option>
+            <option value="服饰">服饰</option>
+            <option value="日用百货">日用百货</option>
+          </select>
+          <button class="btn" onclick="addWord()">加入计划</button>
         </div>
+        <div class="mode-tip" id="add-msg" style="margin-top: 8px"></div>
+      </div>
 
-        <div class="card">
-            <h3>📋 采集计划（<span id="task-count">0</span> 个词）</h3>
-            <div style="overflow-x:auto">
-                <table id="task-table">
-                    <thead><tr><th>关键词</th><th>品类</th><th>状态</th><th>已跑</th><th>上次入库</th><th>来源</th><th>上次运行</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+      <div class="card">
+        <h3>📋 采集计划（<span id="task-count">0</span> 个词）</h3>
+        <div style="overflow-x: auto">
+          <table id="task-table">
+            <thead>
+              <tr>
+                <th>关键词</th>
+                <th>品类</th>
+                <th>状态</th>
+                <th>已跑</th>
+                <th>上次入库</th>
+                <th>来源</th>
+                <th>上次运行</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
 
-        <div class="quick">
-            <a class="q1" href="/">🔍 回首页</a>
-            <a class="q1" href="/items">🛍️ 商品库</a>
-        </div>
+      <div class="quick">
+        <a class="q1" href="/">🔍 回首页</a>
+        <a class="q1" href="/items">🛍️ 商品库</a>
+      </div>
     </div>
 
     <script>
-function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+      function pinUrl(u) {
+        var p = localStorage.getItem("gobuy_pin");
+        return p
+          ? u +
+              (u.indexOf("?") > -1 ? "&" : "?") +
+              "pin=" +
+              encodeURIComponent(p)
+          : u;
+      }
 
-        var POLLING = false;
-        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-        var ST = {pending:['待采集','st-pending'], doing:['采集中','st-doing'], done:['已完成','st-done'], failed:['失败','st-failed'], paused:['已暂停(经验)','st-paused']};
-        var SR = {seed:'种子', auto:'自动', manual:'手动'};
+      var POLLING = false;
+      function esc(s) {
+        return (s == null ? "" : String(s))
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+      var ST = {
+        pending: ["待采集", "st-pending"],
+        doing: ["采集中", "st-doing"],
+        done: ["已完成", "st-done"],
+        failed: ["失败", "st-failed"],
+        paused: ["已暂停(经验)", "st-paused"],
+      };
+      var SR = { seed: "种子", auto: "自动", manual: "手动" };
 
-        function loadTasks() {
-            fetch('/api/crawl_tasks').then(r => r.json()).then(d => {
-                var s = d.stats;
-                var by = s.by_status || {};
-                document.getElementById('stats').innerHTML =
-                    '<div class="stat-box"><b>' + s.total + '</b><span>总词数</span></div>' +
-                    '<div class="stat-box"><b>' + (by.pending || 0) + '</b><span>待采集</span></div>' +
-                    '<div class="stat-box"><b>' + (by.done || 0) + '</b><span>已完成</span></div>' +
-                    '<div class="stat-box"><b>' + (by.failed || 0) + '</b><span>失败待重试</span></div>' +
-                    '<div class="stat-box"><b>' + (by.doing || 0) + '</b><span>采集中</span></div>';
-                var tb = document.querySelector('#task-table tbody');
-                document.getElementById('task-count').innerText = d.tasks.length;
-                tb.innerHTML = d.tasks.map(function(t) {
-                    var st = ST[t.status] || [t.status, ''];
-                    return '<tr><td>' + esc(t.keyword) + '</td><td>' + esc(t.category || '-') + '</td>' +
-                        '<td><span class="st ' + st[1] + '">' + st[0] + '</span></td>' +
-                        '<td>' + t.run_count + '</td><td>' + t.last_result + '</td>' +
-                        '<td>' + (SR[t.source] || t.source) + '</td><td>' + esc(t.last_run_at || '-') + '</td></tr>';
-                }).join('');
-            });
+      function loadTasks() {
+        fetch("/api/crawl_tasks")
+          .then((r) => r.json())
+          .then((d) => {
+            var s = d.stats;
+            var by = s.by_status || {};
+            document.getElementById("stats").innerHTML =
+              '<div class="stat-box"><b>' +
+              s.total +
+              "</b><span>总词数</span></div>" +
+              '<div class="stat-box"><b>' +
+              (by.pending || 0) +
+              "</b><span>待采集</span></div>" +
+              '<div class="stat-box"><b>' +
+              (by.done || 0) +
+              "</b><span>已完成</span></div>" +
+              '<div class="stat-box"><b>' +
+              (by.failed || 0) +
+              "</b><span>失败待重试</span></div>" +
+              '<div class="stat-box"><b>' +
+              (by.doing || 0) +
+              "</b><span>采集中</span></div>";
+            var tb = document.querySelector("#task-table tbody");
+            document.getElementById("task-count").innerText = d.tasks.length;
+            tb.innerHTML = d.tasks
+              .map(function (t) {
+                var st = ST[t.status] || [t.status, ""];
+                return (
+                  "<tr><td>" +
+                  esc(t.keyword) +
+                  "</td><td>" +
+                  esc(t.category || "-") +
+                  "</td>" +
+                  '<td><span class="st ' +
+                  st[1] +
+                  '">' +
+                  st[0] +
+                  "</span></td>" +
+                  "<td>" +
+                  t.run_count +
+                  "</td><td>" +
+                  t.last_result +
+                  "</td>" +
+                  "<td>" +
+                  (SR[t.source] || t.source) +
+                  "</td><td>" +
+                  esc(t.last_run_at || "-") +
+                  "</td></tr>"
+                );
+              })
+              .join("");
+          });
+      }
+
+      function pollStatus() {
+        if (!POLLING) return;
+        fetch("/api/crawl_status")
+          .then((r) => r.json())
+          .then((d) => {
+            var box = document.getElementById("progress");
+            if (d.running) {
+              box.style.display = "block";
+              var etaTxt = "";
+              if (d.eta > 0) {
+                var h = Math.floor(d.eta / 3600),
+                  m = Math.round((d.eta % 3600) / 60);
+                etaTxt =
+                  "｜⏳ 预计还需 <b>" +
+                  (h ? h + " 小时 " : "") +
+                  m +
+                  " 分钟</b>";
+              }
+              box.innerHTML =
+                "<b>🔨 采集中：" +
+                esc(d.current) +
+                "</b><br>" +
+                "进度 " +
+                d.done +
+                " / " +
+                d.total +
+                " 词｜已入库 <b>" +
+                d.new_items +
+                "</b> 件｜每词均速 " +
+                d.avg_per_word +
+                "s" +
+                etaTxt +
+                "｜已跑 " +
+                Math.round(d.elapsed / 60) +
+                " 分钟" +
+                (d.errors && d.errors.length
+                  ? '<br><span class="err">失败：' +
+                    d.errors.slice(-3).map(esc).join("；") +
+                    "</span>"
+                  : "");
+              setTimeout(pollStatus, 5000);
+            } else if (box.style.display === "block") {
+              box.innerHTML =
+                "✅ <b>本轮采集结束</b>：完成 " +
+                d.done +
+                "/" +
+                d.total +
+                " 词，失败 " +
+                (d.errors || []).length +
+                "，新增入库 <b>" +
+                d.new_items +
+                "</b> 件，耗时 " +
+                Math.round(d.elapsed / 60) +
+                " 分钟";
+              setTimeout(function () {
+                box.style.display = "none";
+              }, 20000);
+              loadTasks();
+            }
+          });
+      }
+
+      function startCrawl() {
+        var pages = document.getElementById("pages").value;
+        var mm = document.getElementById("max-minutes").value;
+        var fd = new FormData();
+        fd.append("pages", pages);
+        fd.append("max_minutes", mm);
+        fetch("/api/crawl", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            alert(d.msg);
+            if (d.ok) {
+              POLLING = true;
+              pollStatus();
+            }
+          });
+      }
+
+      // v6 定时采集：设时间到点自动开始（纯前端 setTimeout，WorkBuddy 方案）
+      var _schedTimer = null;
+      function scheduleCrawl() {
+        var t = document.getElementById("schedule-time").value;
+        if (!t) {
+          alert("请先选时间（如 23:00）");
+          return;
         }
+        var now = new Date();
+        var parts = t.split(":");
+        var target = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          +parts[0],
+          +parts[1],
+          0,
+        );
+        if (target <= now) target.setDate(target.getDate() + 1); // 已过点则明天
+        var waitMs = target - now;
+        if (_schedTimer) clearTimeout(_schedTimer);
+        _schedTimer = setTimeout(function () {
+          alert("⏰ 定时采集时间到，开始采集！");
+          startCrawl();
+        }, waitMs);
+        var hh =
+          ("0" + target.getHours()).slice(-2) +
+          ":" +
+          ("0" + target.getMinutes()).slice(-2);
+        document.getElementById("schedule-time").value = hh;
+        alert("✅ 已定时 " + hh + " 开始采集（电脑保持开机）");
+      }
 
-        function pollStatus() {
-            if (!POLLING) return;
-            fetch('/api/crawl_status').then(r => r.json()).then(d => {
-                var box = document.getElementById('progress');
-                if (d.running) {
-                    box.style.display = 'block';
-                    var etaTxt = '';
-                    if (d.eta > 0) {
-                        var h = Math.floor(d.eta / 3600), m = Math.round((d.eta % 3600) / 60);
-                        etaTxt = '｜⏳ 预计还需 <b>' + (h ? h + ' 小时 ' : '') + m + ' 分钟</b>';
-                    }
-                    box.innerHTML = '<b>🔨 采集中：' + esc(d.current) + '</b><br>' +
-                        '进度 ' + d.done + ' / ' + d.total + ' 词｜已入库 <b>' + d.new_items + '</b> 件｜每词均速 ' + d.avg_per_word + 's' +
-                        etaTxt + '｜已跑 ' + Math.round(d.elapsed / 60) + ' 分钟' +
-                        (d.errors && d.errors.length ? '<br><span class="err">失败：' + d.errors.slice(-3).map(esc).join('；') + '</span>' : '');
-                    setTimeout(pollStatus, 5000);
-                } else if (box.style.display === 'block') {
-                    box.innerHTML = '✅ <b>本轮采集结束</b>：完成 ' + d.done + '/' + d.total + ' 词，失败 ' + (d.errors || []).length + '，新增入库 <b>' + d.new_items + '</b> 件，耗时 ' + Math.round(d.elapsed / 60) + ' 分钟';
-                    setTimeout(function(){ box.style.display = 'none'; }, 20000);
-                    loadTasks();
-                }
-            });
+      function resumePaused() {
+        fetch(pinUrl("/api/resume_tasks"), { method: "POST" })
+          .then((r) => r.json())
+          .then((d) => {
+            alert(d.msg);
+            loadTasks();
+          });
+      }
+      function addWord() {
+        var kw = document.getElementById("new-kw").value.trim();
+        if (!kw) {
+          alert("请输入关键词");
+          return;
         }
+        var fd = new FormData();
+        fd.append("keyword", kw);
+        fd.append("category", document.getElementById("new-cat").value);
+        fetch("/api/crawl_add", { method: "POST", body: fd })
+          .then((r) => r.json())
+          .then((d) => {
+            document.getElementById("add-msg").innerText = d.msg;
+            document.getElementById("new-kw").value = "";
+            loadTasks();
+          });
+      }
 
-        function startCrawl() {
-            var pages = document.getElementById('pages').value;
-            var mm = document.getElementById('max-minutes').value;
-            var fd = new FormData();
-            fd.append('pages', pages);
-            fd.append('max_minutes', mm);
-            fetch('/api/crawl', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                alert(d.msg);
-                if (d.ok) { POLLING = true; pollStatus(); }
-            });
-        }
-
-        // v6 定时采集：设时间到点自动开始（纯前端 setTimeout，WorkBuddy 方案）
-        var _schedTimer = null;
-        function scheduleCrawl() {
-            var t = document.getElementById('schedule-time').value;
-            if (!t) { alert('请先选时间（如 23:00）'); return; }
-            var now = new Date();
-            var parts = t.split(':');
-            var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +parts[0], +parts[1], 0);
-            if (target <= now) target.setDate(target.getDate() + 1);  // 已过点则明天
-            var waitMs = target - now;
-            if (_schedTimer) clearTimeout(_schedTimer);
-            _schedTimer = setTimeout(function() {
-                alert('⏰ 定时采集时间到，开始采集！');
-                startCrawl();
-            }, waitMs);
-            var hh = ('0' + target.getHours()).slice(-2) + ':' + ('0' + target.getMinutes()).slice(-2);
-            document.getElementById('schedule-time').value = hh;
-            alert('✅ 已定时 ' + hh + ' 开始采集（电脑保持开机）');
-        }
-
-        function resumePaused() {
-            fetch(pinUrl('/api/resume_tasks', {method: 'POST'}).then(r => r.json()).then(d => {
-                alert(d.msg);
-                loadTasks();
-            });
-        }
-        function addWord() {
-            var kw = document.getElementById('new-kw').value.trim();
-            if (!kw) { alert('请输入关键词'); return; }
-            var fd = new FormData();
-            fd.append('keyword', kw);
-            fd.append('category', document.getElementById('new-cat').value);
-            fetch('/api/crawl_add', {method: 'POST', body: fd}).then(r => r.json()).then(d => {
-                document.getElementById('add-msg').innerText = d.msg;
-                document.getElementById('new-kw').value = '';
-                loadTasks();
-            });
-        }
-
-        loadTasks();
-        // 页面打开时若采集在跑，恢复轮询
-        fetch('/api/crawl_status').then(r => r.json()).then(d => {
-            if (d.running) { POLLING = true; pollStatus(); }
+      loadTasks();
+      // 页面打开时若采集在跑，恢复轮询
+      fetch("/api/crawl_status")
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.running) {
+            POLLING = true;
+            pollStatus();
+          }
         });
     </script>
-</body>
+  </body>
 </html>

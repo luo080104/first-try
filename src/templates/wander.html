@@ -1,125 +1,311 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>购物漫游 - Go购</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css" />
     <style>
-        body { background: #f8f9fa; }
-        .wander-wrap { max-width: 640px; margin: 0 auto; padding: 16px 12px 30px; }
-        .w-card { background: #fff; border-radius: 16px; padding: 14px; margin-bottom: 14px;
-                  box-shadow: 0 2px 12px rgba(0,0,0,0.06); display: flex; gap: 12px; }
-        .w-card .thumb { width: 86px; height: 86px; border-radius: 12px; background: #f1f2f6;
-                         flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-                         font-size: 34px; overflow: hidden; }
-        .w-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .w-card .info { flex: 1; min-width: 0; }
-        .w-card .t { font-size: 15px; font-weight: 600; color: #2d3436; line-height: 1.45;
-                     display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .w-card .m { font-size: 12px; color: #b2bec3; margin-top: 4px; }
-        .w-card .r { font-size: 12px; color: #ff6b35; margin-top: 4px; }
-        .w-card .price { font-size: 17px; font-weight: 700; color: #ff6b35; margin-top: 4px; }
-        .w-card .acts { display: flex; gap: 8px; margin-top: 8px; }
-        .w-card .acts button { border: none; border-radius: 14px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
-        .b-fav { background: #eaf2fb; color: #0984e3; }
-        .b-no { background: #f1f2f6; color: #636e72; }
-        .b-go { background: #ff6b35; color: #fff; }
-        .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-        .topbar h2 { font-size: 20px; margin: 0; flex: 1; }
-        .topbar button { border: none; border-radius: 18px; padding: 7px 16px; cursor: pointer;
-                         background: #ff6b35; color: #fff; font-size: 14px; }
-        .empty-tip { text-align: center; color: #b2bec3; padding: 40px 0; }
+      /* body 背景由公共 style.css 游戏化皮肤接管（2026-08-18） */
+      .wander-wrap {
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 16px 12px 30px;
+      }
+      .w-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        display: flex;
+        gap: 12px;
+      }
+      .w-card .thumb {
+        width: 86px;
+        height: 86px;
+        border-radius: 12px;
+        background: #f1f2f6;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+        overflow: hidden;
+      }
+      .w-card .thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .w-card .info {
+        flex: 1;
+        min-width: 0;
+      }
+      .w-card .t {
+        font-size: 15px;
+        font-weight: 600;
+        color: #2d3436;
+        line-height: 1.45;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .w-card .m {
+        font-size: 12px;
+        color: #b2bec3;
+        margin-top: 4px;
+      }
+      .w-card .r {
+        font-size: 12px;
+        color: #ff6b35;
+        margin-top: 4px;
+      }
+      .w-card .price {
+        font-size: 17px;
+        font-weight: 700;
+        color: #ff6b35;
+        margin-top: 4px;
+      }
+      .w-card .acts {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .w-card .acts button {
+        border: none;
+        border-radius: 14px;
+        padding: 5px 12px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .b-fav {
+        background: #eaf2fb;
+        color: #0984e3;
+      }
+      .b-no {
+        background: #f1f2f6;
+        color: #636e72;
+      }
+      .b-go {
+        background: #ff6b35;
+        color: #fff;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .topbar h2 {
+        font-size: 20px;
+        margin: 0;
+        flex: 1;
+      }
+      .topbar button {
+        border: none;
+        border-radius: 18px;
+        padding: 7px 16px;
+        cursor: pointer;
+        background: #ff6b35;
+        color: #fff;
+        font-size: 14px;
+      }
+      .empty-tip {
+        text-align: center;
+        color: #b2bec3;
+        padding: 40px 0;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="topbar">
-            <h2>🎡 购物漫游</h2>
-            <button onclick="loadWander()">🔄 换一批</button>
-            <a href="javascript:showFavs()" style="color:#0984e3;font-size:14px">❤️ 收藏</a>
-        </div>
-        <div style="text-align:center;color:#b2bec3;font-size:13px;margin-bottom:12px">随便逛逛，说不定就遇到想要的～</div>
-        <div id="w-list"><div class="empty-tip">加载中…</div></div>
-        <div class="quick" style="justify-content:center">
-            <a class="q1" href="/">🏠 回首页</a>
-        </div>
+      <div class="topbar">
+        <h2>🎡 购物漫游</h2>
+        <button onclick="loadWander()">🔄 换一批</button>
+        <a href="javascript:showFavs()" style="color: #0984e3; font-size: 14px"
+          >❤️ 收藏</a
+        >
+      </div>
+      <div
+        style="
+          text-align: center;
+          color: #b2bec3;
+          font-size: 13px;
+          margin-bottom: 12px;
+        "
+      >
+        随便逛逛，说不定就遇到想要的～
+      </div>
+      <div id="w-list"><div class="empty-tip">加载中…</div></div>
+      <div class="quick" style="justify-content: center">
+        <a class="q1" href="/">🏠 回首页</a>
+      </div>
     </div>
 
     <script>
-function pinUrl(u) { var p = localStorage.getItem('gobuy_pin'); return p ? u + (u.indexOf('?') > -1 ? '&' : '?') + 'pin=' + encodeURIComponent(p) : u; }
+      function pinUrl(u) {
+        var p = localStorage.getItem("gobuy_pin");
+        return p
+          ? u +
+              (u.indexOf("?") > -1 ? "&" : "?") +
+              "pin=" +
+              encodeURIComponent(p)
+          : u;
+      }
 
-        function esc(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-        function curUser() { return localStorage.getItem('gobuy_current') || '嘉铭'; }
-        var PLAT = {tb:'淘宝', jd:'京东', pdd:'拼多多', vip:'唯品会'};
-        var ICON = {tb:'🛒', jd:'🔵', pdd:'🛍️', vip:'👗'};
+      function esc(s) {
+        return (s == null ? "" : String(s))
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+      function curUser() {
+        return localStorage.getItem("gobuy_current") || "嘉铭";
+      }
+      var PLAT = { tb: "淘宝", jd: "京东", pdd: "拼多多", vip: "唯品会" };
+      var ICON = { tb: "🛒", jd: "🔵", pdd: "🛍️", vip: "👗" };
 
-        function loadWander() {
-            var box = document.getElementById('w-list');
-            box.innerHTML = '<div class="empty-tip">🎡 正在逛…</div>';
-            fetch(pinUrl('/api/wander?user=' + encodeURIComponent(curUser()) + '&size=12')
-                .then(r => r.json()).then(d => {
-                    if (!d.cards || !d.cards.length) {
-                        box.innerHTML = '<div class="empty-tip">逛完了！换个词搜搜，或去采集中心多采点商品吧</div>';
-                        return;
-                    }
-                    box.innerHTML = d.cards.map(function(c) {
-                        return '<div class="w-card">' +
-                            '<div class="thumb">' + (c.img ? '<img src="' + esc(c.img) + '" onerror="this.style.display=\'none\'">' : ICON[c.platform] || '🛍️') + '</div>' +
-                            '<div class="info">' +
-                            '<div class="t">' + esc(c.title) + '</div>' +
-                            '<div class="m">' + (PLAT[c.platform] || c.platform) + ' ・ ' + esc(c.shop || '') +
-                            (c.sales ? ' ・ 销量 ' + c.sales : '') + '</div>' +
-                            '<div class="r">' + esc(c.reason || '') + '</div>' +
-                            '<div class="price">¥' + c.price +
-                            (c.original_price && c.original_price > c.price ? ' <span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' + c.original_price + '</span>' : '') + '</div>' +
-                            '<div class="acts">' +
-                            '<button class="b-fav" onclick="fav(\'' + c.item_id + '\', this)">❤️ 收藏</button>' +
-                            '<button class="b-no" onclick="dislike(\'' + c.item_id + '\', this)">👎 不感兴趣</button>' +
-                            '<button class="b-go" onclick="window.open(\'' + esc(c.url || searchUrl(c)) + '\')">去看看 ↗</button>' +
-                            '</div></div></div>';
-                    }).join('');
-                })
-                .catch(() => { box.innerHTML = '<div class="empty-tip">网络开小差了，点「换一批」重试</div>'; });
-        }
-
-        function feedback(itemId, action, btn) {
-            var fd = new FormData();
-            fd.append('user', curUser());
-            fd.append('item_id', itemId);
-            fd.append('action', action);
-            fetch(pinUrl('/api/wander_feedback', {method: 'POST', body: fd});
-            var card = btn.closest('.w-card');
-            card.style.opacity = '0.3';
-            if (action === 'dislike') {
-                card.style.transition = 'all 0.4s';
-                card.style.transform = 'translateX(60px)';
-                setTimeout(function() { card.remove(); }, 400);
-            } else {
-                btn.innerText = '✅ 已收藏';
-                btn.disabled = true;
+      function loadWander() {
+        var box = document.getElementById("w-list");
+        box.innerHTML = '<div class="empty-tip">🎡 正在逛…</div>';
+        fetch(
+          pinUrl(
+            "/api/wander?user=" + encodeURIComponent(curUser()) + "&size=12",
+          ),
+        )
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.cards || !d.cards.length) {
+              box.innerHTML =
+                '<div class="empty-tip">逛完了！换个词搜搜，或去采集中心多采点商品吧</div>';
+              return;
             }
-        }
-        function searchUrl(c) {
-            // 2026-08-11 ③：无商品链接时生成平台搜索兜底链接
-            var t = encodeURIComponent(c.title || '');
-            return {tb: 'https://s.taobao.com/search?q=' + t, jd: 'https://search.jd.com/Search?keyword=' + t + '&enc=utf-8',
-                    pdd: 'https://mobile.yangkeduo.com/search_result.html?search_key=' + t,
-                    vip: 'https://category.vip.com/suggest.php?keyword=' + t + '&ff=235%7C12%7C1%7C1'}[c.platform] || 'https://www.taobao.com/';
-        }
-        function dislike(id, btn) { feedback(id, 'dislike', btn); }
-        function fav(id, btn) { feedback(id, 'fav', btn); }
+            box.innerHTML = d.cards
+              .map(function (c) {
+                return (
+                  '<div class="w-card">' +
+                  '<div class="thumb">' +
+                  (c.img
+                    ? '<img src="' +
+                      esc(c.img) +
+                      '" onerror="this.style.display=\'none\'">'
+                    : ICON[c.platform] || "🛍️") +
+                  "</div>" +
+                  '<div class="info">' +
+                  '<div class="t">' +
+                  esc(c.title) +
+                  "</div>" +
+                  '<div class="m">' +
+                  (PLAT[c.platform] || c.platform) +
+                  " ・ " +
+                  esc(c.shop || "") +
+                  (c.sales ? " ・ 销量 " + c.sales : "") +
+                  "</div>" +
+                  '<div class="r">' +
+                  esc(c.reason || "") +
+                  "</div>" +
+                  '<div class="price">¥' +
+                  c.price +
+                  (c.original_price && c.original_price > c.price
+                    ? ' <span style="color:#b2bec3;text-decoration:line-through;font-size:12px">¥' +
+                      c.original_price +
+                      "</span>"
+                    : "") +
+                  "</div>" +
+                  '<div class="acts">' +
+                  '<button class="b-fav" onclick="fav(\'' +
+                  c.item_id +
+                  "', this)\">❤️ 收藏</button>" +
+                  '<button class="b-no" onclick="dislike(\'' +
+                  c.item_id +
+                  "', this)\">👎 不感兴趣</button>" +
+                  '<button class="b-go" onclick="window.open(\'' +
+                  esc(c.url || searchUrl(c)) +
+                  "')\">去看看 ↗</button>" +
+                  "</div></div></div>"
+                );
+              })
+              .join("");
+          })
+          .catch(() => {
+            box.innerHTML =
+              '<div class="empty-tip">网络开小差了，点「换一批」重试</div>';
+          });
+      }
 
-        function showFavs() {
-            fetch(pinUrl('/api/wander_favs?user=' + encodeURIComponent(curUser())).then(r => r.json()).then(d => {
-                if (!d.items || !d.items.length) { alert('还没有收藏～点卡片上的 ❤️ 收藏'); return; }
-                alert(d.items.map(function(it) {
-                    return '❤️ ' + (it.title || '').slice(0, 24) + '  ¥' + it.price + '  [' + (PLAT[it.platform] || it.platform) + ']';
-                }).join('\n'));
-            });
+      function feedback(itemId, action, btn) {
+        var fd = new FormData();
+        fd.append("user", curUser());
+        fd.append("item_id", itemId);
+        fd.append("action", action);
+        fetch(pinUrl("/api/wander_feedback"), { method: "POST", body: fd });
+        var card = btn.closest(".w-card");
+        card.style.opacity = "0.3";
+        if (action === "dislike") {
+          card.style.transition = "all 0.4s";
+          card.style.transform = "translateX(60px)";
+          setTimeout(function () {
+            card.remove();
+          }, 400);
+        } else {
+          btn.innerText = "✅ 已收藏";
+          btn.disabled = true;
         }
+      }
+      function searchUrl(c) {
+        // 2026-08-11 ③：无商品链接时生成平台搜索兜底链接
+        var t = encodeURIComponent(c.title || "");
+        return (
+          {
+            tb: "https://s.taobao.com/search?q=" + t,
+            jd: "https://search.jd.com/Search?keyword=" + t + "&enc=utf-8",
+            pdd:
+              "https://mobile.yangkeduo.com/search_result.html?search_key=" + t,
+            vip:
+              "https://category.vip.com/suggest.php?keyword=" +
+              t +
+              "&ff=235%7C12%7C1%7C1",
+          }[c.platform] || "https://www.taobao.com/"
+        );
+      }
+      function dislike(id, btn) {
+        feedback(id, "dislike", btn);
+      }
+      function fav(id, btn) {
+        feedback(id, "fav", btn);
+      }
 
-        loadWander();
+      function showFavs() {
+        fetch(pinUrl("/api/wander_favs?user=" + encodeURIComponent(curUser())))
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.items || !d.items.length) {
+              alert("还没有收藏～点卡片上的 ❤️ 收藏");
+              return;
+            }
+            alert(
+              d.items
+                .map(function (it) {
+                  return (
+                    "❤️ " +
+                    (it.title || "").slice(0, 24) +
+                    "  ¥" +
+                    it.price +
+                    "  [" +
+                    (PLAT[it.platform] || it.platform) +
+                    "]"
+                  );
+                })
+                .join("\n"),
+            );
+          });
+      }
+
+      loadWander();
     </script>
-</body>
+  </body>
 </html>
