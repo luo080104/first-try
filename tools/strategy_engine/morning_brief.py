@@ -241,7 +241,27 @@ def build_brief() -> str:
         )
         pass  # 判定失败不阻塞晨报（红线③容错）
     # 数据源健康（2026-08-15 UZI data_gap 落地——缺口显式承认——不静默）
-    lines.append("\n【数据源】" + "；".join(_data_source_status()))
+    lines.append("\n【数据源】" + ";".join(_data_source_status()))
+    # A5 日报自检（2026-08-17 全面审核：定时任务死了没人报——自指环修复——
+    # 检查上次日报运行日志 mtime——超过 25h 未更新=任务可能死亡）
+    try:
+        import os as _os
+
+        _log = _os.path.join(
+            _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))),
+            "data", "brief.log",
+        )
+        if _os.path.exists(_log):
+            _age = (
+                datetime.datetime.now().timestamp() - _os.path.getmtime(_log)
+            )
+            if _age > 25 * 3600:
+                lines.append(
+                    f"\n⚠️【日报自检】上次日报运行日志已 {_age / 3600:.0f} 小时未更新——"
+                    "GFBrief 定时任务可能死亡——请检查任务计划程序"
+                )
+    except Exception:
+        pass  # 自检失败不阻塞（容错红线）
     # S4 逻辑变化监测（2026-08-16 架构师 B3 落地——减持/暴雷公告——只提醒不自动卖）
     try:
         from tools.strategy_engine.s4_monitor import build_alert_section

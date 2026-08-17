@@ -37,7 +37,10 @@ GRID_MIN_INTERVAL_DAYS = 28  # Q13：两批间隔 ≥4 周（防阴跌接飞刀�
 
 
 class Portfolio:
-    def __init__(self, path=PORTFOLIO_FILE):
+    def __init__(self, path=None):
+        # path=None 运行时取模块变量（2026-08-17 A3：默认参数绑定在定义时——monkeypatch 失效——改运行时取值）
+        if path is None:
+            path = PORTFOLIO_FILE
         self.path = path
         # 事件日志跟随实例账本路径（测试用临时文件时不污染真实事件流——2026-08-15 修复）
         self.events_file = (
