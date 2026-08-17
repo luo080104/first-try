@@ -61,7 +61,9 @@ def load_leader_pool() -> list[str]:
             d = yaml.safe_load(f)
         codes = [code for grp in d.get("a_share", {}).values() for code, _ in grp]
         return codes if codes else LEADER_POOL
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+        log_diag("core_loop", "load_leader_pool", _e, "龙头池加载失败——回退内置池")
         return LEADER_POOL
 
 
@@ -120,7 +122,9 @@ def _b3_from_kline(
             "track": "swing",
             "reason": "B3 低潮买入（布林下轨+RSI30——回测达标）",
         }
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+        log_diag("core_loop", "_b3_from_kline", _e, "B3 计算失败——当日无 B3 信号（diag 留档）")
         return None  # B3 计算失败不阻塞循环（红线③容错）
 
 
@@ -135,7 +139,9 @@ def valuation_input(code: str, quote: dict[str, Any]) -> dict[str, Any]:
         pct = data.valuation_percentile(code)
         v["pe_percentile"] = pct["pe_percentile"]
         v["fair_pe"] = pct["pe_median"]  # 个股级（覆盖外部传入的指数级）
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+        log_diag("core_loop", "valuation_pct", _e, "估值百分位失败——中性 50 继续")
         v["pe_percentile"] = 50.0
     return v
 
@@ -149,7 +155,9 @@ def _b3_signal_for(code: str, price: float, name: str) -> dict[str, Any] | None:
     try:
         k = data.tencent_kline(code, days=260)
         return _b3_from_kline(code, price, name, k)
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+        log_diag("core_loop", "tencent_kline_b3", _e, "K 线 B3 失败——跳过当日 B3")
         return None  # B3 计算失败不阻塞循环（红线③容错）
 
 
@@ -175,7 +183,9 @@ def run_daily_loop() -> dict[str, Any]:
         # B3 单独再拉 260 天——每只 2 次网络请求——合并为 1 次 260 天）
         try:
             k = data.tencent_kline(code, days=260)
-        except Exception:
+        except Exception as _e:
+            from tools.strategy_engine.diag import log_diag
+            log_diag("core_loop", "tencent_kline", _e, "K 线失败——跳过技术/B3 信号")
             k = None  # K 线失败不阻塞单只打分（红线③容错——跳过技术/B3 信号）
         t = _technical_from_kline(k)
         b3 = _b3_from_kline(code, q.get("price") or 0, q["name"], k)
@@ -220,7 +230,9 @@ def run_daily_loop() -> dict[str, Any]:
     for sig in signals:
         try:
             cf.append_pending(sig)
-        except Exception:
+        except Exception as _e:
+            from tools.strategy_engine.diag import log_diag
+            log_diag("core_loop", "append_pending", _e, "信号入队失败——该信号丢失（重要！）")
             pass  # 入队失败不阻塞循环（红线：不因边缘错误中断每日闭环）
 
     # ⑥ 信号推送（v1.1——达标信号即时推微信——半自动红线：AI 提示带理由）
@@ -233,7 +245,9 @@ def run_daily_loop() -> dict[str, Any]:
                 tag = f"{c['score']}分" if c.get("score") is not None else "B3战术"
                 lines.append(f"  🔔 {c['name']}({c['code']}) {tag}——{c['reason']}")
             push_signal("\n".join(lines))
-        except Exception:
+        except Exception as _e:
+            from tools.strategy_engine.diag import log_diag
+            log_diag("core_loop", "push_signal", _e, "信号推送失败——见 diag 详情")
             pass  # 推送失败不阻塞（红线③：数据失误不静默但也不中断）
 
     # 自检段（每日健康检查——数据源命中/打分分布/异常/数据质量）
@@ -257,7 +271,9 @@ def run_daily_loop() -> dict[str, Any]:
             dq = dq_mod.quality_summary(closes, d_dates, last_date=d_dates[-1])
             for i in dq["issues"]:
                 anomalies.append(f"[数据质量] {i['issue']}")
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+        log_diag("core_loop", "data_quality", _e, "质量检查失败——本日无质量段")
         pass  # 质量检查失败不阻塞（红线③）
     self_check = {
         "quotes_hit": len(quotes),

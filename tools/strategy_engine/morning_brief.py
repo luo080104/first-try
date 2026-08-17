@@ -72,7 +72,10 @@ def _data_source_status() -> list[str]:
             notes.append("ℹ️ 主力资金流：东财封锁——已降级同花顺（当日快照）")
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl"
+        )
         notes.append("⚠️ 主力资金流：探测失败")
     # ② 估值历史源（baostock——估值百分位依赖）
     try:
@@ -81,7 +84,13 @@ def _data_source_status() -> list[str]:
             notes.append("⚠️ 估值百分位：数据不足或源异常（返回中性 50%）")
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "② 估值历史源", _e, "晨报[② 估值历史源]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报",
+            "② 估值历史源",
+            _e,
+            "晨报[② 估值历史源]失败——段跳过（容错红线）——查 diag.jsonl",
+        )
         notes.append("⚠️ 估值百分位：探测失败")
     # ③ 数据新鲜度（2026-08-16 架构师 P2 落地——静默停更检测）
     try:
@@ -120,7 +129,10 @@ def _data_source_status() -> list[str]:
                     notes.append(f"ℹ️ 大V 净值快照：{last_ts[:10]}（每日 16:00 更新）")
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl"
+        )
         pass  # 新鲜度探测失败不阻塞晨报（红线③）
     return notes or ["✅ 数据源正常"]
 
@@ -135,14 +147,30 @@ def build_brief() -> str:
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
     lines = [f"📋 观复日报 · 收盘总结 {now}", "=" * 30]
     # 大盘状态（M 系列 + Q1 利率校准 + Q5 现金纪律——收盘后为当日数据）
-    m = ms.market_status()
+    # 首段防护（2026-08-17 全面审核 S1：8/17 实崩——market_status→tencent_quote URLError 整报丢失）
+    try:
+        m = ms.market_status()
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+
+        log_diag(
+            "晨报",
+            "market_status",
+            _e,
+            "大盘段失败——用中性状态继续（不整报丢失）——查 diag.jsonl",
+        )
+        m = {"status": "正常", "pe": None, "pe_percentile_approx": None}
     lines.append(f"\n【大盘今日】{m['status']}")
     lines.append(f"沪深300 PE={m.get('pe')}（百分位≈{m.get('pe_percentile_approx')}%）")
     fp = m.get("fair_pe_rate_calibrated")
     if fp:
         verdict = "便宜" if (m.get("pe") or 0) < fp else "偏贵"
         lines.append(f"Q1 利率校准: 隐含合理PE≈{fp}——当前{verdict}")
-    sens = ms._fair_pe_sensitivity_text()
+    sens = ""
+    try:
+        sens = ms._fair_pe_sensitivity_text()
+    except Exception:
+        pass  # 敏感度文本失败不阻塞（容错红线）
     if sens:
         lines.append(f"  {sens}")
     for e in m.get("evidence", []):
@@ -167,7 +195,13 @@ def build_brief() -> str:
                 _quotes = {k: v.get("price", 0) for k, v in _q.items()}
             except Exception as _e:
                 from tools.strategy_engine.diag import log_diag
-                log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+                log_diag(
+                    "晨报",
+                    "晨报",
+                    _e,
+                    "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl",
+                )
                 pass  # 行情拉取失败→按成本价（标注）
         _s2 = _p2.summary(quotes=_quotes)
         _pnl = _s2.get("total", 0) - _s2.get("init_cash", 0)
@@ -185,7 +219,10 @@ def build_brief() -> str:
             )
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl"
+        )
         pass  # 持仓盈亏失败不阻塞日报（红线③容错）
     # 虚拟盘通过判定进度（2026-08-15 加——微信端可视化进度）
     try:
@@ -195,7 +232,13 @@ def build_brief() -> str:
         lines.append(f"\n【虚拟盘进度】{gate.get('reason', '')}")
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "check as _gate_c", _e, "晨报[check as _gate_c]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报",
+            "check as _gate_c",
+            _e,
+            "晨报[check as _gate_c]失败——段跳过（容错红线）——查 diag.jsonl",
+        )
         pass  # 判定失败不阻塞晨报（红线③容错）
     # 数据源健康（2026-08-15 UZI data_gap 落地——缺口显式承认——不静默）
     lines.append("\n【数据源】" + "；".join(_data_source_status()))
@@ -208,7 +251,13 @@ def build_brief() -> str:
             lines.append("\n" + s4)
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "build_alert_sect", _e, "晨报[build_alert_sect]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报",
+            "build_alert_sect",
+            _e,
+            "晨报[build_alert_sect]失败——段跳过（容错红线）——查 diag.jsonl",
+        )
         pass  # S4 监测失败不阻塞晨报（红线③容错）
     # 行为提醒（2026-08-16 A3 落地——Q10 过早卖出模式——连续 3 次才提醒）
     try:
@@ -219,7 +268,13 @@ def build_brief() -> str:
             lines.append("\n" + ba)
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "behavior_alert", _e, "晨报[behavior_alert]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报",
+            "behavior_alert",
+            _e,
+            "晨报[behavior_alert]失败——段跳过（容错红线）——查 diag.jsonl",
+        )
         pass  # 行为提醒失败不阻塞晨报（红线③容错）
     # 持仓估值温度（2026-08-16 B5 落地——PE/PB 历史百分位——书 V1：<10 便宜 />80 贵）
     try:
@@ -242,7 +297,10 @@ def build_brief() -> str:
                 )
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl"
+        )
         pass  # 估值温度失败不阻塞晨报（红线③容错）
     # S3 估值减仓 v2（2026-08-17 十年回测定案：PE/PB 百分位>80 且跌破 6 月均线 → 建议减仓 1/3）
     try:
@@ -254,16 +312,19 @@ def build_brief() -> str:
         s3_hits = []
         for _pos in _pos2[:5]:
             _vp = data.valuation_percentile(_pos["code"])
-            _wk = data.bs_kline_weekly(_pos["code"], years=2)[:24]
+            # 切片修复（2026-08-17 全面审核 C1：bs_kline_weekly 升序——取最近 24 根）
+            _wk = data.bs_kline_weekly(_pos["code"], years=2)[-24:]
             if len(_wk) < 12:
                 continue
             _ma24 = sum(_w["close"] for _w in _wk) / len(_wk)
-            _last = _wk[0]["close"]
+            _last = _wk[-1]["close"]
             _sig = s3_valuation_exit(
                 _vp.get("pe_percentile"), _vp.get("pb_percentile"), _last, _ma24
             )
             if _sig["signal"]:
-                s3_hits.append(f"  ⚠️ {_pos['name']}({_pos['code']})：{_sig['reasons'][0]}")
+                s3_hits.append(
+                    f"  ⚠️ {_pos['name']}({_pos['code']})：{_sig['reasons'][0]}"
+                )
         if s3_hits:
             lines.append(
                 "\n【S3 估值减仓提示（书L5524——建议级——不自动卖）】\n"
@@ -272,7 +333,10 @@ def build_brief() -> str:
             )
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报", "晨报", _e, "晨报[晨报]失败——段跳过（容错红线）——查 diag.jsonl"
+        )
         pass  # S3 检查失败不阻塞晨报（红线③容错）
     # 失败票纪律（书 L2540——2026-08-17：卖出的票不到周布林下轨不买回）
     try:
@@ -283,7 +347,13 @@ def build_brief() -> str:
             lines.append("\n" + _fp)
     except Exception as _e:
         from tools.strategy_engine.diag import log_diag
-        log_diag("晨报", "build_alert_sect", _e, "晨报[build_alert_sect]失败——段跳过（容错红线）——查 diag.jsonl")
+
+        log_diag(
+            "晨报",
+            "build_alert_sect",
+            _e,
+            "晨报[build_alert_sect]失败——段跳过（容错红线）——查 diag.jsonl",
+        )
         pass  # 失败票检查失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")

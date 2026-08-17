@@ -30,6 +30,8 @@ BACKUP_FILES = [
     "bigv_ideas.jsonl",  # 大V 思路假设库（B1）
     "wb_statuses.jsonl",  # 鹿鼎公微博（幂等 id 集合依赖）
     "s4_alerts.jsonl",  # S4 公告提醒去重记录
+    "xq_posts.jsonl",  # 观点型大V 发言（2026-08-17 A2：重抓需登录态+id 去重——不能丢）
+    "failed_track.jsonl",  # 失败票黑名单（2026-08-17 A2：丢=买回纪律重置）
     # 2026-08-17 补（书精读五项 + 行业面）
     "diag.jsonl",  # 结构化诊断日志（排障证据——不能丢）
     "breaker.json",  # 重试熔断状态（次日自动重置——备份保安全）

@@ -237,6 +237,7 @@ def resolve_cubes() -> dict[str, dict]:
                     print(f"  ⚪ {bigv}: 无组合")
             time.sleep(0.8)  # 节流（雪球 WAF——08-11 教训）
         except (requests.RequestException, ValueError, KeyError):
+            _xq_fail()  # A1 熔断计数（2026-08-17 全面审核：主路径失败必须计数）
             time.sleep(0.5)
             continue
     _write_json(CUBES_FILE, out)
@@ -292,6 +293,7 @@ def track() -> dict[str, int]:
                         "ts": time.strftime("%Y-%m-%d %H:%M"),
                     }
         except (requests.RequestException, ValueError, KeyError):
+            _xq_fail()  # A1 熔断计数
             pass
         time.sleep(2.0)  # 节流（WAF 实测：2s 间隔 15/15 通过——0.6s 时第 6 个起 400）
         # ② 调仓明细（last_rb_id 变化才拉——show_origin 实测 200）
@@ -349,6 +351,7 @@ def track() -> dict[str, int]:
     try:
         posts = fetch_posts()
     except Exception:
+        _xq_fail()  # A1 熔断计数
         posts = {}  # 发言抓取失败不阻塞（红线③容错）
     n_active = sum(1 for v in cubes.values() if v.get("active"))
     return {

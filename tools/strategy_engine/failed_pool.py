@@ -90,7 +90,8 @@ def build_alert_section() -> str:
     lines = []
     for f in failed:
         try:
-            wk = data.bs_kline_weekly(f["code"], years=2)[:24]
+            # 切片修复（2026-08-17 全面审核 C2：bs_kline_weekly 升序——最近 24 根）
+            wk = data.bs_kline_weekly(f["code"], years=2)[-24:]
             if len(wk) < 12:
                 continue
             closes = [w["close"] for w in reversed(wk)]
@@ -100,7 +101,7 @@ def build_alert_section() -> str:
 
             std = statistics.pstdev(closes) if len(closes) > 1 else 0
             lower = mid - 2 * std
-            cur = wk[0]["close"]
+            cur = wk[-1]["close"]
             if cur >= lower:
                 lines.append(
                     f"  ⛔ {f['name']}({f['code']})：现价{cur:.2f}未到周线下轨"
