@@ -68,18 +68,21 @@ def _throttled(text: str) -> bool:
 
 
 def push_brief() -> bool:
-    """晨报推送（9:00——大盘状态+估值百分位+策略信号——书体系）
+    """收盘日报推送（2026-08-17 改：9:00 盘前晨报 → 工作日 17:00 收盘总结）
 
-    2026-08-15 修复：晨报入口顺带 record_equity（昨日收盘净值）——
-    原缺陷：record_equity 无任何调度调用——净值序列永不积累——gate_check 无法判定
+    变更（甲方拍板 A）：盘前发昨日旧数据无意义——收盘后发当日总结——
+    净值记录同步迁移（收盘后记当日真实净值——gate_check 语义修正）
+    周五跳过推送（周报 15:30 已覆盖——净值照记）
     """
+    import datetime as _dt
+
     # 先记净值（幂等——同一日覆盖——gate_check 判定依赖此序列）
     try:
         from tools.strategy_engine.portfolio import Portfolio
 
         Portfolio().record_equity()
     except Exception:
-        pass  # 净值记录失败不阻塞晨报（红线③容错）
+        pass  # 净值记录失败不阻塞日报（红线③容错）
     # 每日备份（A1 完善——2026-08-16——数据保险——失败不阻塞）
     try:
         from tools.strategy_engine import backup
@@ -87,12 +90,16 @@ def push_brief() -> bool:
         backup.daily_backup()
     except Exception:
         pass
+    # 周五跳过推送（周报 15:30 覆盖——净值已记）
+    if _dt.date.today().weekday() == 4:
+        print("[notify_gf] 周五——日报跳过（周报 15:30 已覆盖）")
+        return True
     if push_wechat is None:
         return False
     text = mb.build_brief()
-    if not _throttled("晨报"):
+    if not _throttled("日报"):
         return False
-    ok = push_wechat(f"📊 观复晨报\n\n{text}")
+    ok = push_wechat(f"📊 观复日报 · 收盘总结\n\n{text}")
     if ok:
         _bump_count()
     return ok

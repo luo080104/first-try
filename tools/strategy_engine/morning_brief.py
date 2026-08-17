@@ -120,12 +120,17 @@ def _data_source_status() -> list[str]:
 
 
 def build_brief() -> str:
-    """组装晨报文本（大盘+利率校准+现金纪律+估值候选+讲解）"""
+    """组装收盘日报（2026-08-17 重构——9:00 盘前晨报改 17:00 收盘总结）
+
+    变更原因（甲方拍板 A）：9:00 盘前发的全是昨日旧数据——改为收盘后
+    发当日总结（大盘今日走势/持仓当日盈亏/当日公告/当日大V）——
+    净值记录同步迁移（收盘后记当日真实净值——gate_check 语义修正）
+    """
     now = datetime.datetime.now().strftime("%Y-%m-%d %A")
-    lines = [f"📋 观复晨报 {now}", "=" * 30]
-    # 大盘状态（M 系列 + Q1 利率校准 + Q5 现金纪律）
+    lines = [f"📋 观复日报 · 收盘总结 {now}", "=" * 30]
+    # 大盘状态（M 系列 + Q1 利率校准 + Q5 现金纪律——收盘后为当日数据）
     m = ms.market_status()
-    lines.append(f"\n【大盘状态】{m['status']}")
+    lines.append(f"\n【大盘今日】{m['status']}")
     lines.append(f"沪深300 PE={m.get('pe')}（百分位≈{m.get('pe_percentile_approx')}%）")
     fp = m.get("fair_pe_rate_calibrated")
     if fp:
@@ -142,6 +147,36 @@ def build_brief() -> str:
     lo, hi = g.get("cash_range", (0, 0))
     hint = g.get("hint", "")
     lines.append(f"Q5 现金纪律: 建议现金 {lo}-{hi}%（{hint}）")
+    # 持仓当日盈亏（2026-08-17 加——收盘日报核心段——当日真实数据）
+    try:
+        from tools.strategy_engine import data as _data
+        from tools.strategy_engine import portfolio as _pf2
+
+        _p2 = _pf2.Portfolio()
+        _hold_codes = list(_p2.data.get("holdings", {}).keys())
+        _quotes = {}
+        if _hold_codes:
+            try:
+                _q = _data.tencent_quote(_hold_codes)  # 实时行情（腾讯——不封 IP）
+                _quotes = {k: v.get("price", 0) for k, v in _q.items()}
+            except Exception:
+                pass  # 行情拉取失败→按成本价（标注）
+        _s2 = _p2.summary(quotes=_quotes)
+        _pnl = _s2.get("total", 0) - _s2.get("init_cash", 0)
+        _pct = _pnl / _s2.get("init_cash", 1) * 100
+        _note = "" if _quotes else "（行情未拉取——按成本价）"
+        lines.append(
+            f"\n【持仓今日】总资产 {_s2.get('total', 0):,.0f} ｜ "
+            f"累计盈亏 {_pnl:+,.0f}（{_pct:+.1f}%）｜ 现金 {_s2.get('cash_pct', 0):.0f}%{_note}"
+        )
+        for _pos in _s2.get("positions", [])[:5]:
+            _pp = _pos.get("pnl_pct", 0)
+            lines.append(
+                f"  {'🟢' if _pp >= 0 else '🔴'} {_pos['name']}({_pos['code']}) "
+                f"{_pp:+.1f}%"
+            )
+    except Exception:
+        pass  # 持仓盈亏失败不阻塞日报（红线③容错）
     # 虚拟盘通过判定进度（2026-08-15 加——微信端可视化进度）
     try:
         from tools.strategy_engine.gate_check import check as _gate_check
@@ -207,6 +242,16 @@ def build_brief() -> str:
         )
     else:
         lines.append("  今日龙头池无达标候选（市场整体不便宜——持币等待是纪律）")
+    # 明日关注（2026-08-17 加——收盘日报行动项——收盘后看明天）
+    lines.append("\n【明日关注】")
+    _n_hold = _s2.get("n_holdings", 0) if "_s2" in dir() else 0
+    _cash = _s2.get("cash_pct", 0) if "_s2" in dir() else 0
+    if not _n_hold:
+        lines.append("  🈳 空仓——等待达标信号（B3 低潮/打分达标）")
+    elif _cash > 15:
+        lines.append("  💰 现金偏高——关注买入信号（B3 低潮/打分达标）")
+    else:
+        lines.append("  🔍 持仓观察——跌破门槛→观察标记（Q14）")
     lines.append("\n—— 观复 · 书体系执行器（半自动：信号需你确认）")
     return "\n".join(lines)
 

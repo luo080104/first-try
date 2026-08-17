@@ -40,8 +40,8 @@ def test_brief_builds(monkeypatch):
         "tools.strategy_engine.weekly_report.behavior_alert", lambda: ""
     )
     b = build_brief()
-    assert "观复晨报" in b
-    assert "【大盘状态】" in b
+    assert "观复日报" in b
+    assert "【大盘今日】" in b
     assert "【数据源】" in b
 
 
