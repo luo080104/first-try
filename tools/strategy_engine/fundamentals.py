@@ -162,7 +162,8 @@ def get_fundamentals(
             # 分红率 = 每股分红 / 基本每股收益（书 L2761：40-75% 区域——H）
             eps = _to_float(lrb[0].get("基本每股收益")) if lrb else 0
             if per_share and eps > 0:
-                f["payout_ratio"] = round(sum(per_share) / eps * 100, 1)
+                # 新浪单季 EPS ×4 年化（2026-08-17 修——漏乘导致分红率虚高 4 倍）
+                f["payout_ratio"] = round(sum(per_share) / (eps * 4) * 100, 1)
     except Exception:
         pass  # 数据源失败——保留 0 值（打分自然偏低——安全方向）
 

@@ -37,26 +37,45 @@ class ScoreResult:
 
 
 def _score_value(f: dict[str, Any]) -> list[tuple[float, str]]:
-    """价值面 0-40（B4 八标准——分项加权）"""
+    """价值面 0-40（B4 八标准 + 分红率——2026-08-17 补书 L2761）
+
+    v2 权重（Q11 虚拟盘校准——甲方 2026-08-17 拍板）：
+    ROE8（阈值 15——书 R15 俱乐部）/利润率4/负债4/现金流4/股息10/成长5/分红率5
+    """
     parts = []
     roe = f.get("roe") or 0
-    s1 = min(10.0, roe / 10 * 10) if roe > 0 else 0
-    parts.append((s1, f"ROE={roe}%"))
-    s2 = 5.0 if (f.get("sales_margin") or 0) > 10 else 0
+    s1 = min(8.0, roe / 15 * 8) if roe > 0 else 0  # 阈值 15（书 R15 俱乐部——v1 是 10）
+    parts.append((s1, f"ROE={roe}%（阈值15——书R15）"))
+    s2 = 4.0 if (f.get("sales_margin") or 0) > 10 else 0
     parts.append((s2, f"利润率{(f.get('sales_margin') or 0):.0f}%"))
     debt = f.get("debt_ratio") or 0
     # 金融豁免（银行/保险/券商——负债率天然高——书"电力/金融除外"——exempt 时不惩罚）
-    s3 = 5.0 if (f.get("debt_exempt", False) or debt < 50) else 0
+    s3 = 4.0 if (f.get("debt_exempt", False) or debt < 50) else 0
     parts.append(
         (s3, f"负债率{debt:.0f}%" + ("（金融豁免）" if f.get("debt_exempt") else ""))
     )
-    s4 = 5.0 if f.get("ocf_gt_profit", False) else 0
+    s4 = 4.0 if f.get("ocf_gt_profit", False) else 0
     parts.append((s4, "现金流"))
     dy = f.get("dividend_yield") or 0
     s5 = min(10.0, dy / 4 * 10)
     parts.append((s5, f"股息率{dy:.1f}%"))
     s6 = 5.0 if f.get("growth_ok", False) else 0
     parts.append((s6, "成长性"))
+    # 分红率（书 L2761：40-75% 诚信区域——2026-08-17 补——宁缺毋滥唯一新增）
+    pr = f.get("payout_ratio") or 0
+    if 40 <= pr <= 75:
+        s7 = 5.0
+        note = f"分红率{pr:.0f}%（健康区 40-75）"
+    elif 0 < pr < 40:
+        s7 = round(pr / 40 * 5, 1)  # 偏低线性（20%→2.5 分）
+        note = f"分红率{pr:.0f}%（偏低——<40）"
+    elif pr > 100:
+        s7 = 1.0  # >100% 透支利润分红——危险信号
+        note = f"分红率{pr:.0f}%（>100 透支——警示）"
+    else:
+        s7 = 0.0
+        note = f"分红率{pr:.0f}%"
+    parts.append((s7, note))
     return parts
 
 

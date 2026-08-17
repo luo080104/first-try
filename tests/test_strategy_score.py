@@ -75,7 +75,7 @@ def test_financial_exempt_value():
     r2 = ss.score_stock(
         f2, _good_v(), {}, {}, quote={"pe_ttm": 20, "pb": 5}, market_status="正常"
     )
-    assert r.total - r2.total == 5.0  # 豁免 = 多 5 分
+    assert r.total - r2.total == 4.0  # 豁免 = 多 4 分（负债权重 5→4——v2 分红率 5 分新增）
 
 
 def _flat_parts(r):
