@@ -254,6 +254,15 @@ def build_brief() -> str:
             )
     except Exception:
         pass  # S3 检查失败不阻塞晨报（红线③容错）
+    # 失败票纪律（书 L2540——2026-08-17：卖出的票不到周布林下轨不买回）
+    try:
+        from tools.strategy_engine.failed_pool import build_alert_section as _fp_alert
+
+        _fp = _fp_alert()
+        if _fp:
+            lines.append("\n" + _fp)
+    except Exception:
+        pass  # 失败票检查失败不阻塞晨报（红线③容错）
     # 龙头池估值候选（B5）
     lines.append("\n【龙头池低估候选（B5：PE<15 或 PB<2）】")
     cands = _valuation_scan(LEADER_POOL)

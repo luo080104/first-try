@@ -141,6 +141,13 @@ class Portfolio:
             del self.data["holdings"][code]
         self.data["cash"] = round(self.data["cash"] + proceeds, 2)
         self.save()
+        # 失败票黑名单（书 L2540——2026-08-17：卖出即记——买回前检查）
+        try:
+            from tools.strategy_engine.failed_pool import record_sell
+
+            record_sell(code, h.get("name", ""), price, reason)
+        except Exception:
+            pass  # 黑名单记录失败不阻塞卖出（容错红线）
         self._event(
             "sell",
             code=code,
