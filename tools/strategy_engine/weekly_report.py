@@ -289,6 +289,40 @@ def build_report() -> str:
                 lines.append(_wb)
         except Exception:
             pass  # 微博摘要失败不阻塞周报（红线③容错）
+        # 观点型大V 本周发言（2026-08-17——甲方：不要局限于组合）
+        try:
+            _posts_path = _os.path.join(_data_dir, "xq_posts.jsonl")
+            _week_posts: list[dict] = []
+            if _os.path.exists(_posts_path):
+                with open(_posts_path, encoding="utf-8") as _f:
+                    for _line in _f:
+                        try:
+                            _p = _json.loads(_line)
+                        except ValueError:
+                            continue
+                        if _p.get("fetched_at", "")[:10] >= (
+                            datetime.date.today() - datetime.timedelta(days=7)
+                        ).isoformat():
+                            _week_posts.append(_p)
+            if _week_posts:
+                # 按大V 分组——每名取最近 2 条有实质内容的（非转发/非空）
+                _by_bigv: dict[str, list[dict]] = {}
+                for _p in _week_posts:
+                    _txt = _p.get("text") or ""
+                    if len(_txt) < 8:
+                        continue
+                    _by_bigv.setdefault(_p.get("bigv", ""), []).append(_p)
+                _shown = 0
+                for _name, _plist in _by_bigv.items():
+                    if _shown >= 8:
+                        break
+                    for _p in _plist[-2:]:
+                        lines.append(
+                            f"  💬 {_name}（{_p.get('ts', '')[:10]}）：{_p.get('text', '')[:60]}"
+                        )
+                        _shown += 1
+        except Exception:
+            pass  # 观点段失败不阻塞周报（红线③容错）
         if not _navs:
             lines.append("📡 大V 数据采集中（16:00 后自动积累）")
     except Exception:
