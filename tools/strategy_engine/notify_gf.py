@@ -122,9 +122,11 @@ def push_brief() -> bool:
 
     # 先记净值（幂等——同一日覆盖——gate_check 判定依赖此序列）
     try:
-        from tools.strategy_engine.portfolio import Portfolio
+        from tools.strategy_engine.portfolio import Portfolio, _get_quotes
 
-        Portfolio().record_equity()
+        _pf = Portfolio()
+        _q = _get_quotes(list(_pf.data.get("holdings") or {}))
+        _pf.record_equity(_q)
     except Exception:
         pass  # 净值记录失败不阻塞日报（红线③容错）
     # 每日备份（A1 完善——2026-08-16——数据保险——失败不阻塞）

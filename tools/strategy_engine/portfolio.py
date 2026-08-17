@@ -19,6 +19,7 @@
 import json
 import os
 import sys
+import time
 from datetime import datetime
 
 # ---- 配置（v0 先验——Q11 待校准）----
@@ -187,7 +188,10 @@ class Portfolio:
         out = []
         total = self.data["cash"]
         for code, h in self.data["holdings"].items():
-            px = (quotes or {}).get(code, h["avg_cost"])
+            _q = (quotes or {}).get(code, {})
+            px = _q.get("price") if isinstance(_q, dict) else _q
+            if not px:
+                px = h["avg_cost"]
             market = round(px * h["shares"], 2)
             pnl = round(market - h["avg_cost"] * h["shares"], 2)
             out.append(
@@ -231,14 +235,43 @@ class Portfolio:
 
         每日收盘调用：总资产 → 追加到 equity_curve（日期/总资产）——gate_check 用
         同一日重复调用不重复记录（幂等）
+
+        data_state 三态（2026-08-17 甲方 Q6 硬要求）：
+        - real: 全部持仓用真实行情价（tushare 收盘价优先）
+        - fallback: 部分/全部持仓行情失败回退成本价（净值失真——判定时不计）
+        - missing: 行情+成本价均不可用（纯现金仓除外——空仓=real）
         """
         _, total = self.positions(quotes)
         curve = self.data.setdefault("equity_curve", [])
         today = datetime.now().strftime("%Y-%m-%d")
+        # 三态判定（2026-08-17 甲方 Q6：判定只统计 real 点）
+        state = "real"
+        if quotes is None:
+            state = "missing"  # 未提供行情——无法验证（调用方应传 _get_quotes 结果）
+        else:
+            h = self.data.get("holdings") or {}
+            if h:
+                used_cost = sum(
+                    1
+                    for code in h
+                    if isinstance(quotes.get(code), dict)
+                    and quotes[code].get("data_state") == "fallback"
+                )
+                real_cnt = sum(
+                    1
+                    for code in h
+                    if isinstance(quotes.get(code), dict)
+                    and quotes[code].get("data_state") == "real"
+                )
+                if used_cost:
+                    state = "fallback"
+                elif real_cnt == 0 and h:
+                    state = "missing"
         if curve and curve[-1].get("date") == today:
             curve[-1]["total"] = round(total, 2)  # 当日覆盖（盘中多次调用取最新）
+            curve[-1]["data_state"] = state
         else:
-            curve.append({"date": today, "total": round(total, 2)})
+            curve.append({"date": today, "total": round(total, 2), "data_state": state})
         self.save()
         return total
 
@@ -321,16 +354,41 @@ class Portfolio:
 
 
 def _get_quotes(codes):
-    """取实时价格（腾讯行情——复用 data.py）"""
+    """取真实行情价（2026-08-17 甲方 Q6：tushare 收盘价优先 + 三态标记）
+
+    优先级：tushare 当日收盘价（付费主源——稳定）→ 腾讯实时 → 失败标 fallback
+    返回 {code: {price, data_state: real/fallback}}
+    """
     from tools.strategy_engine import data
+    from tools.strategy_engine.data_tushare import kline_daily, to_ts_code
 
     quotes = {}
+    # ① tushare 当日收盘价（主源——2026-08-17 甲方 Q6：充了钱要用）
     try:
-        res = data.tencent_quote(codes)
-        for code, q in res.items():
-            quotes[code] = q.get("price") or 0
+        _today = time.strftime("%Y%m%d")
+        for code in codes:
+            try:
+                k = kline_daily(to_ts_code(code), start=_today, end=_today)
+                px = k[-1]["close"] if k else 0
+                if px > 0:
+                    quotes[code] = {"price": px, "data_state": "real"}
+            except Exception:
+                pass  # 单只失败→整体走腾讯兜底
+        if len(quotes) == len(codes):
+            return quotes
     except Exception:
-        pass  # 行情失败不阻塞记账（用成本价估值）
+        pass  # tushare 整体失败→腾讯兜底
+    # ② 腾讯实时（兜底）
+    try:
+        res = data.tencent_quote([c for c in codes if c not in quotes])
+        for code, q in res.items():
+            quotes[code] = {"price": q.get("price") or 0, "data_state": "real"}
+    except Exception:
+        pass
+    # ③ 仍缺的标 fallback（成本价——判定时不计）
+    for code in codes:
+        if code not in quotes:
+            quotes[code] = {"price": 0, "data_state": "fallback"}
     return quotes
 
 

@@ -39,9 +39,14 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
         return []
     # 按 ISO 周聚合（取每周最后一点）
     weekly: dict[str, float] = {}
+    _skipped = 0
     for pt in curve:
         d = pt.get("date", "")[:10]
         if not d:
+            continue
+        # 甲方 Q6（2026-08-17）：只统计真实行情点——fallback/missing 判定时不计
+        if pt.get("data_state") not in (None, "real"):
+            _skipped += 1
             continue
         try:
             iso = datetime.date.fromisoformat(d).isocalendar()
@@ -52,6 +57,8 @@ def _portfolio_weeks() -> list[dict[str, Any]]:
             weekly[key] = float(pt.get("total", 0))
         except (TypeError, ValueError):
             continue  # 坏数据跳过（不崩——红线③容错）
+    if _skipped:
+        print(f"[gate_check] 跳过 {_skipped} 个失真净值点（非 real 态——判定不计）")
     return [{"week": k, "total": v} for k, v in sorted(weekly.items())]
 
 
