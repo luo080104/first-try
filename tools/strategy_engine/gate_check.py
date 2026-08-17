@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""虚拟盘通过判定（gate_check.py——v1.1——定案：连续 4 周跑赢基准 或 满 3 个月）
+"""虚拟盘通过判定（gate_check.py——v2——F5b：90 天保底废除=观察期）
 
-需求 v1.1 定案：连续 N 周跑赢基准（N=4 默认）或满 3 个月（先到为准）——基准沪深300 默认
+需求 v1.1 定案：连续 N 周跑赢基准（N=4 默认）——基准沪深300 默认
 - 数据：portfolio 事件日志（Q11——buy_date 记录）
 - 判定：有持仓 → 周度对比（组合净值 vs 沪深300）——4 周连续超额 → 通过
-- 满 3 个月（90 天）未 4 周连胜 → 也通过（先到为准）
+- F5b（2026-08-17 用户拍板）：满 90 天=观察期——不自动通过——须真实超额
+- 附加闸门：累计超额≥10% + Alpha 非负 + 二项符号检验 p<0.05（甲方 Q4）
 - 通过后 → 通知甲方（真钱阶段决策：2-3 万起步——乙方提问 5 定案）
 """
 
@@ -80,7 +81,7 @@ def significance(weekly: list[dict[str, Any]], bench: dict[str, float], n_boot: 
         port_ret = (cur_t - prev_t) / prev_t
         cur_date = _week_last_day(weekly[i]["week"])
         prev_date = _week_last_day(weekly[i - 1]["week"])
-        bc, bp = bench.get(cur_date), bench.get(prev_date)
+        bc, bp = _bench_get(bench, cur_date), _bench_get(bench, prev_date)
         if not bc or not bp or bp <= 0:
             continue
         bench_ret = (bc - bp) / bp
@@ -218,8 +219,8 @@ def check() -> dict[str, Any]:
             "alpha_positive": att.get("alpha_positive"),
             "attribution_note": att.get("attribution_note", ""),
         }
-    # 沪深300 周线（同窗口——baostock）
-    bench_weeks = d.bs_kline_weekly("000300", 10)
+    # 沪深300 周线（动态窗口——盲审修复：10 周固定会截断早期跑赢周——取组合周数+2 冗余）
+    bench_weeks = d.bs_kline_weekly("000300", max(10, len(weekly) + 2))
     bench = {w["date"][:10]: w["close"] for w in bench_weeks}
     # 风格对照（2026-08-16 架构师 P1 落地——观测先行——判定不变）：
     # 中证红利 000922 周线——组合超额 vs 红利——若连续跑赢沪深300 但对红利无超额
@@ -227,7 +228,7 @@ def check() -> dict[str, Any]:
     style_beat = 0  # 组合 vs 红利指数 连续超额周数
     style_max = 0
     try:
-        div_weeks = d.bs_kline_weekly("000922", 10)
+        div_weeks = d.bs_kline_weekly("000922", max(10, len(weekly) + 2))
         div_bench = {w["date"][:10]: w["close"] for w in div_weeks}
         for i in range(1, len(weekly)):
             prev_t, cur_t = weekly[i - 1]["total"], weekly[i]["total"]
@@ -236,7 +237,7 @@ def check() -> dict[str, Any]:
             port_ret = (cur_t - prev_t) / prev_t
             cur_date = _week_last_day(weekly[i]["week"])
             prev_date = _week_last_day(weekly[i - 1]["week"])
-            dc, dp = div_bench.get(cur_date), div_bench.get(prev_date)
+            dc, dp = _bench_get(div_bench, cur_date), _bench_get(div_bench, prev_date)
             if not dc or not dp or dp <= 0:
                 continue
             div_ret = (dc - dp) / dp
@@ -257,7 +258,7 @@ def check() -> dict[str, Any]:
         # 基准同期收益（用该周最后一天近似）
         cur_date = _week_last_day(weekly[i]["week"])
         prev_date = _week_last_day(weekly[i - 1]["week"])
-        bc, bp = bench.get(cur_date), bench.get(prev_date)
+        bc, bp = _bench_get(bench, cur_date), _bench_get(bench, prev_date)
         if not bc or not bp or bp <= 0:
             continue
         bench_ret = (bc - bp) / bp
@@ -289,9 +290,9 @@ def check() -> dict[str, Any]:
                 "attribution_note": att.get("attribution_note", ""),
             }
         # 整改①：4 周跑赢 + Alpha 必须为正（归因数据不足时保留原判定——标注待确认）
-        # 三态：alpha_positive 可为 True/False/None（数据不足）——避开 is/== 字面量比较
-        alpha_ok = att.get("alpha_positive") is not None and att["alpha_positive"]
-        if alpha_ok == False:  # 显式三态判断（True/False/None 数据不足）
+        # 盲审修复（2026-08-17）：三态显式判断——None=数据不足≠负（原实现塌缩为 False 误阻断）
+        alpha_val = att.get("alpha_positive")
+        if alpha_val == False:  # 显式为负——只有这一种情况阻断（None=数据不足不阻断）
             return {
                 "passed": False,
                 "reason": (
@@ -303,6 +304,12 @@ def check() -> dict[str, Any]:
                 "alpha_positive": False,
                 "attribution_note": att.get("attribution_note", ""),
             }
+        alpha_ok = alpha_val == True
+        alpha_txt = (
+            "——Alpha 为正（策略贡献确认）"
+            if alpha_ok
+            else "——归因数据不足（Alpha 待确认——红线⑤——不阻断）"
+        )
         # 甲方 Q4（2026-08-17）：显著性检验——连续跑赢须异于随机（硬币检验）
         sig = significance(weekly, bench)
         if sig.get("significant") == False:  # p>=0.05——运气不能排除
@@ -323,11 +330,6 @@ def check() -> dict[str, Any]:
             if sig.get("p_binom") is not None
             else "——显著性待样本（周数不足）"
         )
-        alpha_txt = (
-            "——Alpha 为正（策略贡献确认）"
-            if alpha_ok
-            else "——归因数据不足（Alpha 待确认——红线⑤）"
-        )
         return {
             "passed": True,
             "reason": f"连续 {max_wins} 周跑赢沪深300 + 累计超额 {excess_sum * 100:.1f}%≥10%（F5b）{alpha_txt}{sig_txt}",
@@ -339,7 +341,7 @@ def check() -> dict[str, Any]:
         }
     return {
         "passed": False,
-        "reason": f"运行 {days} 天——最高连续跑赢 {max_wins} 周（需 {CONSECUTIVE_WEEKS} 周——满 {MAX_DAYS} 天也通过）{style_txt}",
+        "reason": f"运行 {days} 天——最高连续跑赢 {max_wins} 周（需 {CONSECUTIVE_WEEKS} 周——F5b：满 90 天不自动通过——观察期继续）{style_txt}",
         "days": days,
         "weeks_beat": max_wins,
         "style_beat": style_max,
@@ -348,20 +350,46 @@ def check() -> dict[str, Any]:
     }
 
 
+def _bench_get(bench: dict[str, float], date_key: str) -> float | None:
+    """基准查表——精确命中失败时向前找最近交易日（周五休市兜底——盲审修复 2026-08-17）"""
+    if not date_key:
+        return None
+    import datetime as dt
+
+    d = bench.get(date_key)
+    if d is not None:
+        return d
+    try:
+        cur = dt.date.fromisoformat(date_key)
+    except ValueError:
+        return None
+    for back in range(1, 5):  # 最多回退 4 天（周一周二也能找到上周五）
+        d = bench.get((cur - dt.timedelta(days=back)).isoformat())
+        if d is not None:
+            return d
+    return None
+
+
 def _week_last_day(week_key: str) -> str:
-    """ISO 周键（2026-W33）→ 该周最后一天（周日）"""
+    """ISO 周键（2026-W33）→ 当周最后交易日（周五——A 股交易日历近似）
+
+    2026-08-17 盲审修复：原实现返回周日——与 baostock 周线日期（周五）
+    永不匹配——'4 周跑赢'判定不可达（wins 恒 0）。周五若休市（节假日），
+    查表时用'前一个可用交易日'兜底（_nearest_bench）。
+    """
     try:
         y, w = int(week_key[:4]), int(week_key.split("W")[1])
         import datetime as dt
 
-        # ISO 周: 周一为第 1 天——周日 = 周一 + 6 天
+        # ISO 周: 周一为第 1 天——周五 = 周一 + 4 天
         jan4 = dt.date(y, 1, 4)
         monday = (
             jan4
             - dt.timedelta(days=jan4.isocalendar()[2] - 1)
             + dt.timedelta(weeks=w - 1)
         )
-        return (monday + dt.timedelta(days=6)).isoformat()
+        friday = monday + dt.timedelta(days=4)
+        return friday.isoformat()
     except (ValueError, IndexError):
         return ""
 

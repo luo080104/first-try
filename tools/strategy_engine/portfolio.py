@@ -382,7 +382,12 @@ def _get_quotes(codes):
     try:
         res = data.tencent_quote([c for c in codes if c not in quotes])
         for code, q in res.items():
-            quotes[code] = {"price": q.get("price") or 0, "data_state": "real"}
+            px = q.get("price") or 0
+            # 盲审修复（2026-08-17）：price=0 是缺失不是真实价——标 fallback 防假净值
+            quotes[code] = {
+                "price": px,
+                "data_state": "real" if px > 0 else "fallback",
+            }
     except Exception:
         pass
     # ③ 仍缺的标 fallback（成本价——判定时不计）
@@ -409,8 +414,9 @@ def main():
                 print("⚠️ 约束检查未过：")
                 for i in issues:
                     print(f"  - {i}")
-                print("（不阻止——记录事件供确认——半自动红线：人确认后执行）")
-            _, msg = pf.buy(code, price, shares, track=track, reason=reason)
+                print("（buy() 将拒绝——如需越过加 --force（人工拍板——reason 注明 OVERRIDE））")
+            force = "--force" in sys.argv
+            _, msg = pf.buy(code, price, shares, track=track, reason=reason, force=force)
             print(msg)
         elif cmd == "sell" and len(sys.argv) >= 5:
             code, shares, price = sys.argv[2], int(sys.argv[3]), float(sys.argv[4])

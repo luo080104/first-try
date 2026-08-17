@@ -89,7 +89,11 @@ def _enrich_quote(
     if rev > 0 and mcap > 0:
         q["ps"] = round(mcap / rev, 2)
     if k:
-        lows = [r.get("low") for r in k if isinstance(r.get("low"), (int, float))]
+        lows = [
+            r["low"]
+            for r in k
+            if isinstance(r.get("low"), (int, float))
+        ]
         price = q.get("price") or 0
         if lows and price > 0:
             _min = min(lows)
@@ -242,8 +246,25 @@ def run_daily_loop() -> dict[str, Any]:
             ind = score_industry(code)
         except Exception:
             ind = None
+        # 盲审修复（2026-08-17）：红线真实推导——R5 过度集中从持仓实算（华电 37% 触发）
+        redlines = {}
+        try:
+            from tools.strategy_engine.portfolio import Portfolio
+
+            _over = {o["code"] for o in Portfolio().over_limit()}
+            if code in _over:
+                redlines["over_concentrated"] = True
+        except Exception:
+            pass  # 红线推导失败不阻塞（容错红线）
         score = ss.score_stock(
-            f, v, t, s, quote=_enrich_quote(q, f, k), market_status=status, industry=ind
+            f,
+            v,
+            t,
+            s,
+            quote=_enrich_quote(q, f, k),
+            market_status=status,
+            industry=ind,
+            redlines=redlines,
         )
         candidates.append(
             {
@@ -269,6 +290,9 @@ def run_daily_loop() -> dict[str, Any]:
     for c in candidates:
         if c["code"] in scored:
             continue  # 打分已入队——B3 不重复（去重）
+        # 盲审修复（2026-08-17）：B3 不绕过 N 不买清单/红线硬否决——被否决的股票 B3 不得入队
+        if c.get("vetoed"):
+            continue
         if c.get("b3"):
             signals.append(c["b3"])
 
