@@ -218,9 +218,15 @@ def build_report() -> str:
                     )
             if oscore.get("drift"):
                 lines.append(f"⚠️ {oscore['note']}")
-        except Exception:
+        except Exception as _e:
+            from tools.strategy_engine.diag import log_diag
+
+            log_diag("weekly_report", "online_score", _e, "在线评分失败——见 diag 详情")
             pass  # 在线评分失败不阻塞周报（红线③容错）
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+
+        log_diag("weekly_report", "ledger", _e, "账本段失败——见 diag 详情")
         lines.append("📒 账本采集中（3/6/12 月后回填验证）")
 
     # ⑤ 行为画像（Q10）

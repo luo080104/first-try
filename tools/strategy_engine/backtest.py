@@ -164,7 +164,10 @@ def run_backtest(
         from tools.strategy_engine import regime_coverage as rc
 
         out["coverage"] = rc.coverage_report(closes, trade_indices=buy_indices)
-    except Exception:
+    except Exception as _e:
+        from tools.strategy_engine.diag import log_diag
+
+        log_diag("backtest", "coverage", _e, "覆盖度检测失败——见 diag 详情")
         out["coverage"] = {"n_regimes": 0, "warning": "覆盖度检测失败（不阻塞）"}
     return out
 

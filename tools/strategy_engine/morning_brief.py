@@ -242,6 +242,15 @@ def build_brief() -> str:
         pass  # 判定失败不阻塞晨报（红线③容错）
     # 数据源健康（2026-08-15 UZI data_gap 落地——缺口显式承认——不静默）
     lines.append("\n【数据源】" + ";".join(_data_source_status()))
+    # A4 信号接线自检（2026-08-17 全面审核：注册表=目录非开关——新信号忘接无兜底）
+    try:
+        from tools.strategy_engine.signals import wiring_status
+
+        _unwired = [s["id"] for s in wiring_status() if s["wired"] == "False"]
+        if _unwired:
+            lines.append(f"\n⚠️【信号接线】enabled 未接生产: {'/'.join(_unwired)}——见 signals.wiring_status")
+    except Exception:
+        pass  # 自检失败不阻塞（容错红线）
     # A5 日报自检（2026-08-17 全面审核：定时任务死了没人报——自指环修复——
     # 检查上次日报运行日志 mtime——超过 25h 未更新=任务可能死亡）
     try:

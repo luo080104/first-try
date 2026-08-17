@@ -13,6 +13,7 @@ import datetime
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
@@ -28,6 +29,49 @@ _STATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "push_state.json"
 )
 DAILY_CAP = 3
+
+# 原子领取锁（跨进程互斥——防并发竞态绕过 cap——8/17 count=24 事故根因）
+_LOCK_PATH = _STATE_PATH + ".lock"
+_LOCK_TTL = 60  # 秒——进程崩溃残留锁自动过期
+
+
+def _claim_slot() -> bool:
+    """原子领取当日推送名额（检查+计数一体——跨进程互斥）
+
+    锁文件 O_EXCL 保证同一时刻只有一个进程能通过检查；
+    崩溃残留锁超过 TTL 视为过期可抢。领取成功即计数（推送失败也占名额
+    ——低频合并语义：少推比多推安全）。
+    """
+    fd = None
+    try:
+        try:
+            fd = os.open(_LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                _age = time.time() - os.path.getmtime(_LOCK_PATH)
+            except OSError:
+                return False
+            if _age <= _LOCK_TTL:
+                return False  # 锁被其他进程持有
+            try:
+                os.remove(_LOCK_PATH)
+            except OSError:
+                return False
+            try:
+                fd = os.open(_LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except OSError:
+                return False
+        if _today_count() >= DAILY_CAP:
+            return False
+        _bump_count()
+        return True
+    finally:
+        if fd is not None:
+            os.close(fd)
+            try:
+                os.remove(_LOCK_PATH)
+            except OSError:
+                pass
 
 
 def _today_count() -> int:
@@ -97,11 +141,9 @@ def push_brief() -> bool:
     if push_wechat is None:
         return False
     text = mb.build_brief()
-    if not _throttled("日报"):
+    if not _claim_slot():
         return False
     ok = push_wechat(f"📊 观复日报 · 收盘总结\n\n{text}")
-    if ok:
-        _bump_count()
     return ok
 
 
@@ -115,13 +157,10 @@ def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
         return False
     if not pic_data_url:
         # 无图 → 普通文本推送
-        if not _throttled("图文"):
+        if not _claim_slot():
             return False
-        ok = push_wechat(text)
-        if ok:
-            _bump_count()
-        return ok
-    if not _throttled("图文"):
+        return push_wechat(text)
+    if not _claim_slot():
         return False
     try:
         import urllib.parse
@@ -144,10 +183,7 @@ def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
         )
         if not sendkey:
             # 无 Server酱 → 纯文本降级
-            ok = push_wechat(text)
-            if ok:
-                _bump_count()
-            return ok
+            return push_wechat(text)
         body = urllib.parse.urlencode(
             {"title": "📊 观复周报", "desp": text, "pics": pic_data_url}
         ).encode("utf-8")
@@ -158,9 +194,7 @@ def push_with_pic(text: str, pic_data_url: str | None = None) -> bool:
             urllib.request.urlopen(req, timeout=15).read().decode("utf-8")
         )
         ok = resp.get("code") == 0
-        if ok:
-            _bump_count()
-        else:
+        if not ok:
             print(f"[notify_gf] Server酱图文失败: {resp.get('message', resp)}")
         return ok
     except Exception as e:
@@ -172,12 +206,9 @@ def push_signal(signal_text: str) -> bool:
     """信号推送（达标信号 → 待确认——半自动红线：AI 提示带理由）"""
     if push_wechat is None:
         return False
-    if not _throttled("信号"):
+    if not _claim_slot():
         return False
-    ok = push_wechat(f"🎯 观复信号\n\n{signal_text}")
-    if ok:
-        _bump_count()
-    return ok
+    return push_wechat(f"🎯 观复信号\n\n{signal_text}")
 
 
 if __name__ == "__main__":

@@ -73,6 +73,28 @@ def technical_signals(code: str) -> dict[str, Any]:
     return _technical_from_kline(k)
 
 
+def _enrich_quote(q: dict[str, Any], f: dict[str, Any], k: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """C5 修复（2026-08-17 审核）：补齐 check_no_buy 所需数据生产者
+
+    ps（市销率）= 市值/营收（revenue_yi 来自 fundamentals——C5 补）
+    price_from_low（距低点涨幅%）= 现价 vs 260 天 K 线最低点（K 线已在手）
+    缺数据 → 保持缺省（0）——N2/N3 条件不满足即不误杀（宁缺毋滥）
+    """
+    q = dict(q)
+    rev = f.get("revenue_yi") or 0
+    mcap = q.get("mcap_yi") or 0
+    if rev > 0 and mcap > 0:
+        q["ps"] = round(mcap / rev, 2)
+    if k:
+        lows = [r.get("low") for r in k if isinstance(r.get("low"), (int, float))]
+        price = q.get("price") or 0
+        if lows and price > 0:
+            _min = min(lows)
+            if _min > 0:
+                q["price_from_low"] = round((price - _min) / _min * 100, 1)
+    return q
+
+
 def _technical_from_kline(k: list[dict[str, Any]] | None) -> dict[str, Any]:
     """从 K 线算技术信号（审查 R6：与 B3 共用一次拉取——不重复网络请求）"""
     if not k or len(k) < 25:
@@ -208,7 +230,9 @@ def run_daily_loop() -> dict[str, Any]:
             ind = score_industry(code)
         except Exception:
             ind = None
-        score = ss.score_stock(f, v, t, s, quote=q, market_status=status, industry=ind)
+        score = ss.score_stock(
+            f, v, t, s, quote=_enrich_quote(q, f, k), market_status=status, industry=ind
+        )
         candidates.append(
             {
                 "code": code,

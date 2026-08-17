@@ -210,6 +210,7 @@ SIGNALS: dict[str, dict[str, Any]] = {
         "desc": "B3 低潮买入：布林下轨触 + RSI(6)<30（两重——定案启用）",
         "status": "enabled",
         "source": "主书低潮买入——回测定案",
+        "wired": True,  # 生产接线：core_loop B3 信号（2026-08-17 A4 审计）
         "min_cash": 8000,  # 最小资金约束（2026-08-16 架构师 B1：单只 10% 仓位下限——8 万可执行）
     },
     # ---- 卖出（战术层） ----
@@ -219,6 +220,7 @@ SIGNALS: dict[str, dict[str, Any]] = {
         "desc": "S2 周布林降本：周线收盘 > 布林上轨 → 波段仓卖出（启用）",
         "status": "enabled",
         "source": "主书64/95/手册62",
+        "wired": False,  # A4（2026-08-17）：生产路径零调用——仅回测使用——待接波段仓卖出
     },
     "S3": {
         "kind": "sell",
@@ -226,6 +228,7 @@ SIGNALS: dict[str, dict[str, Any]] = {
         "desc": "S3 估值减仓 v2：PE/PB 百分位>80 且跌破6月均线 → 建议减仓1/3（候选——2026-08-17 扩池 35 只样本外：达标仅 9%——收益代价高——防守属性保留）",
         "status": "候选",
         "source": "主书46/95/98（L5524）+L3906——训练回测 v2 定案被样本外推翻",
+        "wired": True,  # 生产接线：日报 S3 估值减仓提示段（建议级——不自动卖）
     },
     "MA交叉": {
         "kind": "sell",
@@ -261,6 +264,18 @@ def list_signals(kind: str | None = None) -> list[dict[str, Any]]:
             continue
         out.append({"id": sig_id, **meta})
     return out
+
+
+def wiring_status() -> list[dict[str, str]]:
+    """A4 审计（2026-08-17）：注册表接线状态——enabled 但 wired=False = 目录非开关
+
+    core_loop/日报按此输出——新信号忘接有兜底（不再无声无息）
+    """
+    return [
+        {"id": s["id"], "status": s["status"], "wired": str(s.get("wired", False))}
+        for s in list_signals()
+        if s["status"] == "enabled"
+    ]
 
 
 def get_signal(sig_id: str) -> dict[str, Any] | None:

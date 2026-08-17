@@ -111,6 +111,7 @@ def get_fundamentals(
         "payout_ratio": 0,  # 分红率%（书 L2761：40-75% 诚信区域——H）
         "growth_ok": False,
         "debt_exempt": debt_exempt,
+        "revenue_yi": 0,  # 营收（亿元）——C5 修复：供 ps 市销率计算（市值/营收）
     }
     try:
         lrb = _sina_report(code, "lrb") or []
@@ -122,6 +123,7 @@ def get_fundamentals(
                 lrb[0].get("净利润") or lrb[0].get("归属于母公司所有者的净利润")
             )
             if rev > 0:
+                f["revenue_yi"] = round(rev / 1e8, 2)  # 元→亿元（C5）
                 f["sales_margin"] = round(profit / rev * 100, 1)
             growth = _to_float(
                 lrb[0].get("营业总收入_同比") or lrb[0].get("营业收入_同比")

@@ -176,6 +176,7 @@ def eval_buy(code: str) -> dict:
     if m.get("fair_pe_rate_calibrated"):
         v["fair_pe"] = m["fair_pe_rate_calibrated"]
     t = cl.technical_signals(code)
+    k = data.tencent_kline(code, days=260)  # C5：K 线复用——price_from_low 数据生产者
     f = fd.get_fundamentals(
         code, q.get("price") or 0, debt_exempt=code in cl._FINANCIAL_EXEMPT
     )
@@ -187,7 +188,11 @@ def eval_buy(code: str) -> dict:
         ind = score_industry(code)
     except Exception:
         ind = None
-    score = ss.score_stock(f, v, t, s, quote=q, market_status=m["status"], industry=ind)
+    from tools.strategy_engine.core_loop import _enrich_quote
+
+    score = ss.score_stock(
+        f, v, t, s, quote=_enrich_quote(q, f, k), market_status=m["status"], industry=ind
+    )
     # F3 接线（2026-08-17 审核：B4/B5 过滤器零调用者——书纪律恢复——Q6 候选态：报告级不硬拦）
     b4b5 = []
     try:

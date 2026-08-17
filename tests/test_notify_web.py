@@ -6,6 +6,7 @@ python -m 启动时 uvicorn.run 阻塞）。推送层是"静默失败高发区"�
 锁住：①gf_web 全部路由可达 ②晨报构建不崩 ③推送节流上限
 """
 
+import os
 import sys
 
 sys.path.insert(0, ".")
@@ -56,3 +57,24 @@ def test_throttle_cap(tmp_path, monkeypatch):
     ng._bump_count()  # 3
     assert _throttled("测试") == False  # 第 4 条拒绝（显式比较——避 is 字面量规则）
     assert _today_count() <= DAILY_CAP
+
+
+def test_claim_slot_atomic(tmp_path, monkeypatch):
+    """原子领取：并发模拟下 cap 不被绕过（8/17 count=24 事故回归测试）
+
+    多进程同时检查+计数会产生竞态（都读到 count<3 都放行）——
+    _claim_slot 用锁文件互斥——串行领取第 4 次必须失败。
+    """
+    from tools.strategy_engine import notify_gf as ng
+
+    state = tmp_path / "push_state.json"
+    monkeypatch.setattr(ng, "_STATE_PATH", str(state))
+    # 串行领取 3 次全成功
+    assert ng._claim_slot() is True
+    assert ng._claim_slot() is True
+    assert ng._claim_slot() is True
+    assert _today_count() == DAILY_CAP
+    # 第 4 次被拒（锁文件不残留）
+    assert ng._claim_slot() is False
+    assert _today_count() == DAILY_CAP
+    assert not os.path.exists(str(state) + ".lock")
