@@ -14,6 +14,7 @@
 
 import json
 import os
+import time
 from datetime import datetime
 
 from tools.strategy_engine import core_loop as cl
@@ -168,6 +169,16 @@ def eval_buy(code: str) -> dict:
     """
     from tools.strategy_engine import fundamentals as fd
 
+    # 规则版本号（2026-08-17 甲方 Q7 应询：决策时点规则可追溯——华电教训）
+    from tools.strategy_engine import signals as _sg_v
+
+    rule_version = {
+        "score_schema": "v2.1-120制",  # 打分体系版本（价值40+估值30+技术20+票源10+行业20）
+        "threshold": ss.THRESHOLD_MAP.get(ms.market_status().get("status", "正常"), 96),
+        "signals": sorted(s["id"] for s in _sg_v.wiring_status() if s["wired"] == "True"),
+        "date": time.strftime("%Y-%m-%d"),
+    }
+
     q = data.tencent_quote([code]).get(code, {})
     if not q:
         return {"code": code, "error": "无行情"}
@@ -211,6 +222,36 @@ def eval_buy(code: str) -> dict:
     # 技术明细（布林位置/RSI——可读——直接取 technical_signals 字段）
     tech_detail = {k: t[k] for k in ("boll", "rsi", "td", "vol_div") if k in t}
     threshold = ss.THRESHOLD_MAP.get(m["status"], 96)
+
+    # 十年回测前置检查（2026-08-17 甲方 Q5 应询：买入前历史数据检查——华电十年 -0.1% 教训）
+    decade = {}
+    try:
+        import json as _json
+        import os as _os
+
+        _pool = _json.load(
+            open(
+                _os.path.join(
+                    _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))),
+                    ".wbs_tmp",
+                    "full_market.json",
+                ),
+                encoding="utf-8",
+            )
+        )
+        _code = code + (".SH" if code.startswith("6") else ".SZ")
+        hit = next((r for r in _pool if r["code"] == _code), None)
+        if hit:
+            decade = {
+                "ann10y": round(hit["ann"] * 100, 1),
+                "ret10y": round(hit["ret"] * 100, 1),
+                "pe0": round(hit["pe0"], 1) if hit.get("pe0") else None,
+                "dv0": round(hit.get("dv0") or 0, 2),
+                "flag": "🔴 十年年化<0" if hit["ann"] < 0 else "",
+            }
+    except Exception:
+        decade = {"note": "全市场池缺失（.wbs_tmp/full_market.json）——跳过前置检查"}
+
     if score.vetoed:
         conclusion = "⛔ 否决（不买清单/红线）"
     elif b4b5:
@@ -229,5 +270,7 @@ def eval_buy(code: str) -> dict:
         "veto": score.veto_reasons,
         "b4b5": b4b5,
         "tech": tech_detail,
+        "decade": decade,  # 十年回测前置（甲方 Q5——买入前必看）
+        "rule_version": rule_version,  # 规则版本（甲方 Q7——决策可追溯）
         "conclusion": conclusion,
     }
