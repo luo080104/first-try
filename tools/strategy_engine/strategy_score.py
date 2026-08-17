@@ -136,6 +136,17 @@ def _score_source(s: dict[str, Any]) -> list[tuple[float, str]]:
     return parts
 
 
+def _score_industry(industry: dict[str, Any] | None) -> list[tuple[float, str]]:
+    """行业面 0-20（书 L3098"选股票先选行业"——2026-08-17）
+
+    预计算传入（industry.score_industry(code)——含网络调用——score_stock 保持纯函数）
+    数据缺失/未传 → 中性 10 分（不因数据失败惩罚——Q6 失效条件给中性）
+    """
+    if not industry or "error" in industry:
+        return [(10.0, "行业未知（中性——不惩罚）")]
+    return industry.get("parts", [(10.0, "行业数据异常（中性）")])
+
+
 def score_stock(
     f: dict[str, Any],
     v: dict[str, Any],
@@ -144,8 +155,9 @@ def score_stock(
     quote: dict[str, Any] | None = None,
     market_status: str = "正常",
     redlines: dict[str, bool] | None = None,
+    industry: dict[str, Any] | None = None,
 ) -> ScoreResult:
-    """动态打分总入口——输出 0-100 总分 + 分项 + 否决 + 门槛判定"""
+    """动态打分总入口——输出 0-120 总分（含行业面 20——门槛绝对值不变）+ 分项 + 否决 + 门槛判定"""
     result = ScoreResult(total=0.0, market_status=market_status)
     result.threshold = THRESHOLD_MAP.get(market_status, 80)
 
@@ -164,6 +176,7 @@ def score_stock(
         ("估值", _score_valuation(v)),
         ("技术", _score_technical(t)),
         ("票源", _score_source(s)),
+        ("行业", _score_industry(industry)),
     ]:
         sub_total = sum(p for p, _ in parts)
         for p, note in parts:

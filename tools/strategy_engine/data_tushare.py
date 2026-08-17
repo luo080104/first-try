@@ -206,3 +206,45 @@ if __name__ == "__main__":
         print(f"✅ tushare 日线可用：茅台 {len(test)} 行——最新 {test[-1]}")
     else:
         print("❌ tushare 日线不可用（检查 token/权限）")
+
+
+def ts_pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
+    """个股 PE/PB 全历史（daily_basic——2005 起——2026-08-17 主源切换）
+
+    替代 baostock 估值主源（baostock 长区间/指数查询多次挂起——SLA 脆弱）
+    返回 [{date, pe, pb}] 升序——失败返回 []（调用方 fallback baostock）
+    """
+    ts_code = to_ts_code(code)
+    pro = _pro()
+    if not pro:
+        return []
+    try:
+        df = pro.daily_basic(
+            ts_code=ts_code, fields="trade_date,pe_ttm,pb", limit=10000
+        )
+        if df is None or df.empty:
+            return []
+        out = []
+        for _, r in df.iterrows():
+            try:
+                pe_val: Any = r["pe_ttm"]
+                pb_val: Any = r["pb"]
+                pe, pb = float(pe_val), float(pb_val)
+            except (TypeError, ValueError):
+                continue
+            if pe > 0 and pb > 0:
+                out.append(
+                    {
+                        "date": str(r["trade_date"])[:4]
+                        + "-"
+                        + str(r["trade_date"])[4:6]
+                        + "-"
+                        + str(r["trade_date"])[6:8],
+                        "pe": pe,
+                        "pb": pb,
+                    }
+                )
+        out.sort(key=lambda x: x["date"])
+        return out[-days:]
+    except Exception:
+        return []

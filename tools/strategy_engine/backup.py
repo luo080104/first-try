@@ -30,6 +30,10 @@ BACKUP_FILES = [
     "bigv_ideas.jsonl",  # 大V 思路假设库（B1）
     "wb_statuses.jsonl",  # 鹿鼎公微博（幂等 id 集合依赖）
     "s4_alerts.jsonl",  # S4 公告提醒去重记录
+    # 2026-08-17 补（书精读五项 + 行业面）
+    "diag.jsonl",  # 结构化诊断日志（排障证据——不能丢）
+    "breaker.json",  # 重试熔断状态（次日自动重置——备份保安全）
+    "industry_profile.json",  # 行业档案（格局/政策人工评级——重写成本高）
 ]
 # 明确不备份：xq_cookies.json（登录态敏感——过期重新扫码即可）
 

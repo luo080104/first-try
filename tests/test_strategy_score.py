@@ -103,3 +103,22 @@ def test_valuation_band_fix():
     # 分段线性：PE30 → 5-(30-25)/15*5 = 3.33（原 5 分档——线性后更连续）
     pe_part = next(p for name, p, _ in parts if "PE=" in name)
     assert abs(pe_part - 3.33) < 0.1
+
+
+def test_industry_face():
+    """行业面（书 L3098——2026-08-17）：传入真实行业分 / 缺失给中性不惩罚"""
+    from tools.strategy_engine.strategy_score import _score_industry
+
+    # 缺失/失败 → 中性 10 分（Q6：不因数据失败惩罚）
+    r = _score_industry(None)
+    assert abs(r[0][0] - 10.0) < 0.01
+    r2 = _score_industry({"error": "行业映射失败"})
+    assert abs(r2[0][0] - 10.0) < 0.01
+    # 真实行业分（公用——格局 8 满）
+    ind = {"total": 17.5, "parts": [(8.0, "格局公用"), (5.5, "行业PE 18"), (2.0, "3年波动率"), (2.0, "政策面")]}
+    r3 = _score_industry(ind)
+    assert abs(sum(p for p, _ in r3) - 17.5) < 0.01
+    # score_stock 总入口：industry 参数透传——传入真实行业分比中性多 7.5（17.5-10）
+    s0 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=None)
+    s1 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=ind)
+    assert abs(s1.total - s0.total - 7.5) < 0.01

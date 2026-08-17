@@ -153,7 +153,14 @@ def eval_buy(code: str) -> dict:
         code, q.get("price") or 0, debt_exempt=code in cl._FINANCIAL_EXEMPT
     )
     s = {"is_leader": True, "bigv_holding": False}
-    score = ss.score_stock(f, v, t, s, quote=q, market_status=m["status"])
+    # 行业面（书 L3098——2026-08-17：预计算传入——失败给中性不阻塞）
+    try:
+        from tools.strategy_engine.industry import score_industry
+
+        ind = score_industry(code)
+    except Exception:
+        ind = None
+    score = ss.score_stock(f, v, t, s, quote=q, market_status=m["status"], industry=ind)
     # 技术明细（布林位置/RSI——可读——直接取 technical_signals 字段）
     tech_detail = {k: t[k] for k in ("boll", "rsi", "td", "vol_div") if k in t}
     threshold = ss.THRESHOLD_MAP.get(m["status"], 80)

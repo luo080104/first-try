@@ -319,12 +319,31 @@ def _baidu_valuation_series(code: str, indicator: str) -> list[tuple[str, float]
 
 
 def pe_pb_history(code: str, days: int = 2500) -> list[dict[str, Any]]:
-    """PE/PB 历史（baostock 主源 10 年 + 百度交叉验证——P0-2 定案）
+    """PE/PB 历史（tushare 主源 2005 起 + baostock fallback——2026-08-17 主源切换）
 
     code 六位数字（600519）——返回 [{date, pe, pb, source}] 升序
-    主源：baostock（免费无限流——历史到 2006）——百度兜底（1-3 年）
-    2 源交叉验证：重叠期 PE 差异 >20% 标记 source='conflict'（AI Berkshire 纪律）
+    主源：tushare daily_basic（200 元/年已购——2005 起全量——根治 baostock 挂起）
+    fallback：baostock（免费无限流——历史到 2006）——百度兜底（1-3 年）
+    交叉验证：双源重叠期 PE 差异 >20% 标记 source='conflict'（AI Berkshire 纪律）
     """
+    # 主源：tushare（2026-08-17——付费已购——2000 分）
+    try:
+        from tools.strategy_engine.data_tushare import ts_pe_pb_history as _ts_h
+
+        ts_rows = _ts_h(code, days)
+        if len(ts_rows) >= 60:
+            rows = [dict(r, source="tushare") for r in ts_rows]
+            # 交叉验证：baostock 重叠期对比（节流——不阻塞）
+            try:
+                bs_rows = bs_pe_pb_history(code)
+                if len(bs_rows) >= 60:
+                    rows = _cross_check(rows, bs_rows)
+            except Exception:
+                pass  # 交叉验证失败不阻塞主源（红线③）
+            return rows[-days:]
+    except Exception:
+        pass  # tushare 失败 → baostock fallback
+    # fallback：baostock（原主源——免费）
     bs = bs_pe_pb_history(code)
     if len(bs) >= 60:
         # 交叉验证：百度重叠期对比（节流——不阻塞）
