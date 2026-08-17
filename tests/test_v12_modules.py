@@ -53,8 +53,20 @@ def test_dashboard_shape():
     assert isinstance(r["alerts"], list)
 
 
-def test_dashboard_alert_on_cash():
-    """现金偏高 → 告警（当前 78% > 15%——闲置提示）"""
+def test_dashboard_alert_on_cash(monkeypatch, tmp_path):
+    """现金偏高 → 告警（2026-08-17 A3 修复：不再依赖真实账本——临时账本注入）"""
+    import json
+
+    from tools.strategy_engine import portfolio as _pf
+
+    fake = {
+        "init_cash": 80000, "cash": 60000, "holdings": {},
+        "track": {}, "equity_curve": [],
+    }
+    f = tmp_path / "t_port.json"
+    f.write_text(json.dumps(fake), encoding="utf-8")
+    monkeypatch.setattr(_pf, "PORTFOLIO_FILE", str(f))
+    monkeypatch.setattr(_pf, "EVENTS_FILE", str(tmp_path / "t_events.jsonl"))
     r = rd.dashboard()
     assert any("现金" in a for a in r["alerts"])
 
