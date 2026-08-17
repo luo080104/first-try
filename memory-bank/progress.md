@@ -1,29 +1,35 @@
 # 当前进度（progress）
 
-> 最后更新：2026-08-15。Pi 每次工作后更新此文件 + SYNC.md。
+> 最后更新：2026-08-18。Pi 每次工作后更新此文件 + SYNC.md。
 >
 > **维护纪律（2026-08-15 用户指出）：更新本文件前必须核对 docs/SYNC.md 尾部 + `git log --oneline`，禁止从旧版直接继承待办**——progress.md 是易过时缓存，SYNC.md/git log 才是事实源。
+>
+> **分工（2026-08-18 用户明确）：Pi 只负责 Go购。观复/雕龙与 Pi 无关——不读方案/不做任务/不更新进度。**
 
-## Go购（v2.0 收尾）
+## Go购（游戏化皮肤 v3 完成）
 
 ### 已完成
 
 - [x] v2.0 交互打磨：纯卡片导航 / 陪你出发 / 商品库输入即搜 / 实时搜索计时 / 搜索历史
 - [x] 8/13 全量审查修复：连接泄漏 22 处（with closing）、SSE 断线检测、遗留入口 DEPRECATED、crawl 装饰器确认、price_trend 10 分钟缓存
-- [x] family_pin **前后端全链路**（后端 be21479 + 前端 8f0eb49：密码菜单 + 8 页面 15 处带 pin）
+- [x] family_pin 后端 be21479 + 前端 8f0eb49（密码菜单 + 8 页面带 pin）——**但前端有坑，8/18 已修（见下）**
 - [x] 导购模型切 Pro、对话上下文链路（session_id）
 - [x] ruff 295→0、semgrep 清理、缓存 94%
-- [x] Headroom 0.34.0 接入（proxy 8787 + env 开关 + dashboard 汉化 113 处）
-- [x] **Headroom 压缩验证完成**（8/14：kompress 模型 1.4G 已下——长请求实测省 32%（817→556）——start_server.vbs 已配 LLM_API_URL 走 proxy——下次启动自动压缩）
+- [x] Headroom 0.34.0 接入（proxy 8787 + env 开关 + dashboard 汉化）
+- [x] **Headroom 压缩验证完成**（8/14：kompress 1.4G 已下，省 32%）
+- [x] **全面游戏化皮肤 v3（2026-08-18，commit ec12553）**：暗夜星空背景+星点、RPG 双层边框面板、3D 按钮、血条加载、金色传说最低价高亮、进场动画。类名全兼容 JS 零改动。9 页面浏览器级验证（DrissionPage headless 截图+computed style）
+- [x] **family_pin 前端 10 处 fetch(pinUrl) 括号错位修复（2026-08-18）**：8/13 引入时把 fetch 参数误传 pinUrl → 6 页面 JS 整个语法错误静默失效（商品库/历史/盯价/陪你出发/漫游/采集全挂）——node --check 全脚本 + 浏览器冒烟验证
+- [x] **/api/items 空串 422 修复**（min_price 空串→float 解析失败→商品库永远空——_f() 容错）
+- [x] **search_sse 缺 pin 修复**：设置 PIN 后历史模式搜索全部被拒（前端请求不带 pin）——已补 pin 参数
+- [x] git push 205 提交全部完成（2026-08-18，3da4c55..2a0dfdd + ec12553）
 
 ### 待办
 
-- [ ] git push 10+ 提交（热点 TLS 卡死，回家 WiFi 推）
-- [x] Langfuse 接入已完成（8/12：key + @observe + shared/llm.py + 真实调用验证）——非待办（小布清单核对修正）
 - [ ] 采集重跑（PDD 三板斧，等 WiFi/冷却）
-- [ ] 手机端验证（等用户测试）
+- [ ] 手机端验证（**重点：PIN 已设置 1234——8/18 修复前历史搜索/商品库/盯价均失效，请用户重新实测确认修复**）
+- [ ] 皮肤细节微调（等用户看过新界面反馈）
 
-## 雕龙（暂停中）
+## 雕龙（暂停中——与 Pi 无关，不更新）
 
 - [ ] 方案 v1.4 就绪（9 模块+8 Hook+16 决策）——⑥ 质检已扩到 14 项（+人性化评分）
 - [ ] lightnovel-crawler v4.14.0 已装（17 中文源）
