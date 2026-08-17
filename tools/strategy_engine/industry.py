@@ -88,6 +88,53 @@ CATEGORY_PROFILE: dict[str, str] = {
     "S": "工业",
 }
 
+# 证监会一级 → 蛋卷指数估值代码（v1——2026-08-17：蛋卷百分位=现成历史位置）
+# 蛋卷覆盖：银行/煤炭/白酒/医药/消费/信息/地产/证券等——缺公用/能源（fallback 巨潮）
+DANJUAN_IDX: dict[str, str] = {
+    "A": "SH000932",  # 农林牧渔→主要消费
+    "B": "SZ399998",  # 采矿→中证煤炭（能源近似）
+    "I": "SH000993",  # 信息→全指信息
+    "J": "SZ399986",  # 金融→中证银行
+    "K": "SH000989",  # 房地产→全指可选
+}
+
+_eva_cache: dict[str, dict[str, float]] | None = None
+
+
+def _danjuan_eva() -> dict[str, dict[str, float]]:
+    """蛋卷指数估值（雪球系公开 API——63 指数 PE/PB/百分位）——模块级缓存
+
+    返回 {指数代码: {pe_percentile, pe}}——失败 {}（fallback 巨潮横向）
+    """
+    global _eva_cache
+    if _eva_cache:
+        return _eva_cache
+    try:
+        import requests
+
+        r = requests.get(
+            "https://danjuanfunds.com/djapi/index_eva/dj",
+            timeout=20,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        if r.status_code != 200:
+            return {}
+        items = r.json().get("data", {}).get("items", [])
+        out: dict[str, dict[str, float]] = {}
+        for i in items:
+            code = str(i.get("index_code", ""))
+            pp = i.get("pe_percentile")
+            pe = i.get("pe")
+            if code and pp is not None:
+                out[code] = {
+                    "pe_percentile": float(pp),
+                    "pe": float(pe) if pe is not None else 0.0,
+                }
+        _eva_cache = out
+        return out
+    except Exception:
+        return {}
+
 
 def _load_profile() -> dict[str, dict[str, Any]]:
     if os.path.exists(PROFILE_FILE):
@@ -207,9 +254,24 @@ def score_industry(code: str) -> dict[str, Any]:
     except (TypeError, ValueError):
         s1 = 5.0
     parts.append((s1, f"格局{key or cat}：{profile.get('备注', '默认中性')}"))
-    # 位置 6（行业 PE 横向 + 2 年涨幅防接盘）
-    s2 = 0.0
-    if pe is not None:
+    # 位置 6（蛋卷百分位优先——现成历史位置——fallback 巨潮横向 PE + 涨幅防接盘）
+    s2 = 3.0  # 中性默认
+    note = "位置未知（中性）"
+    eva = _danjuan_eva()
+    dj_code = DANJUAN_IDX.get(cat)
+    if dj_code and dj_code in eva:
+        pp = eva[dj_code]["pe_percentile"]
+        if pp < 0.3:
+            s2 = 6.0
+        elif pp < 0.6:
+            s2 = 4.5
+        elif pp < 0.8:
+            s2 = 3.0
+        else:
+            s2 = 1.5  # 历史高位（书 L5524 百分位>80 减仓区）
+        note = f"行业PE百分位 {pp * 100:.0f}%（蛋卷——历史位置）"
+    elif pe is not None:
+        # fallback：巨潮横向评分（蛋卷未覆盖行业——公用/能源）
         if pe < 12:
             s2 = 6.0
         elif pe < 20:
@@ -218,9 +280,7 @@ def score_industry(code: str) -> dict[str, Any]:
             s2 = 3.0
         else:
             s2 = 1.0
-    elif perf:
-        s2 = 3.0  # 中性
-    note = f"行业PE {pe:.0f}" if pe is not None else "行业PE未知"
+        note = f"行业PE {pe:.0f}（横向——蛋卷未覆盖）"
     if perf and perf["ret_2y"] is not None and perf["ret_2y"] > 50:
         s2 = max(0.0, s2 - 2.0)  # 2 年涨超 50%——防接盘（书 N10 精神）
         note += f" 2年涨{perf['ret_2y']:.0f}%（高位——扣防接盘分）"

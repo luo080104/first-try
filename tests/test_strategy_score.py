@@ -122,3 +122,20 @@ def test_industry_face():
     s0 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=None)
     s1 = ss.score_stock(_good_f(), _good_v(), {}, {}, quote={}, market_status="正常", industry=ind)
     assert abs(s1.total - s0.total - 7.5) < 0.01
+
+
+def test_industry_position_danjuan():
+    """行业位置 v1（蛋卷百分位——2026-08-17）：高位扣分/低位加分"""
+    from tools.strategy_engine import industry as ind
+
+    # 金融（中证银行 81% 高位）→ 位置 1.5
+    ind._eva_cache = {"SZ399986": {"pe_percentile": 0.81, "pe": 6.5}}
+    r = ind.score_industry("sh.600036")
+    pos = [p for p in r["parts"] if "百分位" in p[1]]
+    assert pos and abs(pos[0][0] - 1.5) < 0.01
+    # 低位（20%）→ 6 分满分
+    ind._eva_cache = {"SZ399986": {"pe_percentile": 0.2, "pe": 6.5}}
+    r2 = ind.score_industry("sh.600036")
+    pos2 = [p for p in r2["parts"] if "百分位" in p[1]]
+    assert pos2 and abs(pos2[0][0] - 6.0) < 0.01
+    ind._eva_cache = None
