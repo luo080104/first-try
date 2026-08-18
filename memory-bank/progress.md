@@ -96,3 +96,11 @@
 - [x] 商品库分页增强：页码指示/跳页输入/每页 20|50（原来只有上一页/下一页）
 - [x] 全模板 86 处 innerHTML 加 pi-lens-ignore 注释（esc() 安全渲染模式，8/12 审计无高危）——pi-lens 诊断清零
 - [x] 验证：分页 20→50/跳页3、quest done 态、搜索全链路、result 类名 ✅
+
+### 8/18 第三轮（老师规范七条执行，commit 46cf872）
+
+- [x] **规范三**：新建 src/diag.py（失败显式记录 data/diag.jsonl，格式对齐观复）——18 文件 43 处静默 except:pass 全部转 `except as e: diag(component, fn, e, hint)`（LLM/DB/浏览器/搜索全覆盖）
+- [x] **规范一**：compare/app/browser_pool 过时注释改当前状态描述（A-B 实验注释、端口 8000→8001、headless profile）
+- [x] 实测：interact_score 坏数据 → 默认 0.3 + diag.jsonl 自动记录 ✅
+- [x] 遗留（指出不修）：59 个既有 Pyright 错误（DrissionPage 无类型存根）；db.py 幂等迁移建议改 PRAGMA 检查
+- [ ] P2 熔断暂缓（等 diag 数据积累再定）
