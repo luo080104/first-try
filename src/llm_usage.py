@@ -3,6 +3,8 @@
 import os
 import sqlite3
 
+from diag import diag
+
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 
 # DeepSeek 单价（元/百万 token，近似值；V4-Flash 便宜 / V4-Pro 贵）
@@ -34,8 +36,8 @@ def record_usage(model: str, input_tokens: int, output_tokens: int, scene: str =
                       hit, miss))
         conn.commit()
         conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        diag("llm_usage", "record_usage", e, "usage 写库失败——成本记录丢失")
 
 
 DAILY_LIMIT = 3.0  # 每日 LLM 成本上限（元）——超限自动停（2026-08-12 小布审核定）

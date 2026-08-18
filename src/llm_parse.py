@@ -6,6 +6,7 @@ import time
 import urllib.request
 from datetime import datetime
 
+from diag import diag
 from llm_usage import budget_ok
 
 # API Key 只从环境变量读取（禁止硬编码；部署见 docs/上下文清单.md 一、凭证与环境）
@@ -51,8 +52,8 @@ def _log_trace(text: str, reasoning: str, result: dict, cache_hit: int = 0, cach
             f.write(f"[结果] {json.dumps(result, ensure_ascii=False)}\n")
             if cache_hit or cache_miss:
                 f.write(f"[缓存] hit={cache_hit} miss={cache_miss}\n")
-    except Exception:
-        pass
+    except Exception as e:
+        diag("llm_parse", "_log_trace", e, "日志文件写入失败——丢一条 trace 不影响主流程")
 
 def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析用 V4-Flash（简单任务），R1 留给 AI 建议面板
     if not budget_ok():
@@ -103,8 +104,8 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
                     add_category_pref(result['pref_category'], result['pref_word'], source='llm', confidence=0.7)
                 else:
                     add_global_pref(result['pref_word'], source='llm', confidence=0.7)
-        except Exception:
-            pass
+        except Exception as e:
+            diag("llm_parse", "parse_intent", e, "LLM 偏好提取失败——跳过该次偏好学习")
         # P1：缓存命中指标
         usage = data.get('usage', {})
         hit = usage.get('prompt_cache_hit_tokens', 0)
@@ -115,8 +116,8 @@ def parse_intent(text: str, use_reasoner: bool = False) -> dict:  # 意图解析
             from llm_usage import record_usage
             record_usage('deepseek-v4-flash', usage.get('prompt_tokens', 0), usage.get('completion_tokens', 0), '意图解析',
                            usage.get('prompt_cache_hit_tokens', 0), usage.get('prompt_cache_miss_tokens', 0))
-        except Exception:
-            pass
+        except Exception as e:
+            diag("llm_parse", "parse_intent", e, "usage 记账失败——成本记录缺失")
         return result
     except Exception as e:
         print(f'[llm] 解析失败: {str(e)[:80]}，回退为原文')
@@ -180,8 +181,8 @@ def generate_options(keyword: str, groups: list, history_txt: str = '') -> list:
             u = data.get('usage', {})
             record_usage('deepseek-v4-pro', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '导购选项',
                            u.get('prompt_cache_hit_tokens', 0), u.get('prompt_cache_miss_tokens', 0))
-        except Exception:
-            pass
+        except Exception as e:
+            diag("llm_parse", "generate_options", e, "usage 记账失败——成本记录缺失")
         content = data['choices'][0]['message']['content'].strip()
         if content.startswith('```'):
             content = content.split(chr(10), 1)[1].rsplit('```', 1)[0]

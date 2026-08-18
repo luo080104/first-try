@@ -7,6 +7,8 @@ import sys
 import time
 import urllib.request
 
+from diag import diag
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 API_URL = 'https://api.deepseek.com/chat/completions'
@@ -21,8 +23,8 @@ def _gc_sessions():
         conn = get_conn()
         conn.execute("DELETE FROM chat_sessions WHERE updated_at < datetime('now','localtime','-1 day')")
         conn.commit(); conn.close()
-    except Exception:
-        pass
+    except Exception as e:
+        diag("guide", "_gc_sessions", e, "旧会话清理失败——下次启动再清")
 
 
 def get_session(session_id: str) -> dict:
@@ -148,8 +150,8 @@ def _call_llm(messages: list, max_tokens: int = 800, retries: int = 2) -> str:
                     u = data.get('usage', {})
                     record_usage('deepseek-v4-flash', u.get('prompt_tokens', 0), u.get('completion_tokens', 0), '陪你出发',
                         u.get('prompt_cache_hit_tokens', 0), u.get('prompt_cache_miss_tokens', 0))
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("guide", "_call_llm", e, "usage 记账失败——成本记录缺失")
                 return content
             last = ''
             print(f'[guide] 空返回，重试 {attempt + 1}/{retries}')
@@ -201,8 +203,8 @@ def search_recommend(need_card: dict) -> list:
     try:
         from api_client import search_goods, search_pdd
         items = search_goods(keyword) + search_pdd(keyword)
-    except Exception:
-        pass
+    except Exception as e:
+        diag("guide", "search_recommend", e, "实时搜索失败——items 为空继续走库")
     if len(items) < 5:
         try:
             from db import get_conn
@@ -214,8 +216,8 @@ def search_recommend(need_card: dict) -> list:
                 items.append({'platform': r['platform'], 'title': r['title'], 'actualPrice': r['price'],
                               'shopName': r['shop_name'], 'url': r['url'], 'goodsId': r['item_id'],
                               'monthSales': r['sales'], 'brand': r['brand']})
-        except Exception:
-            pass
+        except Exception as e:
+            diag("guide", "search_recommend", e, "历史库查询失败——该轮无历史数据")
 
     # 2. 相关性过滤：标题/品牌必须含扩展词之一（防泛词匹配垃圾）
     items = [it for it in items

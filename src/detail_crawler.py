@@ -7,6 +7,7 @@ import sys
 import time
 
 from browser_pool import get_browser, rehide_loop
+from diag import diag
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -94,8 +95,8 @@ def crawl_tb_detail(item_id: str) -> dict:
                           '.tm-shop-name', '.shop-info-name'])
             if shop:
                 r['shop'] = shop[:40]
-        except Exception:
-            pass
+        except Exception as e:
+            diag("detail_crawler", "first", e, "店铺信息解析失败——该条目缺店铺字段")
         # 店铺链接（shop{userId}.taobao.com → 店铺页/成立时间线索）
         m2 = re.search(r'(?:https?:)?//shop(\d+)\.taobao\.com', html)
         if m2:
@@ -111,8 +112,8 @@ def crawl_tb_detail(item_id: str) -> dict:
     finally:
         try:
             rehide_loop('tb')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("detail_crawler", "crawl_tb_detail", e, "tb 隐藏失败——窗口可能可见")
 
 def crawl_jd_detail(item_id: str) -> dict:
     """京东商品详情页（验证码拦截则返回空，由联盟API字段兜底）"""
@@ -144,8 +145,8 @@ def crawl_jd_detail(item_id: str) -> dict:
     finally:
         try:
             rehide_loop('jd')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("detail_crawler", "crawl_jd_detail", e, "jd 隐藏失败——窗口可能可见")
 
 def crawl_detail(platform: str, item_id: str) -> dict:
     """统一入口：按平台爬详情（低频 15-20s）"""

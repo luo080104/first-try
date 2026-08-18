@@ -8,6 +8,8 @@ import sqlite3
 import sys
 import time
 
+from diag import diag
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "shopping.db")
@@ -46,8 +48,8 @@ def crawl_shop_founded(user_id: str, shop_name: str) -> int:
     tab = browser.latest_tab
     try:
         tab.set.window.hide()  # 2026-08-10 完全隐藏窗口（不弹窗）
-    except Exception:
-        pass
+    except Exception as e:
+        diag("fill_shop_founded", "crawl_shop_founded", e, "窗口隐藏失败——可能弹窗")
 
     try:
         tab.get("https://www.taobao.com/")

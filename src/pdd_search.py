@@ -8,6 +8,7 @@ import sys
 import time
 
 from browser_pool import get_browser, rehide_loop
+from diag import diag
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -79,8 +80,8 @@ def search_pdd(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
             rehide_loop('pdd')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("pdd_search", "search_pdd", e, "pdd 隐藏失败——窗口可能可见")
 
 
 def _parse_search_html(html: str) -> list:

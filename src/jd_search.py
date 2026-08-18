@@ -8,6 +8,7 @@ import sys
 import time
 
 from browser_pool import get_browser, rehide_loop
+from diag import diag
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -102,16 +103,16 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
             sku_id = ''
             try:
                 sku_id = str(c.attr('data-sku') or '').strip()
-            except Exception:
-                pass
+            except Exception as e:
+                diag("jd_search", "search_jd", e, "sku 提取失败——尝试正则兜底")
             if not sku_id:
                 try:
                     href = c.link or ''
                     m = re.search(r'item\.jd\.com/(\d{6,15})', href)
                     if m:
                         sku_id = m.group(1)
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("jd_search", "search_jd", e, "sku 正则兜底失败——该条无 sku")
             is_ad = '广告' in txt
             # 价格：取 ¥ 后面的数字（第二个通常是原价）
             prices = re.findall(r'¥(\d+(?:\.\d+)?)', txt)
@@ -149,8 +150,8 @@ def search_jd(keyword: str, max_items: int = 8, login_wait: int = 150, page: int
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
             rehide_loop('jd')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("jd_search", "search_jd", e, "jd 隐藏失败——窗口可能可见")
 
 if __name__ == '__main__':
     kw = sys.argv[1] if len(sys.argv) > 1 else '石头岛'

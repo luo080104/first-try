@@ -5,6 +5,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from app_state import CATEGORIES, templates
+from diag import diag
 
 router = APIRouter()
 
@@ -153,8 +154,8 @@ def search_bili_api(keyword: str = ""):
     try:
         urllib.request.urlopen("http://127.0.0.1:9222/json/version", timeout=3)
         cdp_ok = True
-    except Exception:
-        pass
+    except Exception as e:
+        diag("routes.search", "search_bili_api", e, "CDP 探测失败——降级走 Edge 可执行文件路径")
     if not cdp_ok:
         edge = next(
             (
@@ -390,8 +391,8 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
                 from db import log_search
 
                 log_search(user_name.strip(), keyword.strip(), category)
-            except Exception:
-                pass
+            except Exception as e:
+                diag("routes.search", "step", e, "搜索日志写入失败——不影响搜索本身")
             # ===== 📚 历史模式：只读商品库，零 API 零爬虫 =====
             if mode == "history":
                 yield step("查询商品库", "running")
@@ -760,14 +761,14 @@ async def search_sse(  # type: ignore[misc]  # generator 内 return 值合法（
                                 + str(m.get("content", ""))[:120]
                                 for m in _hist[-8:]
                             )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        diag("routes.search", "gen", e, "历史价汇总失败——跳过图表只出文本")
                     finally:
                         if _c:
                             try:
                                 _c.close()
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                diag("routes.search", "gen", e, "连接关闭失败——finally 兜底泄漏风险")
                 options = await asyncio.to_thread(
                     generate_options, keyword, groups, history_txt
                 )

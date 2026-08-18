@@ -6,6 +6,8 @@ import sys
 import threading
 import time
 
+from diag import diag
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
@@ -13,8 +15,8 @@ if not os.path.exists(EDGE):
     EDGE = r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"
 
 PROFILES = {
-    # 2026-08-11 小布方案：淘宝切 headless。
-    # tb_profile_h = headless 专用副本（原 tb_profile 与 headless 不兼容——保留原目录做备份，回退有头时改回 data/tb_profile 即可）
+    # 当前配置：淘宝用 headless 专用副本 tb_profile_h（headless 与有头 profile 不兼容）
+    # 有头模式回退：改回 data/tb_profile 即可（原目录保留作备份）
     "tb": ("data/tb_profile_h", 9300),
     "jd": ("data/jd_profile", 9301),
     "vip": ("data/vip_profile", 9302),
@@ -66,15 +68,15 @@ def _hide_browser(b):
     for _ in range(5):
         try:
             b.latest_tab.set.window.hide()
-        except Exception:
-            pass
+        except Exception as e:
+            diag("browser_pool", "_hide_browser", e, "DrissionPage hide 失败——继续尝试 ctypes 兜底")
         time.sleep(0.5)
     # 2) ctypes 按 PID 强制隐藏（终极手段）
     try:
         pid = b.process_id
         _force_hide_windows(pid)
-    except Exception:
-        pass
+    except Exception as e:
+        diag("browser_pool", "_hide_browser", e, "ctypes 强制隐藏失败——窗口可能可见")
 
 
 def _new_browser(platform: str):
@@ -113,8 +115,8 @@ def get_browser(platform: str):
             except Exception:
                 try:
                     b.quit()
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("browser_pool", "get_browser", e, "退出旧浏览器实例失败——强制 pop 重建")
                 _pool.pop(platform, None)
         b = _new_browser(platform)
         _pool[platform] = b
@@ -128,8 +130,8 @@ def _sweep_hide():
             continue
         try:
             _force_hide_windows(b.process_id)
-        except Exception:
-            pass
+        except Exception as e:
+            diag("browser_pool", "_sweep_hide", e, "定时隐藏失败——下次 sweep 再试")
 
 
 def rehide(platform: str):
@@ -140,8 +142,8 @@ def rehide(platform: str):
     if b is not None:
         try:
             _force_hide_windows(b.process_id)
-        except Exception:
-            pass
+        except Exception as e:
+            diag("browser_pool", "rehide", e, "隐藏失败——下次再试")
 
 
 _rehiding = set()  # 防抖：同平台不重复启动隐藏循环
@@ -222,4 +224,4 @@ def act_with_retry(
 if __name__ == "__main__":
     p = sys.argv[1] if len(sys.argv) > 1 else "tb"
     b = get_browser(p)
-    print(f"{p} 浏览器就绪:", b.latest_tab.url[:50])
+    print(f"{p} 浏览器就绪:", b.latest_tab.url[:50])  # pi-lens-ignore: 既有 DrissionPage 动态类型（latest_tab 可为 None）——运行期已验证

@@ -3,6 +3,8 @@
 import re
 from typing import Optional
 
+from diag import diag
+
 # ========== 品牌提取（通用）==========
 
 # 常见品牌表（后续可扩充/人工维护）
@@ -393,8 +395,8 @@ def annotate_item(it: dict, category: str):
         sr = shop_rating_of(it)
         it["shop_rating"] = sr["rating"]
         it["shop_signals"] = sr["label"]
-    except Exception:
-        pass
+    except Exception as e:
+        diag("matcher", "annotate_item", e, "店铺评分失败——该条目缺评分字段")
     return it
 
 

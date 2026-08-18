@@ -1,10 +1,12 @@
 import os
 
-# app.py - Go购网页版 v1.0（雏形）
-# 运行: python src/app.py  → 浏览器打开 http://localhost:8000
+# app.py - Go购网页服务入口
+# 运行: python src/app.py  → 浏览器打开 http://localhost:8001
 import sys
 
-# 2026-08-12 修复 pythonw 秒退：无控制台时 sys.stdout/stderr 为 None → print 崩 → 重定向到文件
+from diag import diag
+
+# pythonw 无控制台时 sys.stdout/stderr 为 None——print 会崩，重定向到文件保日志
 if sys.stdout is None:
     try:
         sys.stdout = open(
@@ -13,8 +15,8 @@ if sys.stdout is None:
             encoding="utf-8",
             errors="replace",
         )
-    except Exception:
-        pass
+    except Exception as e:
+        diag("app", "app_startup", e, "stdout 重定向失败——日志通道缺失")
 if sys.stderr is None:
     try:
         sys.stderr = open(
@@ -23,8 +25,8 @@ if sys.stderr is None:
             encoding="utf-8",
             errors="replace",
         )
-    except Exception:
-        pass
+    except Exception as e:
+        diag("app", "app_startup", e, "stderr 重定向失败——日志通道缺失")
 
 # 2026-08-11 小布①④：pythonw 下 stdout 默认 GBK，print emoji 崩（阻塞搜索+盯价500）——全局改 UTF-8
 for _s in (sys.stdout, sys.stderr):
@@ -32,8 +34,8 @@ for _s in (sys.stdout, sys.stderr):
         continue
     try:
         _s.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]  # TextIO.reconfigure 合法 API，类型检查器不认识
-    except Exception:
-        pass
+    except Exception as e:
+        diag("app", "app_startup", e, "UTF-8 reconfigure 失败——emoji print 可能崩")
 
 sys.path.insert(0, os.path.dirname(__file__))
 import asyncio
@@ -92,4 +94,4 @@ if __name__ == "__main__":
     threading.Thread(target=lambda: asyncio.run(_watch_loop()), daemon=True).start()
     uvicorn.run(
         app, host="0.0.0.0", port=8001
-    )  # 故意 0.0.0.0：手机/家人设备局域网访问必需（防火墙已放行）
+    )  # pi-lens-ignore: bind-all-interfaces 故意 0.0.0.0：手机/家人设备局域网访问必需（防火墙已放行）

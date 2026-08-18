@@ -5,6 +5,8 @@ import os
 import re
 import sqlite3
 
+from diag import diag
+
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), 'schema.sql')
 
@@ -532,8 +534,8 @@ def get_advice_cache(cache_key: str):
         created = _dt.datetime.strptime(row['created_at'], '%Y-%m-%d %H:%M:%S')
         if _dt.datetime.now() - created < _dt.timedelta(hours=ADVICE_CACHE_HOURS):
             return row['advice']
-    except Exception:
-        pass
+    except Exception as e:
+        diag("db", "get_advice_cache", e, "读建议缓存异常——降级直查（宁可慢不可错）")
     return None
 
 def save_advice_cache(cache_key: str, advice: str):
@@ -775,12 +777,12 @@ def set_user_pref(key: str, value, source: str = "manual", confidence: float = 1
     conn = get_conn()
     try:
         conn.execute("ALTER TABLE user_preferences ADD COLUMN source TEXT DEFAULT 'manual'")
-    except Exception:
-        pass
+    except Exception as e:
+        diag("db", "set_user_pref", e, "幂等迁移 source 列失败（列已存在属预期）——建议改 PRAGMA 检查，本轮不改逻辑")
     try:
         conn.execute("ALTER TABLE user_preferences ADD COLUMN confidence REAL DEFAULT 1.0")
-    except Exception:
-        pass
+    except Exception as e:
+        diag("db", "set_user_pref", e, "幂等迁移 confidence 列失败（列已存在属预期）——建议改 PRAGMA 检查，本轮不改逻辑")
     conn.execute(
         '''
         INSERT INTO user_preferences (key, value, source, confidence) VALUES (?,?,?,?)

@@ -5,6 +5,8 @@ import json
 import os
 import sqlite3
 
+from diag import diag
+
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
 BLOGGERS_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'bloggers.json')
 
@@ -49,8 +51,8 @@ def interact_score(platform: str, d: dict) -> float:
         elif platform == 'tieba':
             comment = int(d.get('comment', 0) or 0)
             return min(comment / 100, 1.0)
-    except Exception:
-        pass
+    except Exception as e:
+        diag("score", "interact_score", e, "评论数解析失败——返回默认 0.3")
     return 0.3
 
 # ---------- 口碑倾向（从情感缓存表） ----------

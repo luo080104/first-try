@@ -17,6 +17,7 @@ import time
 import urllib.parse
 
 from browser_pool import get_browser, rehide_loop
+from diag import diag
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -102,8 +103,8 @@ def search_taobao(keyword: str, max_items: int = 20, login_wait: int = 150, page
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
             rehide_loop('tb')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("tb_search", "search_taobao", e, "tb 隐藏失败——窗口可能可见")
 
 def _search_via_listen(tab, keyword: str, max_items: int, login_wait: int, page_num: int) -> list:
     """方案 A：拦截浏览器发出的 MTOP API 请求，直接拿 JSON 响应。
@@ -453,8 +454,8 @@ def _search_via_html(tab, keyword: str, max_items: int) -> list:
         link = ''
         try:
             link = c.link or c.attr('href') or ''
-        except Exception:
-            pass
+        except Exception as e:
+            diag("tb_search", "_search_via_listen", e, "商品链接提取失败——该条无链接")
 
         items.append({
             'platform': 'tb',

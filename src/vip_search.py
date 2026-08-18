@@ -8,6 +8,7 @@ import sys
 import time
 
 from browser_pool import get_browser, rehide_loop
+from diag import diag
 
 EDGE_PATHS = [
     r'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
@@ -78,8 +79,8 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
                 title = ''
                 try:
                     title = c.ele('css:.c-goods-item__name', timeout=2).text.strip()[:100]
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("vip_search", "search_vip", e, "标题提取失败——跳过该条目字段")
 
                 # 价格：价格区文本（特卖价 ¥227 ¥328 6.9折 60天低价）
                 price = None
@@ -90,8 +91,8 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
                     if nums:
                         price = float(nums[0])
                         original = float(nums[1]) if len(nums) > 1 else None
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("vip_search", "search_vip", e, "价格解析失败——该条价格缺失")
                 if not price:
                     continue
 
@@ -100,8 +101,8 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
                 try:
                     brand_ele = tab.ele('css:.brand-title', timeout=1)
                     brand = brand_ele.text.strip() if brand_ele else ''
-                except Exception:
-                    pass
+                except Exception as e:
+                    diag("vip_search", "search_vip", e, "品牌提取失败——该条无品牌")
 
                 items.append({
                     'platform': 'vip',
@@ -123,8 +124,8 @@ def search_vip(keyword: str, max_items: int = 20, login_wait: int = 150, page: i
         # 小布方案：搜索完强制隐藏兜底（防导航/重建后窗口可见）
         try:
             rehide_loop('vip')
-        except Exception:
-            pass
+        except Exception as e:
+            diag("vip_search", "search_vip", e, "vip 隐藏失败——窗口可能可见")
 
 
 if __name__ == '__main__':

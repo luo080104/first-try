@@ -7,6 +7,8 @@ import sqlite3
 import sys
 from typing import Optional
 
+from diag import diag
+
 sys.path.insert(0, os.path.dirname(__file__))
 
 DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'shopping.db')
@@ -80,8 +82,8 @@ def wander_recommend(user_name: str = '', size: int = 12, exclude_ids: Optional[
             got = conn.execute('''SELECT * FROM product_items WHERE title LIKE ? AND price > 0 ORDER BY sales DESC LIMIT ?''',
                                (f'%{kw}%', quota2)).fetchall()
             candidates += [dict(r) for r in got]
-    except Exception:
-        pass
+    except Exception as e:
+        diag("wander", "pick", e, "关联召回失败——跳过该路召回")
     # ③ 探索召回（15%）：未关注的品类随机
     quota3 = max(int(size * 0.15), 2)
     explore_cats = [c for c in ['服饰', '食品', '日用百货', '数码家电'] if c not in cats]

@@ -6,11 +6,12 @@ from contextlib import closing
 from fastapi import APIRouter, Form
 
 from app_state import _BACKGROUND_TASKS
+from diag import diag
 
 router = APIRouter()
 
 
-def _pin_guard(pin: str) -> dict:
+def _pin_guard(pin: str) -> dict | None:
     """PIN 校验（小布🔴2）：失败返回 403 响应体，成功返回 None"""
     from db import verify_pin
 
@@ -799,7 +800,7 @@ async def api_advice(
                 ).fetchall()
                 history += [dict(r) for r in rows]
                 break
-    # v1.0 A-B 实验分流：按 user_name 稳定 hash → variant（a=新版prompt / b=旧版）
+    # A-B 分流：按关键词 hash 稳定分配 variant（当前 a/b 都在用，对比采纳率）
     variant = "a" if (sum(ord(c) for c in keyword) % 2 == 0) else "b"
     advice = await asyncio.to_thread(
         gen_advice, keyword, group, data["subsidies"], history, variant
@@ -816,8 +817,8 @@ async def api_advice(
                 ("compare", keyword[:60], "shown", variant),
             )
             conn.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        diag("routes.api", "api_advice", e, "建议缓存写入失败——本次不缓存")
     return {"ok": True, "advice": advice, "cached": False, "variant": variant}
 
 
