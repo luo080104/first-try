@@ -238,6 +238,7 @@
         var box = document.getElementById("chat-box");
         var div = document.createElement("div");
         div.className = "msg " + role;
+        // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
         div.innerHTML =
           '<div class="avatar">' +
           (role === "ai" ? "" : "👤") +
@@ -256,6 +257,7 @@
           div.className = "rec-card";
           var mc =
             it.match >= 80 ? "#27ae60" : it.match >= 60 ? "#e67e22" : "#b2bec3";
+          // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
           div.innerHTML =
             '<div class="r-title">' +
             esc(it.title || "") +

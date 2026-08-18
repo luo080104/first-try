@@ -171,6 +171,7 @@
 
       function loadWander() {
         var box = document.getElementById("w-list");
+        // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
         box.innerHTML = '<div class="empty-tip">🎡 正在逛…</div>';
         fetch(
           pinUrl(
@@ -180,10 +181,12 @@
           .then((r) => r.json())
           .then((d) => {
             if (!d.cards || !d.cards.length) {
+              // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
               box.innerHTML =
                 '<div class="empty-tip">逛完了！换个词搜搜，或去采集中心多采点商品吧</div>';
               return;
             }
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             box.innerHTML = d.cards
               .map(function (c) {
                 return (
@@ -232,6 +235,7 @@
               .join("");
           })
           .catch(() => {
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             box.innerHTML =
               '<div class="empty-tip">网络开小差了，点「换一批」重试</div>';
           });

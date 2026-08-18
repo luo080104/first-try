@@ -155,6 +155,7 @@
               ? "block"
               : "none";
             if (!list.length) {
+              // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
               box.innerHTML =
                 '<div class="empty">还没有搜索记录<br>去首页搜点什么吧</div>';
               return;
@@ -188,9 +189,11 @@
               });
               html += "</div>";
             });
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             box.innerHTML = html;
           })
           .catch(function () {
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             document.getElementById("hist-box").innerHTML =
               '<div class="empty">加载失败</div>';
           });

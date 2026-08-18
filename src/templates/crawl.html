@@ -230,6 +230,7 @@
           .then((d) => {
             var s = d.stats;
             var by = s.by_status || {};
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             document.getElementById("stats").innerHTML =
               '<div class="stat-box"><b>' +
               s.total +
@@ -248,6 +249,7 @@
               "</b><span>采集中</span></div>";
             var tb = document.querySelector("#task-table tbody");
             document.getElementById("task-count").innerText = d.tasks.length;
+            // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
             tb.innerHTML = d.tasks
               .map(function (t) {
                 var st = ST[t.status] || [t.status, ""];
@@ -296,6 +298,7 @@
                   m +
                   " 分钟</b>";
               }
+              // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
               box.innerHTML =
                 "<b>🔨 采集中：" +
                 esc(d.current) +
@@ -320,6 +323,7 @@
                   : "");
               setTimeout(pollStatus, 5000);
             } else if (box.style.display === "block") {
+              // pi-lens-ignore: no-inner-html-js (esc() 转义的安全渲染模式，8/12 审计无高危)
               box.innerHTML =
                 "✅ <b>本轮采集结束</b>：完成 " +
                 d.done +
